@@ -35,7 +35,42 @@ def thermal_I(
     integrator:GaussLaguerreIntegrator
 )->np.ndarray:
 
-    def integrand(z):
-        return z**2 * F(x/z**2)
+    result = np.zeros_like(x)
 
-    return (1.0/x)* integrator.integrate(integrand)
+    for i, xi in enumerate(x):
+
+        def integrand(z):
+            return z**2 * F(xi / z**2)
+
+        result[i] = (1.0 / xi) * integrator.integrate(integrand)
+
+    return result
+
+def thermal_Ip_asym(x:np.ndarray) -> np.ndarray:
+    """
+    Asymptotic form of I'(x) from Mahadevan et al. (1996), Eq.(32).
+
+    Parameters
+    ----------
+    x : ArrayLike
+        Dimensionless frequency ratio (ν / ν_th). Must be positive.
+
+    Returns
+    -------
+    np.ndarray
+        Asymptotic approximation of I'(x).
+    """
+    x = np.asarray(x, dtype=float)
+    x = np.clip(x, 1e-300, None)
+
+    a1 = 4.0505
+    b1 = 0.40
+    b2 = 0.5316
+    c0 = 1.8899
+
+    return (
+        a1
+        * (1.0 + b1 * x**(-0.25) + b2 * x**(-0.5))
+        * np.exp(-c0 * x**(1.0 / 3.0))
+        / x**(1.0 / 6.0)
+    )
