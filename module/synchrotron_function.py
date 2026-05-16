@@ -1,7 +1,8 @@
 
 import numpy as np
 from scipy import special
-from module.integrator import GaussLaguerreIntegrator
+from module.integrator import GaussLaguerreIntegrator,GaussLegendreIntegrator
+from typing import Callable
 
 def F(x:np.ndarray)->np.ndarray:
     """
@@ -43,6 +44,27 @@ def thermal_I(
             return z**2 * F(xi / z**2)
 
         result[i] = (1.0 / xi) * integrator.integrate(integrand)
+
+    return result
+
+def thermal_Ip(
+    x: np.ndarray,
+    integrator: GaussLegendreIntegrator,
+    I: Callable[[np.ndarray], np.ndarray],
+) -> np.ndarray:
+
+    mu = integrator.x
+    w = integrator.w
+
+    if mu is None or w is None:
+        raise RuntimeError("Integrator is not initialized properly.")
+
+    sin_theta = np.sqrt(np.clip(1.0 - mu**2, 0.0, None))
+
+    result = np.zeros_like(x, dtype=np.float64)
+
+    for i, xi in enumerate(x):
+        result[i] = np.sum(w * I(xi / sin_theta))
 
     return result
 
