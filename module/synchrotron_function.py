@@ -47,7 +47,7 @@ def thermal_I(
 
     return result
 
-def thermal_Ip(
+def thermal_Ip_unwrapped(
     x: np.ndarray,
     integrator: GaussLegendreIntegrator,
     I: Callable[[np.ndarray], np.ndarray],
@@ -67,6 +67,17 @@ def thermal_Ip(
         result[i] = np.sum(w * I(xi / sin_theta))
 
     return result
+
+def thermal_Ip(
+    x: np.ndarray
+):
+    gla_int = GaussLaguerreIntegrator(64)
+    gle_int = GaussLegendreIntegrator(64)
+
+    def thI(x:np.ndarray):
+        return thermal_I(x,gla_int)
+
+    return thermal_Ip_unwrapped(x,gle_int,thI)
 
 def thermal_Ip_asym(x:np.ndarray) -> np.ndarray:
     """
