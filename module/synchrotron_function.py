@@ -107,3 +107,48 @@ def thermal_Ip_asym(x:np.ndarray) -> np.ndarray:
         * np.exp(-c0 * x**(1.0 / 3.0))
         / x**(1.0 / 6.0)
     )
+
+def angle_averaged_dimensionless_synchrotron_power(
+    chi: np.ndarray,
+    beta_gamma: np.ndarray,
+    N:int = 50,
+)->np.ndarray:
+    """
+    無次元化されたsynchrotron specific power <Pi_nu> の積分計算を行う
+    積分計算はGauss-Jacobiの方法で実行する
+
+    Parameters
+    ----------
+    chi: np.ndarray
+        nu/nu_b, where nu_b is a gyro frequency
+    gb: np.ndarray 
+        4-vector of electrons
+    N : int, optional
+        Gauss–Jacobi 積分点数（default: 50）
+
+    Returns
+    -------
+    float or ndarray
+        ピッチ角平均された無次元 specific power <Pi_nu>
+    """
+    # Gauss–Jacobi nodes and weights (alpha = beta = 1/2)
+    mu, w = special.roots_jacobi(N, 0.5, 0.5)
+
+    # sinθ = sqrt(1 - μ^2)
+    sin_theta = np.sqrt(1.0 - mu**2)
+    sin_theta = np.clip(sin_theta, 1e-300, None)
+
+    beta_gamma = np.asarray(beta_gamma)
+    gamma2 = (1.0 + beta_gamma**2)
+
+    chi = np.asarray(chi)
+    x = chi[...,None,None]/(1.5*gamma2[None,...,None]*sin_theta)
+
+    # F(x)
+    Fval = F(x)
+
+    # 積分（重みはすでに含まれている）
+    integral = np.sum(w * Fval, axis=-1)
+
+    # prefactor 1/2
+    return 0.5 * integral
