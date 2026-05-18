@@ -19,7 +19,7 @@ def compute(theta:float,chi:np.ndarray):
     fw.write_csv_with_params(df,{"theta":theta},filepath)
     print(f"output {filepath}")
 
-chi = np.logspace(-3,5,256)
+chi = np.logspace(-5,5,256)
 compute(theta=0.20,chi=chi)
 compute(theta=1.00,chi=chi)
 compute(theta=5.00,chi=chi)
