@@ -13,6 +13,7 @@ def compute(theta:float,chi:np.ndarray):
         "x_m":ss.xm,
         "jnu":ss.jnu_th,
         "anu":ss.anu_th,
+        "snu":ss.snu_th,
     })
     theta_fmt = int(theta*10)
     filepath = Path(f"data/test/thermal_spectrum_theta{theta_fmt:03d}.csv")

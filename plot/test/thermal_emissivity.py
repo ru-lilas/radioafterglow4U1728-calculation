@@ -38,16 +38,24 @@ def plot_spectrum_each_theta(ax,dfs,y:str,ylabel:str):
     ax.set_xlabel(r"$x_{\mathrm{M}}$",fontsize=labelfs)
     ax.legend()
 
-fig,ax = plt.subplots(figsize=(8,6))
-fig.set_layout_engine("constrained")
-plot_spectrum_each_theta(ax,dfs,"jnu",r"$j_{\nu}/j_0$")
-spectrum="emissivity"
-fig.savefig(f"fig/test/thermal_{spectrum}.pdf")
-fig.savefig(f"fig/test/thermal_{spectrum}.svg")
+def create_plot(figsize:tuple[float,float]):
+    fig,ax = plt.subplots(figsize=figsize)
+    fig.set_layout_engine("constrained")
+    return fig,ax
+def save_plot(fig,spectrum:str):
+    fig.savefig(f"fig/test/thermal_{spectrum}.pdf")
+    fig.savefig(f"fig/test/thermal_{spectrum}.svg")
+    return
 
-fig,ax = plt.subplots(figsize=(8,6))
-fig.set_layout_engine("constrained")
+fig,ax = create_plot((8,6))
+plot_spectrum_each_theta(ax,dfs,"jnu",r"$j_{\nu}/j_0$")
+save_plot(fig,"emissivity")
+
+fig,ax = create_plot((8,6))
 plot_spectrum_each_theta(ax,dfs,"anu",r"$\alpha_{\nu}/\alpha_0$")
-spectrum="absorption"
-fig.savefig(f"fig/test/thermal_{spectrum}.pdf")
-fig.savefig(f"fig/test/thermal_{spectrum}.svg")
+save_plot(fig,"absorption")
+
+fig,ax = create_plot((8,6))
+plot_spectrum_each_theta(ax,dfs,"snu",r"$S_{\nu}/S_0$")
+ax.set_ylim(1.0e-6,1.0e+08)
+save_plot(fig,"source_function")
