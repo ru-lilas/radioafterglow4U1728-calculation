@@ -21,9 +21,24 @@ class SynchrotronSpectrum:
     mu: float
     mu_e: float
     beta_sh: float
-    a_wind: u.Quantity
-    t: u.Quantity
-    nu_array: u.Quantity
+    a_wind_value: float
+    a_wind_unit: str
+    t_value: float
+    t_unit: str
+    nu_array_value: float
+    nu_array_unit: str
+
+    @property
+    def a_wind_quantity(self):
+        return u.Quantity(self.a_wind_value,u.Unit(self.a_wind_unit))
+
+    @property
+    def t(self):
+        return u.Quantity(self.a_wind_value,u.Unit(self.t_unit))
+
+    @property
+    def nu_array_quantity(self):
+        return u.Quantity(self.nu_array_value, u.Unit(self.nu_array_unit))
 
     @property
     def theta_e(self)->float:
@@ -44,7 +59,7 @@ class SynchrotronSpectrum:
     @property
     def n_wind(self)->u.Quantity:
         return calculate_n_wind(
-            a_wind=self.a_wind,
+            a_wind=self.a_wind_quantity,
             r=self.r,
             mu=self.mu
         )
@@ -67,7 +82,7 @@ class SynchrotronSpectrum:
 
     @property
     def omega(self):
-        return synchrotron_scaling_values.convert_nu_into_omega(self.nu_array)
+        return synchrotron_scaling_values.convert_nu_into_omega(self.nu_array_quantity)
 
     @property
     def omega_B(self):

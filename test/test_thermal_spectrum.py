@@ -9,11 +9,23 @@ from module.utilities import filewriters as fw
 from pathlib import Path
 
 def compute(input_params:dict):
-    metadata = {}
+    metadata = {
+        key: value
+        for key, value in input_params.items()
+        if key != "nu_array_value"
+    }
 
     ss = SynchrotronSpectrum(**input_params)
+    metadata["r_value"] = ss.r.value
+    metadata["r_unit"] = ss.r.unit
+    metadata["n_wind_value"] = ss.n_wind.value
+    metadata["n_wind_unit"] = str(ss.n_wind.unit)
+    metadata["b_mag_value"] = ss.b_mag.value
+    metadata["b_mag_unit"] = str(ss.b_mag.unit)
+    metadata["theta_e"] = ss.theta_e
+
     df = pd.DataFrame({
-        "nu":ss.nu_array,
+        "nu":ss.nu_array_quantity,
         "chi":ss.chi,
         "x_m":ss.xm,
         "jnu_dimless":ss.j_nu_th_dimless,
@@ -32,9 +44,12 @@ params = {
     "mu": 0.62,
     "mu_e": 1.18,
     "beta_sh": 0.1,
-    "a_wind": 1.0e+07*u.g/u.cm,
-    "t": 1.0*u.min,
-    "nu_array": u.Quantity(np.logspace(3,15,512),u.Hz)
+    "a_wind_value": 1.0e+07,
+    "a_wind_unit": "g/cm",
+    "t_value": 1.0,
+    "t_unit": "min", 
+    "nu_array_value": np.logspace(3,15,512),
+    "nu_array_unit": "Hz"
 }
 
 compute(params)

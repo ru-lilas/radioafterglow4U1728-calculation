@@ -2,6 +2,7 @@ from typing import Any
 import yaml
 import pandas as pd
 from pathlib import Path
+import warnings
 
 def read_csv(filepath:Path):
     df = pd.read_csv(
@@ -16,6 +17,22 @@ def read_yaml(filepath: Path):
         config = yaml.safe_load(f)
     return config
 
+def parse_value(value: str) -> Any:
+    value = value.strip()
+
+    # 空文字だけは warning
+    if value == "":
+        warnings.warn("empty value detected")
+        return value
+
+    # floatとして読めるならfloat
+    try:
+        return float(value)
+
+    # 失敗したら普通にstr
+    except ValueError:
+        return value
+
 def read_keyvalue(filepath:Path,split_sign:str="=")->dict[str,Any]:
     keyvalue = {}
     if not filepath.is_file():
@@ -29,11 +46,9 @@ def read_keyvalue(filepath:Path,split_sign:str="=")->dict[str,Any]:
             line = line[1:].strip()
             if split_sign in line:
                 key, value = line.split(split_sign,1)
-                try:
-                    keyvalue[key.strip()] = float(value.strip())
-                except ValueError:
-                    print(f"Warning: fail to convert value into float type:metadata['{key}'] = {value}")
-                    keyvalue[key] = value.strip()
+
+                key = key.strip()
+                keyvalue[key] = parse_value(value)
         else:
             break
     return keyvalue
