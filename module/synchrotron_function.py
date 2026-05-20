@@ -1,3 +1,5 @@
+# pyright: reportAttributeAccessIssue=false
+# pyright: reportUnknownMemberType=false
 
 import numpy as np
 from scipy import special
