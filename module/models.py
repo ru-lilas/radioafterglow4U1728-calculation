@@ -34,7 +34,7 @@ class SynchrotronSpectrum:
 
     @property
     def t(self):
-        return u.Quantity(self.a_wind_value,u.Unit(self.t_unit))
+        return u.Quantity(self.t_value,u.Unit(self.t_unit))
 
     @property
     def nu_array_quantity(self):
@@ -95,6 +95,10 @@ class SynchrotronSpectrum:
     @property
     def chi(self):
         return synchrotron_scaling_values.chi_gyro(omega=self.omega, omega_b=self.omega_B)
+
+    @property
+    def nu_crit(self):
+        return synchrotron_scaling_values.calculate_nu_crit(nu_B=self.nu_B, theta=self.theta_e)
 
     @property
     def xm(self)->np.ndarray:

@@ -1,42 +1,11 @@
-
 import matplotlib.pyplot as plt
 from module.utilities import filereaders as fr
+from module.utilities import plot_utils
 from pathlib import Path
 
-dfs = [
-        fr.read_csv(Path("data/test/thermal_spectrum_theta002.csv")),
-        fr.read_csv(Path("data/test/thermal_spectrum_theta010.csv")),
-        fr.read_csv(Path("data/test/thermal_spectrum_theta050.csv"))
-]
-
-def plot_spectrum_each_theta(ax,dfs,y:str,ylabel:str):
-    ax.loglog(
-        dfs[0]["x_m"],
-        dfs[0][y],
-        color = "#FF4B00",
-        ls="-",
-        label=r"$\Theta=0.2$"
-    )
-    ax.loglog(
-        dfs[1]["x_m"],
-        dfs[1][y],
-        color = "#000000",
-        ls="-",
-        label=r"$\Theta=1.0$"
-    )
-    ax.loglog(
-        dfs[2]["x_m"],
-        dfs[2][y],
-        color = "#005AFF",
-        ls="-",
-        label=r"$\Theta=5.0$"
-    )
-    labelfs=16
-    ax.set_xlim(1.0e-3,1.0e+05)
-    ax.set_ylim(1.0e-6,1.0e+03)
-    ax.set_ylabel(ylabel,fontsize=labelfs)
-    ax.set_xlabel(r"$x_{\mathrm{M}}$",fontsize=labelfs)
-    ax.legend()
+input_path = Path("data/test/thermal_spectrum_000.csv")
+df = fr.read_csv(input_path)
+metadata = fr.read_keyvalue(input_path)
 
 def create_plot(figsize:tuple[float,float]):
     fig,ax = plt.subplots(figsize=figsize)
@@ -48,14 +17,40 @@ def save_plot(fig,spectrum:str):
     return
 
 fig,ax = create_plot((8,6))
-plot_spectrum_each_theta(ax,dfs,"jnu",r"$j_{\nu}/j_0$")
+ax.loglog(
+    df["nu"],
+    df["jnu_th"],
+    color = "#000000",
+    ls="-",
+)
+labelfs=16
+ax.set_xlim(1.0e+6,1.0e+15)
+ax.set_ylim(1.0e-16,1.0e-10)
+nu_crit = metadata["nu_crit_value"]
+nu_B = metadata["nu_B_value"]
+ax.axvline(nu_crit*1.0e-02,ls="--",color="#000000",lw=1.5)
+ax.axvline(nu_crit,ls="-",color="#000000",lw=1.5)
+ax.axvline(nu_crit*1.0e+02,ls="-.",color="#000000",lw=1.5)
+ax.axvline(nu_B,ls="-",color="#004AFF",lw=1.0)
+annotconf = plot_utils.AnnotationConfigure(
+    use=True,
+    fontsize=8,
+    text= \
+        r"$\beta_{\mathrm{sh}}=$"f"{metadata['beta_sh']:.1e}"
+        f", $A=${metadata['a_wind_value']:.1e} {metadata['a_wind_unit']}"
+        r", $\varepsilon_{\mathrm{th}}=$"f"{metadata['eps_th']:.1e}"
+        r", $\varepsilon_{\mathrm{B}}=$"f"{metadata['eps_B']:.1e}"
+        r", $\mu=$"f"{metadata['mu']:.2f}"
+        r", $\mu_{\mathrm{e}}=$"f"{metadata['mu_e']:.2f}\n"
+        f"$t=${metadata['t_value']:.1e} {metadata['t_unit']}"
+        f", $r=${metadata['r_value']:.1e} {metadata['r_unit']}"
+        r", $n_{\mathrm{w}}=$"f"{metadata['n_wind_value']:.1e} {metadata['n_wind_unit']}"
+        r", $\Theta=$"f"{metadata['theta_e']:.1e}"
+        f", $B=${metadata['b_mag_value']:.1e} {metadata['b_mag_unit']}"
+)
+j_unit = metadata["j0_unit"]
+nu_unit = metadata["nu_array_unit"]
+ax.set_ylabel(r"$j_{\nu}~$"f"[{j_unit}]",fontsize=labelfs)
+ax.set_xlabel(r"$\nu~$"f"[{nu_unit}]",fontsize=labelfs)
+plot_utils.annotation(ax,annotconf)
 save_plot(fig,"emissivity")
-
-fig,ax = create_plot((8,6))
-plot_spectrum_each_theta(ax,dfs,"anu",r"$\alpha_{\nu}/\alpha_0$")
-save_plot(fig,"absorption")
-
-fig,ax = create_plot((8,6))
-plot_spectrum_each_theta(ax,dfs,"snu",r"$S_{\nu}/S_0$")
-ax.set_ylim(1.0e-6,1.0e+08)
-save_plot(fig,"source_function")

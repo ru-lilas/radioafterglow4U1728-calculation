@@ -37,7 +37,7 @@ def omega_b(
     """
         calculate gyro frequency for given B
     """
-    omega_b = e*b_mag/(m_e*c)
+    omega_b = (e*b_mag/(m_e*c)).to(u.Hz)
     omega_b_val = np.clip(omega_b.value, 1e-300, None) # avoid devision by zero
     return omega_b_val*omega_b.unit
 
@@ -52,3 +52,8 @@ def chi_gyro(
     value = np.clip(omega/omega_b,1e-300,None)
     return value
 
+def calculate_nu_crit(
+    nu_B:u.Quantity,
+    theta:float
+)->u.Quantity:
+    return (1.5 * theta**2 * nu_B).to(u.Hz)

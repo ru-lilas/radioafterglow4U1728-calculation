@@ -1,4 +1,3 @@
-
 import matplotlib.pyplot as plt
 from module.utilities import filereaders as fr
 from module.utilities import plot_utils
@@ -20,25 +19,24 @@ def save_plot(fig,spectrum:str):
 fig,ax = create_plot((8,6))
 ax.loglog(
     df["nu"],
-    df["lnu"],
+    df["tau_nu"],
     color = "#000000",
     ls="-",
 )
 labelfs=16
 ax.set_xlim(1.0e+6,1.0e+15)
-ax.set_ylim(1.0e+10,1.0e+30)
-ax.set_ylabel(r"$L_{\nu}$ [erg/s/Hz]",fontsize=labelfs)
-ax.set_xlabel(r"$\nu$ [Hz]",fontsize=labelfs)
+ax.set_ylim(1.0e-10,1.0e+10)
 nu_crit = metadata["nu_crit_value"]
 nu_B = metadata["nu_B_value"]
 ax.axvline(nu_crit*1.0e-02,ls="--",color="#000000",lw=1.5)
 ax.axvline(nu_crit,ls="-",color="#000000",lw=1.5)
 ax.axvline(nu_crit*1.0e+02,ls="-.",color="#000000",lw=1.5)
 ax.axvline(nu_B,ls="-",color="#004AFF",lw=1.0)
+ax.axhline(1.0,ls="--",color="#000000",lw=0.75)
 annotconf = plot_utils.AnnotationConfigure(
     use=True,
     fontsize=8,
-    text=\
+    text= \
         r"$\beta_{\mathrm{sh}}=$"f"{metadata['beta_sh']:.1e}"
         f", $A=${metadata['a_wind_value']:.1e} {metadata['a_wind_unit']}"
         r", $\varepsilon_{\mathrm{th}}=$"f"{metadata['eps_th']:.1e}"
@@ -51,5 +49,8 @@ annotconf = plot_utils.AnnotationConfigure(
         r", $\Theta=$"f"{metadata['theta_e']:.1e}"
         f", $B=${metadata['b_mag_value']:.1e} {metadata['b_mag_unit']}"
 )
+nu_unit = metadata["nu_array_unit"]
+ax.set_ylabel(r"$\tau_{\nu}~$",fontsize=labelfs)
+ax.set_xlabel(r"$\nu~$"f"[{nu_unit}]",fontsize=labelfs)
 plot_utils.annotation(ax,annotconf)
-save_plot(fig,"luminosity")
+save_plot(fig,"optical_depth")
