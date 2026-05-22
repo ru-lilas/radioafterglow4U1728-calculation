@@ -23,7 +23,7 @@ def main(args:argparse.Namespace):
     
     metadata, df = compute(input)
     
-    dump_csv(metadata,df,config.output,inputpath)
+    dump_csv(metadata,df,args.outpath)
     
     return
 
@@ -32,6 +32,10 @@ if __name__ == "__main__":
     
     parser.add_argument(
         "infile",
+        type=Path
+    )
+    parser.add_argument(
+        "outpath",
         type=Path
     )
     
