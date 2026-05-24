@@ -18,8 +18,6 @@ def main(args:argparse.Namespace):
         outpath = output_dir/f"{beta*100:03.0f}.yaml"
         OmegaConf.save(input_combined,outpath)
 
-        print(f"output {outpath}")
-
     return
 
 if __name__ == "__main__":

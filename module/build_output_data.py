@@ -1,20 +1,7 @@
 from module.models import SynchrotronSpectrum
 import pandas as pd
-from module.utilities import filewriters as fw
-from pathlib import Path
 
-def compute(input_params:dict):
-
-    print("calculating spectrum...")
-    ss = SynchrotronSpectrum(**input_params)
-
-    metadata = build_metadata(input_params,ss)
-    df = build_tabledata(ss)
-
-    return metadata,df
-
-def build_metadata(input_params:dict,ss:SynchrotronSpectrum):
-    print("building metadata...")
+def metadata(input_params:dict,ss:SynchrotronSpectrum):
     metadata = {
         key: value
         for key, value in input_params.items()
@@ -37,16 +24,13 @@ def build_metadata(input_params:dict,ss:SynchrotronSpectrum):
 
     return metadata
 
-def build_tabledata(ss:SynchrotronSpectrum)->pd.DataFrame:
-    print("building table-format data...")
+def tabledata(ss:SynchrotronSpectrum)->pd.DataFrame:
     df = pd.DataFrame({
-        "nu":ss.nu_array_quantity,
+        "nu":ss.nu_array_value,
         "chi":ss.chi,
         "x_m":ss.xm,
         "jnu_dimless":ss.j_nu_th_dimless,
-        "jnu_th":ss.j_nu_th.value,
         "anu_dimless":ss.a_nu_th_dimless,
-        "anu_th":ss.a_nu_th.value,
         "snu_dimless":ss.S_nu_th_dimless,
         "lnu":ss.lnu_th,
         "tau_nu":ss.tau_nu

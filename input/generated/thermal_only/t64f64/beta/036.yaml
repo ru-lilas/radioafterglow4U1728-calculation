@@ -1,0 +1,19 @@
+frequency:
+  log10_min: 6.0
+  log10_max: 12.0
+  num: 64
+  unit: Hz
+time:
+  log10_min: -3.0
+  log10_max: 3.0
+  num: 64
+  unit: s
+plasma:
+  eps_th: 1.0
+  eps_B: 0.1
+  mu: 0.62
+  mu_e: 1.18
+wind:
+  a_wind_value: 10000000.0
+  a_wind_unit: g/cm
+beta_sh: 0.36

@@ -15,6 +15,5 @@ def dump_csv(
     outpath:Path,
 )->Path:
     fw.write_csv_with_params(df,metadata,outpath)
-    print(f"output {outpath}")
     return outpath
 

@@ -13,6 +13,8 @@ from module.radius import r_rad
 from module.luminosity import calculate_lnu_th
 from module.optical_depth import calculate_tau_nu,calculate_escape_fraction
 from dataclasses import dataclass
+from functools import cached_property
+from module.utilities import unit_aliases as unit
 
 @dataclass
 class SynchrotronSpectrum:
@@ -25,10 +27,10 @@ class SynchrotronSpectrum:
     a_wind_unit: str
     t_value: float
     t_unit: str
-    nu_array_value: float
-    nu_array_unit: str
+    nu_array_value: np.ndarray
+    nu_unit: str
 
-    @property
+    @cached_property
     def a_wind_quantity(self):
         return u.Quantity(self.a_wind_value,u.Unit(self.a_wind_unit))
 
@@ -36,11 +38,11 @@ class SynchrotronSpectrum:
     def t(self):
         return u.Quantity(self.t_value,u.Unit(self.t_unit))
 
-    @property
+    @cached_property
     def nu_array_quantity(self):
-        return u.Quantity(self.nu_array_value, u.Unit(self.nu_array_unit))
+        return u.Quantity(self.nu_array_value, u.Unit(self.nu_unit))
 
-    @property
+    @cached_property
     def theta_e(self)->float:
         return calculate_theta_e(
             eps_th=self.eps_th,
@@ -80,7 +82,7 @@ class SynchrotronSpectrum:
             mu=self.mu
         )
 
-    @property
+    @cached_property
     def omega(self):
         return synchrotron_scaling_values.convert_nu_into_omega(self.nu_array_quantity)
 
@@ -169,11 +171,12 @@ class SynchrotronSpectrum:
         )
 
     @property
-    def f_esc(self):
+    def f_esc(self)->np.ndarray:
         """ escape fraction
         """
         return calculate_escape_fraction(tau_nu=self.tau_nu)
 
     @property
-    def lnu_th(self):
-        return calculate_lnu_th(snu_th=self.S_nu_th,f_esc=self.f_esc,r=self.r)
+    def lnu_th(self)->np.ndarray:
+        lnu_th_quantity = calculate_lnu_th(snu_th=self.S_nu_th,f_esc=self.f_esc,r=self.r)
+        return np.asarray(lnu_th_quantity.to_value(unit.specific_luminosity))
