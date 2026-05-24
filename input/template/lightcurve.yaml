@@ -6,4 +6,6 @@
 unit: "GHz"
 width: 1.0e-1
 values:
+  - 5.5
   - 9.0
+  - 100.0

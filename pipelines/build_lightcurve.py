@@ -5,11 +5,9 @@
 # pyright: reportUnknownMemberType=false
 import astropy.units as u
 from pathlib import Path
-from module.dump_csv import dump_csv
 from module.utilities import filereaders as fr
 import argparse
 import numpy as np
-from tqdm import tqdm
 import pandas as pd
 
 def parse_lightcurve_config(config:dict):
@@ -30,6 +28,21 @@ def build_lc_row(metadata:dict,df:pd.DataFrame,nu:float):
         "lnu": float(row["lnu"]),
     }
 
+def build_lc(inpath_list:list[Path],nu_ref:float)->pd.DataFrame:
+    lc_longformat = []
+    for inpath in inpath_list:
+        metadata = fr.read_keyvalue(inpath)
+        df = fr.read_csv(inpath)
+        nu,lc_row = build_lc_row(metadata,df,nu_ref)
+        lc_single_line = {
+            "nu": nu,
+            **metadata,
+            **lc_row
+        }
+        lc_longformat.append(lc_single_line)
+
+    return pd.DataFrame(lc_longformat)
+
 def main(args:argparse.Namespace):
 
     outpath:Path = args.output
@@ -39,17 +52,8 @@ def main(args:argparse.Namespace):
     lc_longformat = []
 
     # スペクトルの時間発展データを取得
-    for inpath in inpath_list:
-        metadata = fr.read_keyvalue(inpath)
-        df = fr.read_csv(inpath)
-        for nu_ref in nu_refs:
-            nu,lc_row = build_lc_row(metadata,df,nu_ref)
-            lc_single_line = {
-                "nu": nu,
-                **metadata,
-                **lc_row
-            }
-            lc_longformat.append(lc_single_line)
+    for nu_ref in nu_refs:
+        lc_longformat.append(build_lc(inpath_list,nu_ref))
 
     df = pd.DataFrame(lc_longformat)
     df.to_csv(outpath,index=False)

@@ -1,0 +1,11 @@
+TicksConfigure:
+  xlim: [1.0e+06,1.0e+12]
+  ylim: [1.0e+10,1.0e+30]
+  xscale: "log"
+  yscale: "log"
+  fontsize: 16
+
+LabelConfigure:
+  xlabel: '$\nu$ [Hz]'
+  ylabel: '$L_{\nu}$ [erg/s/Hz]'
+  fontsize: 16

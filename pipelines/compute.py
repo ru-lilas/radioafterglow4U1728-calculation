@@ -49,10 +49,12 @@ def _build_freq_array(input_raw:dict)->dict[str,Any]:
 
 def main(args:argparse.Namespace):
 
+    inpath:Path = args.input
     outdir:Path = args.outdir
     outdir.mkdir(parents=True,exist_ok=True)
 
-    input_raw = fr.read_yaml(args.input)
+    print(f"read {inpath}")
+    input_raw = fr.read_yaml(inpath)
     input_time = _build_time_array(input_raw)
     input_freq = _build_freq_array(input_raw)
 
