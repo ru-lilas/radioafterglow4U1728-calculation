@@ -50,6 +50,20 @@ FIXED_YAML := $(INPUTDIR)/template/$(RESO)/$(BETA_DIR)/base.yaml
 #     	"$(FREQ_YAML)" \
 #     	-o "$@"
 #
+.SECONDEXPANSION:
+
+$(DATADIR)/$(MODEL)/$(RESO)/beta/%/lightcurve_lnu.csv: \
+	$$(wildcard $(DATADIR)/$(MODEL)/$(RESO)/beta/$$*/spectrum/[0-9][0-9][0-9].csv) \
+	$(DATADIR)/$(MODEL)/$(RESO)/beta/%/spectrum/.done \
+	pipelines/build_lightcurve.py \
+	input/template/lightcurve.yaml
+	python -m pipelines.build_lightcurve \
+		$(filter %.csv,$^) \
+		-o $@ \
+		-c $(lastword $^)
+	
+.SECONDARY:
+
 $(DATADIR)/$(MODEL)/$(RESO)/beta/%/spectrum/.done: \
 		input/generated/$(MODEL)/$(RESO)/beta/%.yaml \
 		pipelines/compute.py
@@ -71,6 +85,3 @@ input/generated/$(MODEL)/$(RESO)/beta/%.yaml: \
 		--time $(TIME_YAML) \
 		--frequency $(FREQ_YAML) \
 		--outdir input/generated/$(MODEL)/$(RESO)/beta/
-
-# $(YAMLS) &: $(INDIR)/general/varying_beta.yaml pipelines/separate_betas.py
-# 	python -m pipelines.separate_betas $< $(INDIR)/$(MODEL)/$(BETA_DIR)

@@ -1,32 +1,32 @@
-from module.models import SynchrotronSpectrum
+from module.models import SynchrotronSpectrum,InputParameters
+from dataclasses import asdict
 import pandas as pd
 
-def metadata(input_params:dict,ss:SynchrotronSpectrum):
+def metadata(inputparams:InputParameters,ss:SynchrotronSpectrum):
     metadata = {
-        key: value
-        for key, value in input_params.items()
-        if key != "nu_array_value"
+        **asdict(inputparams),
+        "t_value" : ss.t_value,
+        "t_unit" : ss.t_unit,
+        "r_value" : ss.r.value,
+        "r_unit" : ss.r.unit,
+        "n_wind_value" : ss.n_wind.value,
+        "n_wind_unit" : ss.n_wind.unit,
+        "b_mag_value" : ss.b_mag.value,
+        "b_mag_unit" : ss.b_mag.unit,
+        "theta_e" : ss.theta_e,
+        "nu_B_value" : ss.nu_B.value,
+        "nu_crit_value" : ss.nu_crit.value,
+        "j0_value" : ss.j0.value,
+        "j0_unit" : ss.j0.unit,
+        "a0_value" : ss.a0.value,
+        "a0_unit" : ss.a0.unit,
     }
-
-    metadata["r_value"] = ss.r.value
-    metadata["r_unit"] = ss.r.unit
-    metadata["n_wind_value"] = ss.n_wind.value
-    metadata["n_wind_unit"] = ss.n_wind.unit
-    metadata["b_mag_value"] = ss.b_mag.value
-    metadata["b_mag_unit"] = ss.b_mag.unit
-    metadata["theta_e"] = ss.theta_e
-    metadata["nu_B_value"] = ss.nu_B.value
-    metadata["nu_crit_value"] = ss.nu_crit.value
-    metadata["j0_value"] = ss.j0.value
-    metadata["j0_unit"] = ss.j0.unit
-    metadata["a0_value"] = ss.a0.value
-    metadata["a0_unit"] = ss.a0.unit
 
     return metadata
 
 def tabledata(ss:SynchrotronSpectrum)->pd.DataFrame:
     df = pd.DataFrame({
-        "nu":ss.nu_array_value,
+        "nu":ss.nu.value_array,
         "chi":ss.chi,
         "x_m":ss.xm,
         "jnu_dimless":ss.j_nu_th_dimless,

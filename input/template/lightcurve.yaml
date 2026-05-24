@@ -1,0 +1,9 @@
+# write frequencies where you want to draw the lightcurve
+# unit: 周波数の単位
+# width: valueからのずれとして許容する値
+# values: 周波数
+
+unit: "GHz"
+width: 1.0e-1
+values:
+  - 9.0

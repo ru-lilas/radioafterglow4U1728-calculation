@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any
 from module.dump_csv import dump_csv
 from module.utilities import filereaders as fr
-from module.models import SynchrotronSpectrum
+from module.models import InputParameters, SynchrotronSpectrum, Frequency
 from module import build_output_data
 import argparse
 import numpy as np
@@ -39,12 +39,12 @@ def _build_freq_array(input_raw:dict)->dict[str,Any]:
             f"Available keys: {available}"
         ) from e
     return {
-        "nu_array_value": np.logspace(
+        "value_array": np.logspace(
             start=input_freq["log10_min"],
             stop=input_freq["log10_max"],
             num=input_freq["num"]
         ),
-        "nu_unit": input_freq["unit"]
+        "unit": input_freq["unit"]
     }
 
 def main(args:argparse.Namespace):
@@ -57,21 +57,25 @@ def main(args:argparse.Namespace):
     input_freq = _build_freq_array(input_raw)
 
     t_array = np.asarray(input_time["t_array_value"])
-    spectrum_input = {
-        **input_raw["plasma"],
-        **input_raw["wind"],
-        **input_freq,
-        "beta_sh": input_raw["beta_sh"],
-        "t_value": float(input_time["t_array_value"][0]),
-        "t_unit": input_time["t_unit"]
-    }
-    ss = SynchrotronSpectrum(**spectrum_input)
+    input_params = InputParameters(
+        **{
+            **input_raw["plasma"],
+            **input_raw["wind"],
+            "beta_sh": input_raw["beta_sh"],
+        }
+    )
+    nu = Frequency(**input_freq)
+    ss = SynchrotronSpectrum(
+        inputparams=input_params,
+        t_value = float(input_time["t_array_value"][0]),
+        t_unit = input_time["t_unit"],
+        nu=nu
+        )
 
     for i,t in enumerate(tqdm(t_array)):
         ss.t_value = t
-        spectrum_input["t_value"] = t
         metadata = build_output_data.metadata(
-            input_params=spectrum_input,
+            inputparams=input_params,
             ss=ss
         )
         df = build_output_data.tabledata(ss)

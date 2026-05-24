@@ -17,7 +17,7 @@ from functools import cached_property
 from module.utilities import unit_aliases as unit
 
 @dataclass
-class SynchrotronSpectrum:
+class InputParameters:
     eps_th: float
     eps_B: float
     mu: float
@@ -25,14 +25,22 @@ class SynchrotronSpectrum:
     beta_sh: float
     a_wind_value: float
     a_wind_unit: str
+
+@dataclass
+class Frequency:
+    value_array: np.ndarray
+    unit: str
+
+@dataclass
+class SynchrotronSpectrum:
+    inputparams: InputParameters
     t_value: float
     t_unit: str
-    nu_array_value: np.ndarray
-    nu_unit: str
+    nu:Frequency
 
     @cached_property
     def a_wind_quantity(self):
-        return u.Quantity(self.a_wind_value,u.Unit(self.a_wind_unit))
+        return u.Quantity(self.inputparams.a_wind_value,u.Unit(self.inputparams.a_wind_unit))
 
     @property
     def t(self):
@@ -40,22 +48,22 @@ class SynchrotronSpectrum:
 
     @cached_property
     def nu_array_quantity(self):
-        return u.Quantity(self.nu_array_value, u.Unit(self.nu_unit))
+        return u.Quantity(self.nu.value_array, u.Unit(self.nu.unit))
 
     @cached_property
     def theta_e(self)->float:
         return calculate_theta_e(
-            eps_th=self.eps_th,
-            mu=self.mu,
-            mu_e=self.mu_e,
-            beta_sh=self.beta_sh
+            eps_th=self.inputparams.eps_th,
+            mu=self.inputparams.mu,
+            mu_e=self.inputparams.mu_e,
+            beta_sh=self.inputparams.beta_sh
         )
 
     @property
     def r(self)->u.Quantity:
         return r_rad(
             t=self.t,
-            beta_sh=self.beta_sh
+            beta_sh=self.inputparams.beta_sh
         )
 
     @property
@@ -63,23 +71,23 @@ class SynchrotronSpectrum:
         return calculate_n_wind(
             a_wind=self.a_wind_quantity,
             r=self.r,
-            mu=self.mu
+            mu=self.inputparams.mu
         )
 
     @property
     def n_ele(self)->u.Quantity:
         return calculate_n_ele_for_strong_shock(
             n_upstream=self.n_wind,
-            mu_e=self.mu_e
+            mu_e=self.inputparams.mu_e
         )
 
     @property
     def b_mag(self):
         return magnetic_field(
             n_us=self.n_wind,
-            beta_sh=self.beta_sh,
-            eps_B=self.eps_B,
-            mu=self.mu
+            beta_sh=self.inputparams.beta_sh,
+            eps_B=self.inputparams.eps_B,
+            mu=self.inputparams.mu
         )
 
     @cached_property
