@@ -1,36 +1,44 @@
-NUMBERS := $(shell seq -f "%03g" 10 50)
-TIMES := $(shell seq -f "%03g" 0 100)
-
-CSVS := $(addsuffix .csv,$(NUMBERS))
-
 INPUTDIR := input
 DATADIR := data
 FIGDIR := fig
 
 BETA_DIR := beta
+BETA ?= 10
+BETA_FMT := $(shell printf "%03d" $(BETA))
 TIME_RESO ?= 64
 SPEC_RESO ?= 256
 RESO := t$(TIME_RESO)f$(SPEC_RESO)
 
 THERMAL_DIR := thermal_only
 MODEL ?= $(THERMAL_DIR)
+SPECTRUM_PEAK_EVOLUTION := spectrum_peak_evolution
 
 TIME_YAML  := $(INPUTDIR)/template/$(RESO)/time.yaml
 FREQ_YAML := $(INPUTDIR)/template/$(RESO)/frequency.yaml
 VARYING_YAML := $(INPUTDIR)/template/$(RESO)/varying_beta.yaml
 FIXED_YAML := $(INPUTDIR)/template/$(RESO)/$(BETA_DIR)/base.yaml
 
-$(FIGDIR)/$(MODEL)/$(RESO)/beta/020/spectrum/%.pdf: \
-	$(DATADIR)/$(MODEL)/$(RESO)/beta/020/spectrum/%.csv \
-	pipelines/plot/spectrum.py \
-	plotconfigs/spectrum.yaml
+.SECONDEXPANSION:
+
+$(FIGDIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/spectrum/%.pdf: \
+	$(DATADIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/spectrum/.done \
+		pipelines/plot/spectrum.py \
+		plotconfigs/spectrum.yaml
 	python -m pipelines.plot.spectrum \
+		$(DATADIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/spectrum/$*.csv \
+ 		-o $@ \
+		-c $(lastword $^)
+
+$(FIGDIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/$(SPECTRUM_PEAK_EVOLUTION).pdf: \
+	$(DATADIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/$(SPECTRUM_PEAK_EVOLUTION).csv \
+	pipelines/plot/$(SPECTRUM_PEAK_EVOLUTION).py \
+	plotconfigs/$(SPECTRUM_PEAK_EVOLUTION).yaml
+	python -m pipelines.plot.$(SPECTRUM_PEAK_EVOLUTION) \
 		$< \
 		-o $@ \
 		-c $(lastword $^)
 
-.SECONDEXPANSION:
-$(FIGDIR)/$(MODEL)/$(RESO)/beta/%/lightcurve.pdf: \
+$(FIGDIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/lightcurve.pdf: \
 	$$(wildcard $(DATADIR)/$(MODEL)/$(RESO)/beta/$$*/spectrum/[0-9][0-9][0-9].csv) \
 	$(DATADIR)/$(MODEL)/$(RESO)/beta/$$*/spectrum/.done \
 	pipelines/plot/lightcurve.py \
@@ -41,16 +49,23 @@ $(FIGDIR)/$(MODEL)/$(RESO)/beta/%/lightcurve.pdf: \
 		-c $(lastword $^)
 
 .SECONDARY:
+$(DATADIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/$(SPECTRUM_PEAK_EVOLUTION).csv: \
+	$$(wildcard $(DATADIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/spectrum/[0-9][0-9][0-9].csv) \
+	pipelines/spectrum_peak_evolution.py
+	python -m pipelines.spectrum_peak_evolution \
+		$(filter %.csv,$^) \
+		-o $@ \
 
-$(DATADIR)/$(MODEL)/$(RESO)/beta/%/spectrum/.done: \
-	input/generated/$(MODEL)/$(RESO)/beta/%.yaml \
+$(DATADIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/spectrum/.done: \
+	input/generated/$(MODEL)/$(RESO)/beta/$(BETA_FMT).yaml \
 		pipelines/compute.py
 	python -m pipelines.compute \
 		$< \
-		--outdir $(DATADIR)/$(MODEL)/$(RESO)/beta/$*/spectrum
+		--outdir $(DATADIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/spectrum
+	mkdir -p $(dir $@)
 	touch $@
 
-input/generated/$(MODEL)/$(RESO)/beta/%.yaml: \
+input/generated/$(MODEL)/$(RESO)/beta/$(BETA_FMT).yaml: \
 	$(VARYING_YAML) \
 	$(FIXED_YAML) \
 	$(TIME_YAML) \
