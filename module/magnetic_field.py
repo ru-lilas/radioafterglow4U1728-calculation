@@ -19,3 +19,9 @@ def magnetic_field(
         ),unit.magnetic_field
     )
 
+def wind_profile(
+    eps_B:float,
+    a_wind:u.Quantity[u.g/u.cm],
+    t:u.Quantity[u.s]
+)->u.Quantity:
+    return (1.5*np.sqrt(eps_B*a_wind)/t).to(unit.magnetic_field)

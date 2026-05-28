@@ -154,3 +154,9 @@ def angle_averaged_dimensionless_synchrotron_power(
 
     # prefactor 1/2
     return 0.5 * integral
+
+def jnu_th_dimless(x_m:np.ndarray):
+    return x_m*thermal_Ip(x_m)
+
+def anu_th_dimless(x_m:np.ndarray):
+    return thermal_Ip(x_m)/x_m

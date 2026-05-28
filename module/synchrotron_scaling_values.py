@@ -3,8 +3,21 @@
 import astropy.units as u
 import numpy as np
 from module.utilities import unit_aliases as unit
-from astropy.constants import e,c,m_e
+from astropy.constants import e,c,m_e,m_p
 e = u.Quantity(e.esu)
+
+def calculate_t_peak_nu(
+    eps_B: float,
+    theta: float,
+    a_wind: u.Quantity,
+    nu: u.Quantity,
+):
+    t_peak = (
+        9.0 * theta**2 * e * np.sqrt(eps_B * a_wind)
+    )/(
+            8.0 * np.pi * m_e * c * nu
+        )
+    return t_peak.to(u.s) 
 
 def calculate_P0(b_mag:u.Quantity):
     return (np.sqrt(3)*e**3*b_mag/(m_e*c**2)).to(u.erg/u.s/u.Hz)
@@ -57,3 +70,42 @@ def calculate_nu_crit(
     theta:float
 )->u.Quantity:
     return (1.5 * theta**2 * nu_B).to(u.Hz)
+
+def calculate_nu_b(
+        b_mag:u.Quantity
+)->u.Quantity:
+    return convert_omega_into_nu(omega_b(b_mag))
+
+def calculate_phi_theta(
+    theta:float,
+    eps_B:float,
+    a_wind:u.Quantity
+)->float:
+    nu_t = (
+        9.0 * theta**2 * e * np.sqrt(eps_B * a_wind)
+    )/(
+            8.0 * np.pi * m_e * c
+        )
+    return nu_t.to_value(u.dimensionless_unscaled)
+
+def calculate_tau_theta(
+    eps_B: float,
+    theta: float,
+    mu: float,
+    mu_e: float,
+    beta_sh: float,
+    a_wind: u.Quantity
+):
+    tau = (
+        2.0*e*mu_e/(3**(2.5)*theta**5*mu*m_p*c*beta_sh)
+            *np.sqrt(a_wind/eps_B)
+    )
+    return tau.to(u.dimensionless_unscaled)
+
+def j_theta(f_theta:float,n_ele_theta:u.Quantity,b_mag_theta:u.Quantity):
+    j_theta = (
+            np.sqrt(3)*e**3*n_ele_theta*b_mag_theta*f_theta
+        )/(
+            8.0*np.pi*m_e*c**2
+        )
+    return j_theta.to(unit.emissivity)
