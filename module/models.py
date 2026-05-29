@@ -5,6 +5,7 @@ import astropy.units as u
 import numpy as np
 from module import thermal
 from module import synchrotron_scaling_values
+from module import electron_temperature
 from module.electron_temperature import calculate_theta_e
 from module.electron_density import calculate_n_ele_for_strong_shock
 from module.magnetic_field import magnetic_field
@@ -25,6 +26,97 @@ class InputParameters:
     beta_sh: float
     a_wind_value: float
     a_wind_unit: str
+
+@dataclass
+class SynchrotronScalingValues:
+    input:InputParameters
+    nu_value: float
+    nu_unit: str
+
+    @cached_property
+    def a_wind(self)->u.Quantity:
+        return u.Quantity(self.input.a_wind_value,u.Unit(self.input.a_wind_unit))
+    @cached_property
+    def nu(self)->u.Quantity:
+        return u.Quantity(self.nu_value,u.Unit(self.nu_unit))
+
+    @cached_property
+    def theta(self)->float:
+        return electron_temperature.calculate_theta_e(
+            eps_th=self.input.eps_th,
+            mu=self.input.mu,
+            mu_e=self.input.mu_e,
+            beta_sh=self.input.beta_sh
+        )
+
+    @cached_property
+    def phi_theta(self):
+        return synchrotron_scaling_values.calculate_phi_theta(
+            theta=self.theta,
+            eps_B=self.input.eps_B,
+            a_wind=self.a_wind
+        )
+
+    @cached_property
+    def t_theta(self):
+        return synchrotron_scaling_values.calculate_t_theta(
+            phi_theta=self.phi_theta,
+            nu=self.nu
+        )
+
+    @cached_property
+    def r_theta(self):
+        return synchrotron_scaling_values.calculate_r_theta(
+            beta_sh=self.input.beta_sh,
+            t_theta=self.t_theta
+        )
+
+    @cached_property
+    def n_e_theta(self):
+        return synchrotron_scaling_values.calculate_n_ele_theta(
+            beta_sh=self.input.beta_sh,
+            mu=self.input.mu,
+            mu_e=self.input.mu_e,
+            a_wind = self.a_wind,
+            t_theta=self.t_theta
+        )
+
+    @cached_property
+    def b_mag_theta(self):
+        return synchrotron_scaling_values.calculate_b_mag_theta(
+            eps_B=self.input.eps_B,
+            a_wind=self.a_wind,
+            t_theta=self.t_theta
+        )
+
+    @cached_property
+    def j_theta(self):
+        return synchrotron_scaling_values.calculate_j_theta(self.theta,self.n_e_theta,self.b_mag_theta)
+
+    @cached_property
+    def alpha_theta(self):
+        return synchrotron_scaling_values.calculate_alpha_theta(self.theta,self.n_e_theta,self.b_mag_theta)
+
+    @cached_property
+    def l_theta(self):
+        return synchrotron_scaling_values.calculate_l_theta(
+            r_theta=self.r_theta,
+            j_theta=self.j_theta,
+            alpha_theta=self.alpha_theta
+        )
+
+    @cached_property
+    def tau_theta(self):
+        return synchrotron_scaling_values.calculate_tau_theta(
+            alpha_theta=self.alpha_theta,
+            r_theta=self.r_theta
+        )
+
+    def lnu_th_xi(self,xi:np.ndarray):
+        return synchrotron_scaling_values.calculate_lnu_xi_dimless(
+            tau_theta=self.tau_theta,
+            xi=xi
+        )
 
 @dataclass
 class Frequency:

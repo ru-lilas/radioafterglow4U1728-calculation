@@ -1,0 +1,11 @@
+TicksConfigure:
+  xlim: [1.0e+00,1.0e+11]
+  ylim: [1.0e+00,1.0e+04]
+  xscale: "log"
+  yscale: "log"
+  fontsize: 16
+
+LabelConfigure:
+  xlabel: '$\tau_{\Theta}$'
+  ylabel: '$\xi_{\mathrm{peak}}=\phi_{\mathrm{peak}}/\phi_{\Theta}$'
+  fontsize: 24

@@ -18,6 +18,14 @@ FREQ_YAML := $(INPUTDIR)/template/$(RESO)/frequency.yaml
 VARYING_YAML := $(INPUTDIR)/template/$(RESO)/varying_beta.yaml
 FIXED_YAML := $(INPUTDIR)/template/$(RESO)/$(BETA_DIR)/base.yaml
 
+fig/test/tau_xi_dependence.pdf: data/test/tau_xi_dependence.csv plot/test/test_tau_xi_dependence.py plotconfigs/tau_xi_dependence.yaml
+	python -m plot.test.test_tau_xi_dependence \
+		$< \
+		-o $@ \
+		-c $(lastword $^)
+data/test/tau_xi_dependence.csv: test/test_tau_xi_dependence.py
+	python -m test.test_tau_xi_dependence $@
+
 .SECONDEXPANSION:
 
 $(FIGDIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/spectrum/%.pdf: \
@@ -79,9 +87,16 @@ input/generated/$(MODEL)/$(RESO)/beta/$(BETA_FMT).yaml: \
 		--frequency $(FREQ_YAML) \
 		--outdir input/generated/$(MODEL)/$(RESO)/beta/
 
+
 plotconfigs/lightcurve.yaml:
 	@echo "エラー: ファイルがありません $@"
 	@false
 plotconfigs/spectrum.yaml:
+	@echo "エラー: ファイルがありません $@"
+	@false
+test/test_tau_xi_dependence.py:
+	@echo "エラー: ファイルがありません $@"
+	@false
+plotconfigs/tau_xi_dependence.yaml:
 	@echo "エラー: ファイルがありません $@"
 	@false

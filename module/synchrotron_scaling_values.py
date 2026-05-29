@@ -2,8 +2,10 @@
 # pyright: reportUnknownMemberType=false
 import astropy.units as u
 import numpy as np
+from module import electron_temperature, synchrotron_function
 from module.utilities import unit_aliases as unit
 from astropy.constants import e,c,m_e,m_p
+from module import f_factor
 e = u.Quantity(e.esu)
 
 def calculate_t_peak_nu(
@@ -80,32 +82,102 @@ def calculate_phi_theta(
     theta:float,
     eps_B:float,
     a_wind:u.Quantity
-)->float:
+)->u.Quantity:
     nu_t = (
         9.0 * theta**2 * e * np.sqrt(eps_B * a_wind)
     )/(
             8.0 * np.pi * m_e * c
         )
-    return nu_t.to_value(u.dimensionless_unscaled)
+    return nu_t.to(u.s*u.GHz)
 
-def calculate_tau_theta(
-    eps_B: float,
-    theta: float,
-    mu: float,
-    mu_e: float,
-    beta_sh: float,
-    a_wind: u.Quantity
-):
-    tau = (
-        2.0*e*mu_e/(3**(2.5)*theta**5*mu*m_p*c*beta_sh)
-            *np.sqrt(a_wind/eps_B)
-    )
-    return tau.to(u.dimensionless_unscaled)
+# def calculate_tau_theta(
+#     eps_B: float,
+#     theta: float,
+#     mu: float,
+#     mu_e: float,
+#     beta_sh: float,
+#     a_wind: u.Quantity
+# ):
+#     tau = (
+#         2.0*e*mu_e/(3**(2.5)*theta**5*mu*m_p*c*beta_sh)
+#             *np.sqrt(a_wind/eps_B)
+#     )
+#     return tau.to(u.dimensionless_unscaled)
 
-def j_theta(f_theta:float,n_ele_theta:u.Quantity,b_mag_theta:u.Quantity):
+def calculate_j_theta(
+        theta:float,
+        n_ele_theta:u.Quantity,
+        b_mag_theta:u.Quantity
+)->u.Quantity:
+    f_theta = f_factor.exact(theta)
     j_theta = (
             np.sqrt(3)*e**3*n_ele_theta*b_mag_theta*f_theta
         )/(
             8.0*np.pi*m_e*c**2
         )
     return j_theta.to(unit.emissivity)
+
+def calculate_alpha_theta(
+    theta:float,
+    n_ele_theta:u.Quantity,
+    b_mag_theta:u.Quantity
+)->u.Quantity:
+    f_theta = f_factor.exact(theta)
+    alpha_theta = (
+            np.pi*e*n_ele_theta*f_theta
+    )/(
+            3**(1.5)*theta**5*b_mag_theta
+        )
+    return alpha_theta.to(unit.absorption_coefficient)
+
+def calculate_tau_theta(
+    alpha_theta:u.Quantity,
+    r_theta:u.Quantity,
+):
+    tau_theta = (alpha_theta*r_theta).to_value(u.dimensionless_unscaled) 
+    return np.asarray(tau_theta)
+
+def calculate_t_theta(phi_theta:u.Quantity,nu:u.Quantity)->u.Quantity:
+    t_theta = phi_theta/nu
+    return t_theta.to(u.s)
+
+def calculate_r_theta(beta_sh:float,t_theta:u.Quantity)->u.Quantity:
+    r_theta = beta_sh*c*t_theta
+    return r_theta.to(u.cm)
+
+def calculate_n_ele_theta(
+    beta_sh:float,
+    mu:float,
+    mu_e:float,
+    a_wind:u.Quantity,
+    t_theta:u.Quantity
+)->u.Quantity:
+    # strong shock, compression ratio = 4
+    n_ele_theta = mu_e*a_wind/(np.pi*mu*m_p*(beta_sh*c*t_theta)**2)
+    return n_ele_theta.to(unit.number_density)
+
+def calculate_b_mag_theta(
+    eps_B:float,
+    a_wind:u.Quantity[u.g/u.cm],
+    t_theta:u.Quantity[u.s]
+)->u.Quantity:
+    return (1.5*np.sqrt(eps_B*a_wind)/t_theta).to(unit.magnetic_field)
+
+def calculate_l_theta(
+    r_theta:u.Quantity,
+    j_theta:u.Quantity,
+    alpha_theta:u.Quantity
+)->u.Quantity:
+    l_theta = 4.0 * np.pi**2 * r_theta**2 * j_theta / alpha_theta
+    return l_theta.to(unit.specific_luminosity)
+
+def func_ssa_peak(tau_theta:float,xi:float):
+    tau = np.atleast_1d(tau_theta)
+    xi_arr = np.atleast_1d(xi)
+    ip_xi = synchrotron_function.thermal_Ip(xi_arr)
+    return np.log(tau_theta) + np.log(xi) + np.log(ip_xi)
+
+def calculate_lnu_xi_dimless(tau_theta:np.ndarray,xi:np.ndarray)->np.ndarray:
+    ip_xi = synchrotron_function.thermal_Ip(xi)
+    lnu_xi = xi**2 * (-np.expm1(-tau_theta*ip_xi/xi))
+    return lnu_xi
