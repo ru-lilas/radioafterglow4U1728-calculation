@@ -7,8 +7,8 @@ TicksConfigure:
 
 LabelConfigure:
   xlabel: '$\tau_{\Theta}$'
-  ylabel: '$\xi_{\mathrm{peak}}=\phi_{\mathrm{peak}}/\phi_{\Theta}$'
+  ylabel: '$L_{\nu,\mathrm{peak}}~/~L_{\Theta}$'
   fontsize: 24
 
 x_name: "tau_theta"
-y_name: "xi_peak"
+y_name: "lnu_peak_dimless"

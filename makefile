@@ -18,6 +18,15 @@ FREQ_YAML := $(INPUTDIR)/template/$(RESO)/frequency.yaml
 VARYING_YAML := $(INPUTDIR)/template/$(RESO)/varying_beta.yaml
 FIXED_YAML := $(INPUTDIR)/template/$(RESO)/$(BETA_DIR)/base.yaml
 
+fig/test/tau_theta__lnu_peak.pdf: \
+	data/test/tau_theta_dependence.csv\
+	plot/test/test_tau_theta_dependence.py\
+	plotconfigs/tau_theta__lnu_peak.yaml
+	python -m plot.test.test_tau_theta_dependence \
+		$< \
+		-o $@ \
+		-c $(lastword $^)
+
 fig/test/tau_theta__tau_peak.pdf: \
 	data/test/tau_theta_dependence.csv\
 	plot/test/test_tau_theta_dependence.py\
