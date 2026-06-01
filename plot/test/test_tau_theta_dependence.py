@@ -13,6 +13,8 @@ def main(args:argparse.Namespace):
     conf = fr.read_yaml(confpath)
     conftick = plot_utils.TicksConfigure(**conf["TicksConfigure"])
     conflabel = plot_utils.LabelConfigure(**conf["LabelConfigure"])
+    xname = conf["x_name"]
+    yname = conf["y_name"]
 
     outpath.parent.mkdir(parents=True,exist_ok=True)
     with PdfPages(outpath) as pdf:
@@ -24,8 +26,8 @@ def main(args:argparse.Namespace):
         plot_utils.configure_tick(ax,conftick)
         plot_utils.configure_label(ax,conflabel)
         ax.loglog(
-            df["tau_theta"],
-            df["xi_peak"],
+            df[xname],
+            df[yname],
             color = "#000000",
             ls="-",
         )

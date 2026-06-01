@@ -175,7 +175,7 @@ def func_ssa_peak(tau_theta:float,xi:float):
     tau = np.atleast_1d(tau_theta)
     xi_arr = np.atleast_1d(xi)
     ip_xi = synchrotron_function.thermal_Ip(xi_arr)
-    return np.log(tau_theta) + np.log(xi) + np.log(ip_xi)
+    return np.log(tau_theta) - np.log(xi) + np.log(ip_xi)
 
 def calculate_lnu_xi_dimless(tau_theta:np.ndarray,xi:np.ndarray)->np.ndarray:
     ip_xi = synchrotron_function.thermal_Ip(xi)

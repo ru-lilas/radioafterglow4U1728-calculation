@@ -18,13 +18,26 @@ FREQ_YAML := $(INPUTDIR)/template/$(RESO)/frequency.yaml
 VARYING_YAML := $(INPUTDIR)/template/$(RESO)/varying_beta.yaml
 FIXED_YAML := $(INPUTDIR)/template/$(RESO)/$(BETA_DIR)/base.yaml
 
-fig/test/tau_xi_dependence.pdf: data/test/tau_xi_dependence.csv plot/test/test_tau_xi_dependence.py plotconfigs/tau_xi_dependence.yaml
-	python -m plot.test.test_tau_xi_dependence \
+fig/test/tau_theta__tau_peak.pdf: \
+	data/test/tau_theta_dependence.csv\
+	plot/test/test_tau_theta_dependence.py\
+	plotconfigs/tau_theta__tau_peak.yaml
+	python -m plot.test.test_tau_theta_dependence \
 		$< \
 		-o $@ \
 		-c $(lastword $^)
-data/test/tau_xi_dependence.csv: test/test_tau_xi_dependence.py
-	python -m test.test_tau_xi_dependence $@
+
+fig/test/tau_theta__xi_peak.pdf: \
+	data/test/tau_theta_dependence.csv\
+	plot/test/test_tau_theta_dependence.py\
+	plotconfigs/tau_theta__xi_peak.yaml
+	python -m plot.test.test_tau_theta_dependence \
+		$< \
+		-o $@ \
+		-c $(lastword $^)
+
+data/test/tau_theta_dependence.csv: test/test_tau_theta__xi.py
+	python -m test.test_tau_theta__xi $@
 
 .SECONDEXPANSION:
 

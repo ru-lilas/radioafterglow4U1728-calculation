@@ -1,0 +1,14 @@
+TicksConfigure:
+  xlim: [1.0e+00,1.0e+11]
+  ylim: [0.99,1.01]
+  xscale: "log"
+  yscale: "linear"
+  fontsize: 16
+
+LabelConfigure:
+  xlabel: '$\tau_{\Theta}$'
+  ylabel: '$\tau_{\mathrm{peak}}$'
+  fontsize: 24
+
+x_name: "tau_theta"
+y_name: "tau_peak"
