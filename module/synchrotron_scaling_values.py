@@ -2,6 +2,7 @@
 # pyright: reportUnknownMemberType=false
 import astropy.units as u
 import numpy as np
+from numpy.typing import NDArray
 from module import electron_temperature, synchrotron_function
 from module.utilities import unit_aliases as unit
 from astropy.constants import e,c,m_e,m_p
@@ -130,12 +131,21 @@ def calculate_alpha_theta(
         )
     return alpha_theta.to(unit.absorption_coefficient)
 
+# def calculate_tau_theta(
+#     alpha_theta:u.Quantity,
+#     r_theta:u.Quantity,
+# )->np.ndarray:
+#     tau_theta = np.atleast_1d((alpha_theta*r_theta).to_value(u.dimensionless_unscaled))
+#     return tau_theta
+#
 def calculate_tau_theta(
-    alpha_theta:u.Quantity,
-    r_theta:u.Quantity,
-):
-    tau_theta = (alpha_theta*r_theta).to_value(u.dimensionless_unscaled) 
-    return np.asarray(tau_theta)
+    alpha_theta: u.Quantity,
+    r_theta: u.Quantity,
+)->NDArray[np.float64]:
+    tau_theta = (alpha_theta * r_theta).to_value(
+        u.dimensionless_unscaled
+    )
+    return np.atleast_1d(np.asarray(tau_theta,dtype=float))
 
 def calculate_t_theta(phi_theta:u.Quantity,nu:u.Quantity)->u.Quantity:
     t_theta = phi_theta/nu

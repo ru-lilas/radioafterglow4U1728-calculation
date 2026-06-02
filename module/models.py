@@ -15,7 +15,7 @@ from module.luminosity import calculate_lnu_th
 from module.optical_depth import calculate_tau_nu,calculate_escape_fraction
 from dataclasses import dataclass
 from functools import cached_property
-from module.utilities import unit_aliases as unit
+from module.utilities import bisection, unit_aliases as unit
 
 @dataclass
 class InputParameters:
@@ -112,11 +112,31 @@ class SynchrotronScalingValues:
             r_theta=self.r_theta
         )
 
-    def lnu_th_xi(self,xi:np.ndarray):
-        return synchrotron_scaling_values.calculate_lnu_xi_dimless(
+    @cached_property
+    def xi_peak(self):
+        tau_theta = self.tau_theta[0]
+        def f(xi:float):
+            return synchrotron_scaling_values.func_ssa_peak(tau_theta,xi)
+        xi_peak = bisection.bisection(f,1.0e-01,1.0e+04) 
+        return np.asarray(xi_peak,dtype=np.float64)
+
+    @cached_property
+    def lnu_peak_dimless(self):
+        lnu_peak_dimless = synchrotron_scaling_values.calculate_lnu_xi_dimless(
             tau_theta=self.tau_theta,
-            xi=xi
+            xi=self.xi_peak
         )
+        return lnu_peak_dimless
+
+    @cached_property
+    def phi_peak(self):
+        phi_peak = u.Quantity(self.xi_peak * self.phi_theta)
+        return phi_peak
+
+    @cached_property
+    def t_peak(self)->u.Quantity:
+        return u.Quantity(self.phi_peak/self.nu).to(self.t_theta.unit)
+
 
 @dataclass
 class Frequency:
