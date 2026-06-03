@@ -28,12 +28,14 @@ def main(args:argparse.Namespace):
     )
 
     tau_theta = values.tau_theta[0]
-    t_peak = values.t_peak.to(u.Unit("min"))
+    t_peak = values.t_peak.to(u.Unit("s"))
+    print(f"nu = {values.nu:.2e}")
     print(f"tau_theta = {tau_theta:.2e}")
     print(f"phi_theta = {values.phi_theta:.2e}")
     print(f"xi_peak = {values.xi_peak:.2e}")
     print(f"phi_peak = {values.phi_peak:.2e}")
     print(f"t_peak = {t_peak:.2e}")
+    print(f"lnu_peak = {values.lnu_peak:.2e}")
 
     return
 

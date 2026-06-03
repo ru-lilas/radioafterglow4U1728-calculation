@@ -137,6 +137,11 @@ class SynchrotronScalingValues:
     def t_peak(self)->u.Quantity:
         return u.Quantity(self.phi_peak/self.nu).to(self.t_theta.unit)
 
+    @cached_property
+    def lnu_peak(self):
+        lnu_peak = u.Quantity(self.l_theta*self.lnu_peak_dimless,self.l_theta.unit)
+        return lnu_peak
+
 
 @dataclass
 class Frequency:

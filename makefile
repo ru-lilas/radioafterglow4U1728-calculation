@@ -6,7 +6,7 @@ BETA_DIR := beta
 BETA ?= 10
 BETA_FMT := $(shell printf "%03d" $(BETA))
 TIME_RESO ?= 64
-SPEC_RESO ?= 256
+SPEC_RESO ?= 64
 RESO := t$(TIME_RESO)f$(SPEC_RESO)
 
 THERMAL_DIR := thermal_only
