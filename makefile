@@ -48,10 +48,10 @@ fig/test/tau_theta__xi_peak.pdf: \
 		-o $@ \
 		-c $(lastword $^)
 
-fig/synchrotron_functions/ip.pdf: \
+fig/synchrotron_functions/%.pdf: \
 	data/tabular/xi.csv \
 	plot/test/test_tau_theta_dependence.py \
-	plotconfigs/ip.yaml
+	plotconfigs/&.yaml
 	python -m plot.test.test_tau_theta_dependence \
 		$< \
 		-o $@ \

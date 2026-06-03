@@ -7,8 +7,8 @@ TicksConfigure:
 
 LabelConfigure:
   xlabel: '$\xi$'
-  ylabel: '$I\prime(\xi)$'
+  ylabel: '$\xi^{-1}~I\prime(\xi)$'
   fontsize: 24
 
 x_name: "xi"
-y_name: "ip"
+y_name: "ip_xi_inv"
