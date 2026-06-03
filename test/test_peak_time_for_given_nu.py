@@ -1,4 +1,4 @@
-from module import synchrotron_function, synchrotron_scaling_values
+from module import synchrotron_function, synchrotron_scaling_values, tabular
 from module.utilities import bisection
 import numpy as np
 import pandas as pd
@@ -11,6 +11,9 @@ import astropy.units as u
 def main(args:argparse.Namespace):
     # outpath:Path = args.output
     # outpath.parent.mkdir(parents=True,exist_ok=True)
+    tabular_path:Path = args.tabular
+    df_table = tabular.read_tabular(tabular_path)
+    table = tabular.ThermalSynchrotronTable(df_table)
 
     inputs = InputParameters(
         eps_th=1.0,
@@ -24,7 +27,8 @@ def main(args:argparse.Namespace):
     values = SynchrotronScalingValues(
         input=inputs,
         nu_value=9.0,
-        nu_unit="GHz"
+        nu_unit="GHz",
+        table=table
     )
 
     tau_theta = values.tau_theta[0]
@@ -35,16 +39,18 @@ def main(args:argparse.Namespace):
     print(f"xi_peak = {values.xi_peak:.2e}")
     print(f"phi_peak = {values.phi_peak:.2e}")
     print(f"t_peak = {t_peak:.2e}")
-    print(f"lnu_peak = {values.lnu_peak:.2e}")
+    print(f"lnu_peak/lnu_theta = {values.lnu_peak_dimless[0]:.2e}")
+    print(f"lnu_peak = {values.lnu_peak[0]:.2e}")
 
     return
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
-    # parser.add_argument(
-    #     "output",
-    #     type=Path,
-    # )
+    parser.add_argument(
+        "--tabular",
+        type=Path,
+        required=True
+    )
     args = parser.parse_args()
     main(args)

@@ -18,8 +18,9 @@ FREQ_YAML := $(INPUTDIR)/template/$(RESO)/frequency.yaml
 VARYING_YAML := $(INPUTDIR)/template/$(RESO)/varying_beta.yaml
 FIXED_YAML := $(INPUTDIR)/template/$(RESO)/$(BETA_DIR)/base.yaml
 
-data/test/peak_time_for_given_nu.csv: test/test_peak_time_for_given_nu.py
-	python -m test.test_peak_time_for_given_nu $@
+data/test/peak_time_for_given_nu.csv: test/test_peak_time_for_given_nu.py data/tabular/xi.csv
+	python -m test.test_peak_time_for_given_nu \
+		--tabular $(lastword $^)
 
 fig/test/tau_theta__lnu_peak.pdf: \
 	data/test/tau_theta_dependence.csv\
@@ -57,8 +58,10 @@ fig/synchrotron_functions/%.pdf: \
 		-o $@ \
 		-c $(lastword $^)
 
-data/test/tau_theta_dependence.csv: test/test_tau_theta__xi.py
-	python -m test.test_tau_theta__xi $@
+data/test/tau_theta_dependence.csv: test/test_tau_theta__xi.py data/tabular/xi.csv
+	python -m test.test_tau_theta__xi \
+		$@ \
+		--tabular $(lastword $^)
 
 data/tabular/xi.csv: \
 	input/tabular/xi.yaml \

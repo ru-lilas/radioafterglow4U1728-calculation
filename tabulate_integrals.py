@@ -30,7 +30,9 @@ def main(args:Namespace):
 
     df = pd.DataFrame({
         "xi":xi_array,
+        "ln_xi":np.log(xi_array),
         "ip":ipxi,
+        "ln_ip":np.log(ipxi),
         "ip_xi_inv":ipxi/xi_array,
         "ip_xi2_inv":ipxi/xi_array**2
     })

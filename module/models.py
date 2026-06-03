@@ -3,6 +3,7 @@
 
 import astropy.units as u
 import numpy as np
+from numpy.typing import NDArray
 from module import thermal
 from module import synchrotron_scaling_values
 from module import electron_temperature
@@ -15,6 +16,7 @@ from module.luminosity import calculate_lnu_th
 from module.optical_depth import calculate_tau_nu,calculate_escape_fraction
 from dataclasses import dataclass
 from functools import cached_property
+from module.tabular import ThermalSynchrotronTable
 from module.utilities import bisection, unit_aliases as unit
 
 @dataclass
@@ -32,6 +34,7 @@ class SynchrotronScalingValues:
     input:InputParameters
     nu_value: float
     nu_unit: str
+    table: ThermalSynchrotronTable
 
     @cached_property
     def a_wind(self)->u.Quantity:
@@ -115,16 +118,17 @@ class SynchrotronScalingValues:
     @cached_property
     def xi_peak(self):
         tau_theta = self.tau_theta[0]
-        def f(xi:float):
-            return synchrotron_scaling_values.func_ssa_peak(tau_theta,xi)
+        def f(xi:NDArray[np.float64]):
+            return synchrotron_scaling_values.func_ssa_peak_tablular(xi,tau_theta,self.table)
         xi_peak = bisection.bisection(f,1.0e-01,1.0e+04) 
         return np.asarray(xi_peak,dtype=np.float64)
 
     @cached_property
     def lnu_peak_dimless(self):
-        lnu_peak_dimless = synchrotron_scaling_values.calculate_lnu_xi_dimless(
+        lnu_peak_dimless = synchrotron_scaling_values.calculate_lnu_xi_dimless_tabular(
             tau_theta=self.tau_theta,
-            xi=self.xi_peak
+            xi=self.xi_peak,
+            table=self.table
         )
         return lnu_peak_dimless
 

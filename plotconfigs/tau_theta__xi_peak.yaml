@@ -1,6 +1,6 @@
 TicksConfigure:
   xlim: [1.0e+00,1.0e+11]
-  ylim: [1.0e+00,1.0e+06]
+  ylim: [1.0e+00,1.0e+04]
   xscale: "log"
   yscale: "log"
   fontsize: 16

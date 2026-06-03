@@ -4,6 +4,7 @@ import astropy.units as u
 import numpy as np
 from numpy.typing import NDArray
 from module import electron_temperature, synchrotron_function
+from module.tabular import ThermalSynchrotronTable
 from module.utilities import unit_aliases as unit
 from astropy.constants import e,c,m_e,m_p
 from module import f_factor
@@ -182,15 +183,28 @@ def calculate_l_theta(
     return l_theta.to(unit.specific_luminosity)
 
 def func_ssa_peak(tau_theta:float,xi:float):
-    tau = np.atleast_1d(tau_theta)
     xi_arr = np.atleast_1d(xi)
     ip_xi = synchrotron_function.thermal_Ip(xi_arr)
     return np.log(tau_theta) - np.log(xi) + np.log(ip_xi)
+
+def func_ssa_peak_tablular(xi:NDArray[np.float64],tau_theta:float,table:ThermalSynchrotronTable):
+    log_ip_xi = table.calculate_log_ip(xi)
+    return np.log(tau_theta) - np.log(xi) + log_ip_xi
 
 def calculate_lnu_xi_dimless(
         tau_theta:NDArray[np.float64],
         xi:NDArray[np.float64]
 )->NDArray[np.float64]:
     ip_xi = synchrotron_function.thermal_Ip(xi)
+    lnu_xi = xi**2 * (-np.expm1(-tau_theta*ip_xi/xi))
+    return lnu_xi
+
+def calculate_lnu_xi_dimless_tabular(
+    xi:NDArray[np.float64],
+    tau_theta:NDArray[np.float64],
+    table:ThermalSynchrotronTable
+)->NDArray[np.float64]:
+    log_ip_xi = table.calculate_log_ip(xi)
+    ip_xi = np.exp(log_ip_xi)
     lnu_xi = xi**2 * (-np.expm1(-tau_theta*ip_xi/xi))
     return lnu_xi
