@@ -48,8 +48,22 @@ fig/test/tau_theta__xi_peak.pdf: \
 		-o $@ \
 		-c $(lastword $^)
 
+fig/synchrotron_functions/ip.pdf: \
+	data/tabular/xi.csv \
+	plot/test/test_tau_theta_dependence.py \
+	plotconfigs/ip.yaml
+	python -m plot.test.test_tau_theta_dependence \
+		$< \
+		-o $@ \
+		-c $(lastword $^)
+
 data/test/tau_theta_dependence.csv: test/test_tau_theta__xi.py
 	python -m test.test_tau_theta__xi $@
+
+data/tabular/xi.csv: \
+	input/tabular/xi.yaml \
+		tabulate_integrals.py
+	python $(lastword $^) $< --output $@
 
 .SECONDEXPANSION:
 

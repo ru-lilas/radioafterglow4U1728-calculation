@@ -1,0 +1,14 @@
+TicksConfigure:
+  xlim: [1.0e+00,1.0e+03]
+  ylim: [1.0e-10,1.0e+03]
+  xscale: "log"
+  yscale: "log"
+  fontsize: 16
+
+LabelConfigure:
+  xlabel: '$\xi$'
+  ylabel: '$I\prime(\xi)$'
+  fontsize: 24
+
+x_name: "xi"
+y_name: "ip"
