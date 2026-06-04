@@ -55,7 +55,7 @@ def main(args:argparse.Namespace):
                 [0],[0],
                 color="#000000",
                 ls="-.",
-                label=rf"$\nu={nu_ref:.1e}$ Hz"
+                label=r"$\nu_{\mathrm{ref}}="f"{nu_ref:.1e}$ Hz"
             ),
             Line2D(
                 [0],[0],

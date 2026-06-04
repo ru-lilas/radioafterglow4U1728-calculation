@@ -3,15 +3,27 @@ import numpy as np
 from module.models import ThermalSynchrotronScalingValues,InputParameters,SynchrotronSpectrum
 from module import tabular
 from module.utilities import filewriters as fw
+from module.utilities import filereaders as fr
 from module.utilities import unit_aliases as ua
 from pathlib import Path
 import pandas as pd
 import astropy.units as u
 
+def fetch_nu_ref(refdata:dict)->float:
+    value = float(refdata["nu_ref_value"])
+    unit = u.Unit(refdata["nu_ref_unit"])
+    quantity = u.Quantity(value,unit)
+
+    return np.atleast_1d(np.asarray(quantity.to_value(u.Unit("Hz")),dtype=np.float64))[0]
+
 def main(args:argparse.Namespace):
     outpath:Path = args.output
 
     tabular_path:Path = args.tabular
+    refpath:Path = args.reference
+
+    refdata:dict = fr.read_yaml(refpath)
+
     df_table = tabular.read_tabular(tabular_path)
     table = tabular.ThermalSynchrotronTable(df_table)
     nu_arr =np.logspace(
@@ -38,12 +50,14 @@ def main(args:argparse.Namespace):
     t_peak_arr = scalings.t_peak
     t_peak_arr_value = np.asarray(t_peak_arr.to_value(u.Unit("s")),dtype=np.float64)
 
-    i = 160
-    print(f"Reference index i={i}")
-    nu_ref = nu_arr[i]
+    nu_ref = fetch_nu_ref(refdata)
+    idx = np.abs(np.log(nu_arr / nu_ref)).argmin()
+    t_peak_value_ref:float = t_peak_arr_value[idx]
+    print(f"Reference frequency :{nu_ref:.2e} Hz (index i={idx})")
+    print(f"Estimated peak time :{t_peak_value_ref:.2e} s")
+
     lnu_peak_ref_arr = np.asarray(scalings.lnu_peak.to_value(ua.specific_luminosity),dtype=np.float64)
-    lnu_peak_ref = lnu_peak_ref_arr[i]
-    t_peak_value_ref:float = t_peak_arr_value[i]
+    lnu_peak_ref = lnu_peak_ref_arr[idx]
 
     spectrum = SynchrotronSpectrum(
         inputs=inputs,
@@ -54,15 +68,16 @@ def main(args:argparse.Namespace):
         tabular=table
     )
 
+    df = pd.DataFrame({
+        "nu":nu_arr,
+        "lnu_th":spectrum.lnu_th.to_value(ua.specific_luminosity)
+    })
+
     metadata = {
         "t_peak_ref": t_peak_value_ref,
         "nu_peak_ref": nu_ref,
         "lnu_peak_ref": lnu_peak_ref
     }
-    df = pd.DataFrame({
-        "nu":nu_arr,
-        "lnu_th":spectrum.lnu_th.to_value(ua.specific_luminosity)
-    })
 
     fw.write_csv_with_params(df,metadata,outpath)
 
@@ -73,6 +88,11 @@ if __name__ == "__main__":
     
     parser.add_argument(
         "--tabular",
+        type=Path,
+        required=True
+    )
+    parser.add_argument(
+        "--reference",
         type=Path,
         required=True
     )

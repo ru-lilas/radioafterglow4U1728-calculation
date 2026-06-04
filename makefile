@@ -27,9 +27,13 @@ $(FIGDIR)/test/%.pdf: \
  		-o $@ \
 		-c $(lastword $^)
 
-$(DATADIR)/test/test_peak_matching.csv: test/test_thermal_spectrum.py data/tabular/xi.csv
-	python -m test.test_thermal_spectrum \
+$(DATADIR)/test/%.csv: \
+	test/%.py \
+	input/test/%.yaml \
+	data/tabular/xi.csv
+	python -m test.$* \
 		--output $@ \
+		--reference $(word 2,$^)\
 		--tabular $(lastword $^)
 
 data/test/peak_time_for_given_nu.csv: test/test_peak_time_for_given_nu.py data/tabular/xi.csv
