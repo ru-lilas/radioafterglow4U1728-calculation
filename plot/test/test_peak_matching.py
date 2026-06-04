@@ -6,6 +6,7 @@ from pathlib import Path
 import argparse
 from matplotlib.backends.backend_pdf import PdfPages
 import astropy.units as u
+import pandas as pd
 
 def main(args:argparse.Namespace):
     inpath:Path = args.input
@@ -15,8 +16,8 @@ def main(args:argparse.Namespace):
     conf = fr.read_yaml(confpath)
     conftick = plot_utils.TicksConfigure(**conf["TicksConfigure"])
     conflabel = plot_utils.LabelConfigure(**conf["LabelConfigure"])
-    xname = conf["x_name"]
-    yname = conf["y_name"]
+    xname = str(conf["x_name"])
+    yname = str(conf["y_name"])
 
 
     df = fr.read_csv(inpath)
@@ -30,8 +31,15 @@ def main(args:argparse.Namespace):
     nu_ref = metadata["nu_peak_ref"]
     lnu_peak_estimated = metadata["lnu_peak_ref"]
 
+    # peak luminosity
+    row_peak = pd.DataFrame(df.loc[[df[yname].idxmax()]])
+    nu_peak = float(row_peak.iloc[0][xname])
+    lnu_peak = float(row_peak.iloc[0][yname])
+    nu_err = 1.0 - nu_peak/nu_ref
+    lnu_err = 1.0 - lnu_peak/lnu_peak_estimated
+
     with PdfPages(outpath) as pdf:
-    
+
         figsize=(16,9)
         fig,ax = plt.subplots(figsize=figsize)
         fig.set_layout_engine("constrained")
@@ -55,13 +63,13 @@ def main(args:argparse.Namespace):
                 [0],[0],
                 color="#000000",
                 ls="-.",
-                label=r"$\nu_{\mathrm{ref}}="f"{nu_ref:.1e}$ Hz"
+                label=r"$\nu_{\mathrm{ref}}=$"f"{nu_ref:.1e} Hz"
             ),
             Line2D(
                 [0],[0],
                 color="#000000",
                 ls="--",
-                label=r"$L_{\nu,\mathrm{peak}}=$"f"{lnu_peak_estimated:.2e} erg/s/Hz"
+                label=r"$L_{\nu,\mathrm{est}}=$"f"{lnu_peak_estimated:.2e} erg/s/Hz"
             )
         ]
         ax.legend(handles=legend_handles,fontsize=16)
@@ -70,11 +78,25 @@ def main(args:argparse.Namespace):
             use=True,
             fontsize=16,
             text = \
-            r"$t=$"f"{t_ref:.1e}"
+            r"$t=$"f"{t_ref:.1e}" \
         )
         plot_utils.annotation(ax,annotconf)
 
+        plot_utils.annotation(
+            ax,
+            plot_utils.AnnotationConfigure(
+                use=True,
+                fontsize=16,
+                pos=(0.01,0.99),
+                ha="left",va="top",
+                text= \
+                    r"$1-\nu_{\mathrm{peak}}~/~\nu_{\mathrm{ref}}=$"f"{nu_err:.2e}\n" \
+                    r"$1-L_{\nu,{\mathrm{peak}}}~/~L_{\nu,{\mathrm{est}}}=$"f"{lnu_err:.2e}"
+        ))
+        
+
         pdf.savefig(fig)
+
         plt.close(fig)
 
     return

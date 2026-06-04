@@ -16,31 +16,23 @@ def fetch_nu_ref(refdata:dict)->float:
 
     return np.atleast_1d(np.asarray(quantity.to_value(u.Unit("Hz")),dtype=np.float64))[0]
 
+def fetch_nu_arr(refdata:dict):
+    ref_nu_arr = refdata["nu_arr"]
+    return np.logspace(**ref_nu_arr)
+
 def main(args:argparse.Namespace):
     outpath:Path = args.output
 
     tabular_path:Path = args.tabular
-    refpath:Path = args.reference
+    inpath:Path = args.input
 
-    refdata:dict = fr.read_yaml(refpath)
+    refdata:dict = fr.read_yaml(inpath)
 
     df_table = tabular.read_tabular(tabular_path)
     table = tabular.ThermalSynchrotronTable(df_table)
-    nu_arr =np.logspace(
-            start=6.0,
-            stop=12.0,
-            num=256
-        )
+    nu_arr = fetch_nu_arr(refdata)
 
-    inputs = InputParameters(
-        eps_th=1.0,
-        eps_B=0.1,
-        mu=0.62,
-        mu_e=1.18,
-        beta_sh=0.1,
-        a_wind_value=1.0e+07,
-        a_wind_unit="g/cm"
-    )
+    inputs = InputParameters(**refdata["inputs"])
     scalings = ThermalSynchrotronScalingValues(
         input=inputs,
         nu_value=nu_arr,
@@ -52,7 +44,7 @@ def main(args:argparse.Namespace):
 
     nu_ref = fetch_nu_ref(refdata)
     idx = np.abs(np.log(nu_arr / nu_ref)).argmin()
-    t_peak_value_ref:float = t_peak_arr_value[idx]
+    t_peak_value_ref = float(t_peak_arr_value[idx])
     print(f"Reference frequency :{nu_ref:.2e} Hz (index i={idx})")
     print(f"Estimated peak time :{t_peak_value_ref:.2e} s")
 
@@ -87,12 +79,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
     parser.add_argument(
-        "--tabular",
+        "input",
         type=Path,
-        required=True
     )
     parser.add_argument(
-        "--reference",
+        "--tabular",
         type=Path,
         required=True
     )

@@ -1,2 +1,15 @@
 nu_ref_value: 9.0
 nu_ref_unit: "GHz"
+nu_arr:
+  start: 6.0
+  stop: 12.0
+  num: 2048
+
+inputs:
+  eps_th: 1.0
+  eps_B: 0.1
+  mu: 0.62
+  mu_e: 1.18
+  beta_sh: 0.1
+  a_wind_value: 1.0e+07
+  a_wind_unit: "g/cm"

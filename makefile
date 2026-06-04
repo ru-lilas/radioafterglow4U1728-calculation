@@ -28,12 +28,12 @@ $(FIGDIR)/test/%.pdf: \
 		-c $(lastword $^)
 
 $(DATADIR)/test/%.csv: \
-	test/%.py \
 	input/test/%.yaml \
+	test/%.py \
 	data/tabular/xi.csv
 	python -m test.$* \
+		$<\
 		--output $@ \
-		--reference $(word 2,$^)\
 		--tabular $(lastword $^)
 
 data/test/peak_time_for_given_nu.csv: test/test_peak_time_for_given_nu.py data/tabular/xi.csv
