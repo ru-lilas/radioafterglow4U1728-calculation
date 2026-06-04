@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from functools import cached_property
 from module.tabular import ThermalSynchrotronTable
 from module.utilities import bisection, unit_aliases as unit
+from module import calculate_lnu_th
 
 @dataclass
 class InputParameters:
@@ -29,41 +30,42 @@ class InputParameters:
     a_wind_value: float
     a_wind_unit: str
 
-@dataclass
-class SynchrotronScalingValues:
-    input:InputParameters
-    nu_value: float
-    nu_unit: str
-    table: ThermalSynchrotronTable
-
     @cached_property
-    def a_wind(self)->u.Quantity:
-        return u.Quantity(self.input.a_wind_value,u.Unit(self.input.a_wind_unit))
-    @cached_property
-    def nu(self)->u.Quantity:
-        return u.Quantity(self.nu_value,u.Unit(self.nu_unit))
+    def a_wind_quantity(self)->u.Quantity:
+        return u.Quantity(self.a_wind_value,u.Unit(self.a_wind_unit))
 
     @cached_property
     def theta(self)->float:
         return electron_temperature.calculate_theta_e(
-            eps_th=self.input.eps_th,
-            mu=self.input.mu,
-            mu_e=self.input.mu_e,
-            beta_sh=self.input.beta_sh
+            eps_th=self.eps_th,
+            mu=self.mu,
+            mu_e=self.mu_e,
+            beta_sh=self.beta_sh
         )
 
     @cached_property
     def phi_theta(self):
         return synchrotron_scaling_values.calculate_phi_theta(
             theta=self.theta,
-            eps_B=self.input.eps_B,
-            a_wind=self.a_wind
+            eps_B=self.eps_B,
+            a_wind=self.a_wind_quantity
         )
+
+@dataclass
+class ThermalSynchrotronScalingValues:
+    input:InputParameters
+    nu_value: NDArray[np.float64]
+    nu_unit: str
+    table: ThermalSynchrotronTable
+
+    @cached_property
+    def nu(self)->u.Quantity:
+        return u.Quantity(self.nu_value,u.Unit(self.nu_unit))
 
     @cached_property
     def t_theta(self):
         return synchrotron_scaling_values.calculate_t_theta(
-            phi_theta=self.phi_theta,
+            phi_theta=self.input.phi_theta,
             nu=self.nu
         )
 
@@ -80,7 +82,7 @@ class SynchrotronScalingValues:
             beta_sh=self.input.beta_sh,
             mu=self.input.mu,
             mu_e=self.input.mu_e,
-            a_wind = self.a_wind,
+            a_wind = self.input.a_wind_quantity,
             t_theta=self.t_theta
         )
 
@@ -88,17 +90,17 @@ class SynchrotronScalingValues:
     def b_mag_theta(self):
         return synchrotron_scaling_values.calculate_b_mag_theta(
             eps_B=self.input.eps_B,
-            a_wind=self.a_wind,
+            a_wind=self.input.a_wind_quantity,
             t_theta=self.t_theta
         )
 
     @cached_property
     def j_theta(self):
-        return synchrotron_scaling_values.calculate_j_theta(self.theta,self.n_e_theta,self.b_mag_theta)
+        return synchrotron_scaling_values.calculate_j_theta(self.input.theta,self.n_e_theta,self.b_mag_theta)
 
     @cached_property
     def alpha_theta(self):
-        return synchrotron_scaling_values.calculate_alpha_theta(self.theta,self.n_e_theta,self.b_mag_theta)
+        return synchrotron_scaling_values.calculate_alpha_theta(self.input.theta,self.n_e_theta,self.b_mag_theta)
 
     @cached_property
     def l_theta(self):
@@ -134,7 +136,7 @@ class SynchrotronScalingValues:
 
     @cached_property
     def phi_peak(self):
-        phi_peak = u.Quantity(self.xi_peak * self.phi_theta)
+        phi_peak = u.Quantity(self.xi_peak * self.input.phi_theta)
         return phi_peak
 
     @cached_property
@@ -146,7 +148,6 @@ class SynchrotronScalingValues:
         lnu_peak = u.Quantity(self.l_theta*self.lnu_peak_dimless,self.l_theta.unit)
         return lnu_peak
 
-
 @dataclass
 class Frequency:
     value_array: np.ndarray
@@ -154,158 +155,45 @@ class Frequency:
 
 @dataclass
 class SynchrotronSpectrum:
-    inputparams: InputParameters
+    inputs: InputParameters
     t_value: float
     t_unit: str
-    nu:Frequency
+    nu_value: NDArray[np.float64]
+    nu_unit: str
+    tabular: ThermalSynchrotronTable
 
     @cached_property
-    def a_wind_quantity(self):
-        return u.Quantity(self.inputparams.a_wind_value,u.Unit(self.inputparams.a_wind_unit))
+    def scalings(self):
+        return ThermalSynchrotronScalingValues(
+            input=self.inputs,
+            nu_value=self.nu_value,
+            nu_unit=self.nu_unit,
+            table=self.tabular
+        )
 
     @property
-    def t(self):
+    def t_quantity(self):
         return u.Quantity(self.t_value,u.Unit(self.t_unit))
 
-    @cached_property
-    def nu_array_quantity(self):
-        return u.Quantity(self.nu.value_array, u.Unit(self.nu.unit))
+    @property
+    def phi(self)->u.Quantity:
+        nu = self.scalings.nu
+        return nu*self.t_quantity
 
-    @cached_property
-    def theta_e(self)->float:
-        return calculate_theta_e(
-            eps_th=self.inputparams.eps_th,
-            mu=self.inputparams.mu,
-            mu_e=self.inputparams.mu_e,
-            beta_sh=self.inputparams.beta_sh
+    @property
+    def xi(self):
+        xi = np.asarray((self.phi/self.inputs.phi_theta).to_value(unit.dimensionless),dtype=np.float64)
+        return xi
+
+    @property
+    def lnu_th_dimless(self):
+        return calculate_lnu_th.dimless_tabular(
+            x=self.xi,
+            tau_theta=self.scalings.tau_theta,
+            table=self.tabular
         )
 
     @property
-    def r(self)->u.Quantity:
-        return r_rad(
-            t=self.t,
-            beta_sh=self.inputparams.beta_sh
-        )
-
-    @property
-    def n_wind(self)->u.Quantity:
-        return calculate_n_wind(
-            a_wind=self.a_wind_quantity,
-            r=self.r,
-            mu=self.inputparams.mu
-        )
-
-    @property
-    def n_ele(self)->u.Quantity:
-        return calculate_n_ele_for_strong_shock(
-            n_upstream=self.n_wind,
-            mu_e=self.inputparams.mu_e
-        )
-
-    @property
-    def b_mag(self):
-        return magnetic_field(
-            n_us=self.n_wind,
-            beta_sh=self.inputparams.beta_sh,
-            eps_B=self.inputparams.eps_B,
-            mu=self.inputparams.mu
-        )
-
-    @cached_property
-    def omega(self):
-        return synchrotron_scaling_values.convert_nu_into_omega(self.nu_array_quantity)
-
-    @property
-    def omega_B(self):
-        return synchrotron_scaling_values.omega_b(self.b_mag)
-
-    @property
-    def nu_B(self):
-        return synchrotron_scaling_values.convert_omega_into_nu(omega=self.omega_B)
-
-    @property
-    def chi(self):
-        return synchrotron_scaling_values.chi_gyro(omega=self.omega, omega_b=self.omega_B)
-
-    @property
-    def nu_crit(self):
-        return synchrotron_scaling_values.calculate_nu_crit(nu_B=self.nu_B, theta=self.theta_e)
-
-    @property
-    def xm(self)->np.ndarray:
-        return thermal.convert_xm(theta=self.theta_e, chi=self.chi)
-
-    #---normalization quantities---
-    @property
-    def P0(self)->u.Quantity:
-        return synchrotron_scaling_values.calculate_P0(self.b_mag)
-
-    @property
-    def j0(self)->u.Quantity:
-        return synchrotron_scaling_values.calculate_j0(
-            nu_B=self.nu_B,
-            n_ele=self.n_ele
-        )
-
-    @property
-    def a0(self)->u.Quantity:
-        return synchrotron_scaling_values.calculate_alpha0(
-            nu_B=self.nu_B,
-            n_ele=self.n_ele,
-            pnu0=self.P0
-        )
-
-    @property
-    def S0(self)->u.Quantity:
-        return self.j0/self.a0
-
-    #---frequency dependence terms---
-    @property
-    def j_nu_th_dimless(self)->np.ndarray:
-        return thermal.j_th(
-            theta=self.theta_e,
-            chi=self.chi
-        )
-
-    @property
-    def a_nu_th_dimless(self)->np.ndarray:
-        return thermal.anu_th_dimless(
-            theta=self.theta_e,
-            chi=self.chi,
-        )
-
-    @property
-    def S_nu_th_dimless(self)->np.ndarray:
-        value = self.j_nu_th_dimless/self.a_nu_th_dimless
-        return value
-
-    #---
-    @property
-    def j_nu_th(self)->u.Quantity:
-        return self.j0*self.j_nu_th_dimless
-
-    @property
-    def a_nu_th(self)->u.Quantity:
-        return self.a0*self.a_nu_th_dimless
-
-    @property
-    def S_nu_th(self)->u.Quantity:
-        return self.S0*self.S_nu_th_dimless
-
-    @property
-    def tau_nu(self):
-        return calculate_tau_nu(
-            alpha_nu=self.a_nu_th,
-            r=self.r
-        )
-
-    @property
-    def f_esc(self)->np.ndarray:
-        """ escape fraction
-        """
-        return calculate_escape_fraction(tau_nu=self.tau_nu)
-
-    @property
-    def lnu_th(self)->np.ndarray:
-        lnu_th_quantity = calculate_lnu_th(snu_th=self.S_nu_th,f_esc=self.f_esc,r=self.r)
-        return np.asarray(lnu_th_quantity.to_value(unit.specific_luminosity))
+    def lnu_th(self):
+        q = u.Quantity((self.scalings.l_theta * self.lnu_th_dimless).to(self.scalings.l_theta.unit))
+        return q

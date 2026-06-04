@@ -18,6 +18,20 @@ FREQ_YAML := $(INPUTDIR)/template/$(RESO)/frequency.yaml
 VARYING_YAML := $(INPUTDIR)/template/$(RESO)/varying_beta.yaml
 FIXED_YAML := $(INPUTDIR)/template/$(RESO)/$(BETA_DIR)/base.yaml
 
+$(FIGDIR)/test/%.pdf: \
+	$(DATADIR)/test/%.csv \
+		plot/test/%.py \
+		plotconfigs/test/%.yaml
+	python -m plot.test.$* \
+		$< \
+ 		-o $@ \
+		-c $(lastword $^)
+
+$(DATADIR)/test/test_peak_matching.csv: test/test_thermal_spectrum.py data/tabular/xi.csv
+	python -m test.test_thermal_spectrum \
+		--output $@ \
+		--tabular $(lastword $^)
+
 data/test/peak_time_for_given_nu.csv: test/test_peak_time_for_given_nu.py data/tabular/xi.csv
 	python -m test.test_peak_time_for_given_nu \
 		--tabular $(lastword $^)
@@ -130,11 +144,11 @@ input/generated/$(MODEL)/$(RESO)/beta/$(BETA_FMT).yaml: \
 		--outdir input/generated/$(MODEL)/$(RESO)/beta/
 
 
-plotconfigs/lightcurve.yaml:
+plotconfigs/%.yaml:
 	@echo "エラー: ファイルがありません $@"
 	@false
-plotconfigs/spectrum.yaml:
-	@echo "エラー: ファイルがありません $@"
+plotconfigs/test/%.yaml:
+	@echo "エラー: プロットコンフィグファイルがありません $@"
 	@false
 test/test_tau_xi_dependence.py:
 	@echo "エラー: ファイルがありません $@"

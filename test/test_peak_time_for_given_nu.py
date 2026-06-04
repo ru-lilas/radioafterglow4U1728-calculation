@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import argparse
-from module.models import SynchrotronScalingValues,InputParameters
+from module.models import ThermalSynchrotronScalingValues,InputParameters
 from pathlib import Path
 import astropy.units as u
 
@@ -24,9 +24,9 @@ def main(args:argparse.Namespace):
         a_wind_value=1.0e+07,
         a_wind_unit="g/cm"
     )
-    values = SynchrotronScalingValues(
+    values = ThermalSynchrotronScalingValues(
         input=inputs,
-        nu_value=9.0,
+        nu_value=np.array([9.0]),
         nu_unit="GHz",
         table=table
     )
@@ -35,7 +35,6 @@ def main(args:argparse.Namespace):
     t_peak = values.t_peak.to(u.Unit("s"))
     print(f"nu = {values.nu:.2e}")
     print(f"tau_theta = {tau_theta:.2e}")
-    print(f"phi_theta = {values.phi_theta:.2e}")
     print(f"xi_peak = {values.xi_peak:.2e}")
     print(f"phi_peak = {values.phi_peak:.2e}")
     print(f"t_peak = {t_peak:.2e}")
