@@ -1,0 +1,33 @@
+fig_nu_err:
+  TicksConfigure:
+    xlim: [1.0e+00,1.0e+03]
+    ylim: [-0.30,0.3]
+    xscale: "log"
+    yscale: "linear"
+    fontsize: 16
+
+  LabelConfigure:
+    xlabel: '$t$[s]'
+    ylabel: '$1-\nu_{\mathrm{peak}}~/~\nu_{\mathrm{ref}}$'
+    fontsize: 16
+
+  x_name: "t_ref"
+  y_name: "nu_err"
+
+fig_lnu_err:
+  TicksConfigure:
+    xlim: [1.0e+00,1.0e+03]
+    ylim: [-0.10,0.1]
+    xscale: "log"
+    yscale: "linear"
+    fontsize: 16
+
+  LabelConfigure:
+    xlabel: '$t$[s]'
+    ylabel: '$1-L_{\nu,\mathrm{peak}}~/~L_{\nu,\mathrm{est}}$'
+    fontsize: 16
+
+  x_name: "t_ref"
+  y_name: "lnu_err"
+
+
