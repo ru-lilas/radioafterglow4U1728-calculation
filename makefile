@@ -128,6 +128,13 @@ $(FIGDIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/lightcurve.pdf: \
 		-c $(lastword $^)
 
 .SECONDARY:
+$(DATADIR)/test/test_peak_deviations.csv: \
+	$$(wildcard $(DATADIR)/test/test_peak_matching/spectrum/[0-9][0-9][0-9].csv) \
+		$(DATADIR)/test/test_peak_matching/spectrum/.done
+	python -m test.test_peak_deviations \
+		$(filter %.csv,$^) \
+		-o $@
+
 $(DATADIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/$(SPECTRUM_PEAK_EVOLUTION).csv: \
 	$$(wildcard $(DATADIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/spectrum/[0-9][0-9][0-9].csv) \
 	pipelines/spectrum_peak_evolution.py
