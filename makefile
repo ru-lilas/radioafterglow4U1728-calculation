@@ -36,6 +36,17 @@ $(DATADIR)/test/%.csv: \
 		--output $@ \
 		--tabular $(lastword $^)
 
+$(DATADIR)/test/%/spectrum/.done: \
+	input/test/%.yaml \
+		test/%.py \
+		data/tabular/xi.csv
+	python -m test.$* \
+		$< \
+		--outdir $(DATADIR)/test/$*/spectrum \
+		--tabular $(lastword $^)
+	mkdir -p $(dir $@)
+	touch $@
+
 data/test/peak_time_for_given_nu.csv: test/test_peak_time_for_given_nu.py data/tabular/xi.csv
 	python -m test.test_peak_time_for_given_nu \
 		--tabular $(lastword $^)

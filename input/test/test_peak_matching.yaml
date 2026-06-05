@@ -3,7 +3,7 @@ nu_ref_unit: "GHz"
 nu_arr:
   start: 6.0
   stop: 12.0
-  num: 2048
+  num: 256
 
 inputs:
   eps_th: 1.0
