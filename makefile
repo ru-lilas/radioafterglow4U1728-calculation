@@ -18,6 +18,25 @@ FREQ_YAML := $(INPUTDIR)/template/$(RESO)/frequency.yaml
 VARYING_YAML := $(INPUTDIR)/template/$(RESO)/varying_beta.yaml
 FIXED_YAML := $(INPUTDIR)/template/$(RESO)/$(BETA_DIR)/base.yaml
 
+$(FIGDIR)/test/test_peak_matching/spectrum/%.pdf: \
+	$(DATADIR)/test/test_peak_matching/spectrum/%.csv \
+	$(DATADIR)/test/test_peak_matching/spectrum/.done \
+		plot/test/test_peak_matching.py \
+		plotconfigs/test/test_peak_matching.yaml
+	python -m plot.test.test_peak_matching \
+		$< \
+ 		-o $@ \
+		-c $(lastword $^)
+
+$(FIGDIR)/integral_ip.pdf: \
+	$(DATADIR)/tabular/xi.csv \
+		plot/integral_tabular.py \
+		plotconfigs/integral_tabular.yaml
+	python -m plot.integral_tabular \
+		$< \
+ 		-o $@ \
+		-c $(lastword $^)
+
 $(FIGDIR)/test/%.pdf: \
 	$(DATADIR)/test/%.csv \
 		plot/test/%.py \
