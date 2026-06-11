@@ -8,28 +8,126 @@ from matplotlib.backends.backend_pdf import PdfPages
 import astropy.units as u
 import pandas as pd
 
-def main(args:argparse.Namespace):
-    inpath:Path = args.input
-    confpath:Path = args.config
-    outpath:Path = args.output
-
-    conf = fr.read_yaml(confpath)
+def plot_debag_value(
+    pdf:PdfPages,
+    conf:dict,
+    df:pd.DataFrame,
+    t_ref:u.Quantity,
+    metadata:dict
+)->None:
     conftick = plot_utils.TicksConfigure(**conf["TicksConfigure"])
     conflabel = plot_utils.LabelConfigure(**conf["LabelConfigure"])
     xname = str(conf["x_name"])
     yname = str(conf["y_name"])
 
+    figsize=(16,9)
+    fig,ax = plt.subplots(figsize=figsize)
+    fig.set_layout_engine("constrained")
+    plot_utils.configure_tick(ax,conftick)
+    plot_utils.configure_label(ax,conflabel)
+    ax.plot(
+        df[xname],
+        df[yname],
+        color = "#000000",
+        ls="-",
+    )
+    if "hlines" in conf.keys():
+        conf_vlines:dict = conf["hlines"]
+        for _,conf_hline in conf_vlines.items():
+            ax.axhline(
+                conf_hline["value"],
+                color = "#000000",
+                ls=conf_hline["ls"],
+            )
+    if "vlines" in conf.keys():
+        conf_vlines:dict = conf["vlines"]
+        for key,conf_element in conf_vlines.items():
+            if key in metadata.keys():
+                ax.axvline(
+                    metadata[key],
+                    color = "#000000",
+                    ls=conf_element["ls"],
+                )
+            else:
+                ax.axvline(
+                    conf_element["value"],
+                    color = "#000000",
+                    ls=conf_element["ls"],
+                )
+            
+    t_ref = metadata["t"]
+    t_unit = metadata["t_unit"]
+    t = u.Quantity(t_ref,u.Unit(t_unit))
+    phi_theta_value = metadata["phi_theta"]
+    phi_unit = metadata["phi_unit"]
+    phi_theta = u.Quantity(phi_theta_value,u.Unit(phi_unit))
 
-    df = fr.read_csv(inpath)
-    metadata = fr.read_keyvalue(inpath)
+    # if "annotations" in conf.keys():
+    #     conf_annot:dict = conf["annotations"]
+    #     for quantity_name, quantity_setting in conf_annot.items():
+    #         value = metadata[quantity_name]
+    #         unit_keyname = quantity_setting["unit"]
+    #         unit = metadata[unit_keyname]
+    #         quantity = u.Quantity(value,u.Unit(unit))
+    #         text_prefix = str(quantity_setting["prefix"])
+    #         text_element = text_prefix + f"{quantity}:.1e"
+
+    if "inner_annotation" in conf.keys():
+        conf_inneranot:dict = conf["inner_annotation"]
+
+        for key,conf_element in conf_inneranot.items():
+            if key in metadata.keys():
+                value = float(metadata[key])
+                prefix = str(conf_element["prefix"])
+                fmt = str(conf_element["fmt"])
+                text = prefix+f"{value:{fmt}}"
+            else:
+                text = ""
+            annotconf = plot_utils.AnnotationConfigure(
+                use=True,
+                fontsize=16,
+                text = text,
+                pos=(0.01,0.99),
+                ha="left",
+                va="top"
+            )
+            plot_utils.annotation(ax,annotconf)
+
+    annotconf = plot_utils.AnnotationConfigure(
+        use=True,
+        fontsize=16,
+        text = \
+        r"$t=$"f"{t:.1e}, " \
+        r'$\phi_{\Theta}=$'f"{phi_theta:.1e}"
+    )
+    plot_utils.annotation(ax,annotconf)
+
+    pdf.savefig(fig)
+
+    plt.close(fig)
+    return
+
+def main(args:argparse.Namespace):
+    inpath:Path = args.input
+    confpath:Path = args.config
+    outpath:Path = args.output
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
-    t_value_ref = metadata["t_peak_ref"]
+    conf = fr.read_yaml(confpath)
+    df = fr.read_csv(inpath)
+
+    metadata = fr.read_keyvalue(inpath)
+    nu_ref = metadata["nu_peak_ref"]
+    lnu_peak_estimated = metadata["lnu_peak_ref"]
+
+    t_value_ref = metadata["t"]
     t_unit_ref = "s"
     t_ref = u.Quantity(t_value_ref,u.Unit(t_unit_ref))
 
-    nu_ref = metadata["nu_peak_ref"]
-    lnu_peak_estimated = metadata["lnu_peak_ref"]
+    conftick = plot_utils.TicksConfigure(**conf["TicksConfigure"])
+    conflabel = plot_utils.LabelConfigure(**conf["LabelConfigure"])
+    xname = str(conf["x_name"])
+    yname = str(conf["y_name"])
 
     # peak luminosity
     row_peak = pd.DataFrame(df.loc[[df[yname].idxmax()]])
@@ -98,6 +196,9 @@ def main(args:argparse.Namespace):
         pdf.savefig(fig)
 
         plt.close(fig)
+
+        plot_debag_value(pdf,conf["plot_lnudimless_xi"],df,t_ref,metadata)
+        plot_debag_value(pdf,conf["ln_tau"],df,t_ref,metadata)
 
     return
 

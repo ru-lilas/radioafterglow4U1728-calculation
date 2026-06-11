@@ -1,6 +1,6 @@
 TicksConfigure:
   xlim: [1.0e+06,1.0e+12]
-  ylim: [1.0e+10,1.0e+30]
+  ylim: [1.0e+10,1.0e+28]
   xscale: "log"
   yscale: "log"
   fontsize: 16
@@ -13,3 +13,66 @@ LabelConfigure:
 x_name: "nu"
 y_name: "lnu_th"
 
+plot_lnudimless_xi:
+  TicksConfigure:
+    xlim: [1.0e+00,1.0e+04]
+    ylim: [1.0e-10,1.0e+10]
+    xscale: "log"
+    yscale: "log"
+    fontsize: 16
+
+  LabelConfigure:
+    xlabel: '$x_{\mathrm{M}}$'
+    ylabel: '$L_{\nu}~/~L_{\Theta}$'
+    fontsize: 24
+
+  vlines:
+    xi_peak:
+      name: '$\xi_{\mathrm{peak}}$'
+      ls: '--'
+
+  inner_annotation:
+    xi_peak:
+      prefix: '$x_{\mathrm{M}}(\tau=1)=$'
+      fmt: ".2e"
+
+  x_name: "xi"
+  y_name: "lnu_th_dimless"
+
+ln_tau:
+  TicksConfigure:
+    xlim: [1.0e+00,1.0e+04]
+    ylim: [-20.0,10.0]
+    xscale: "log"
+    yscale: "linear"
+    fontsize: 16
+
+  LabelConfigure:
+    xlabel: '$x_{\mathrm{M}}$'
+    ylabel: '$\ln\tau(x_{\mathrm{M}})$'
+    fontsize: 24
+  hlines:
+    solution:
+      value: 0.0
+      name: '$\tau = 1$'
+      ls: '--'
+  vlines:
+    xi_peak:
+      name: '$x_{\mathrm{M,peak}}$'
+      ls: '--'
+
+  annotations:
+    t:
+      unit: 't_unit'
+      prefix: '$t=$'
+    phi_theta:
+      unit: 'phi_unit'
+      prefix: '$\phi_{\Theta}=$'
+
+  inner_annotation:
+    xi_peak:
+      prefix: '$x_{\mathrm{M}}(\tau=1)=$'
+      fmt: ".2e"
+
+  x_name: "xi"
+  y_name: "ln_tau"

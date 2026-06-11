@@ -24,4 +24,10 @@ class ThermalSynchrotronTable:
         return np.array(self.tabular["ln_ip"], dtype=np.float64)
 
     def calculate_log_ip(self,xi:NDArray[np.float64])->NDArray[np.float64]:
-        return np.interp(x=xi,xp=self.xi_tabular,fp=self.log_ip_tabular)
+        xi_min = self.xi_tabular[0]
+        xi_max = self.xi_tabular[-1]
+        # if np.any(xi < xi_min) or np.any(xi > xi_max):
+        #     raise ValueError(
+        #         f"x={xi} is outside interpolation range [{xi_min}, {xi_max}]"
+        #     )
+        return np.interp(xi, self.xi_tabular, self.log_ip_tabular)

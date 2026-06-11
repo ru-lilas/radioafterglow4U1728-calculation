@@ -18,7 +18,7 @@ def main(args:argparse.Namespace):
 
     for i,tau_theta in enumerate(tau_theta_arr):
         def f(xi:NDArray[np.float64]):
-            return synchrotron_scaling_values.func_ssa_peak_tablular(xi,tau_theta=tau_theta,table=table)
+            return synchrotron_scaling_values.func_ssa_peak_tabular(xi,tau_theta=tau_theta,table=table)
         xi_peak__arr[i] = bisection.bisection(f,1.0e-1,1.0e+4)
 
     log_ip_xi_peak = table.calculate_log_ip(xi_peak__arr)

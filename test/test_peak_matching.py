@@ -38,9 +38,11 @@ def main(args:argparse.Namespace):
     )
     t_peak_arr = scalings.t_peak
     t_peak_arr_value = np.asarray(t_peak_arr.to_value(u.Unit("s")),dtype=np.float64)
+    t_unit = str(t_peak_arr.unit)
+    t_peak_list:list[float] = list(t_peak_arr_value)
 
     lnu_peak_ref_arr = np.asarray(scalings.lnu_peak.to_value(ua.specific_luminosity),dtype=np.float64)
-    for i,t_ref in enumerate(t_peak_arr_value):
+    for i,t_ref in enumerate(t_peak_list):
         outpath = outdir/f"{i:03d}.csv"
 
         spectrum = SynchrotronSpectrum(
@@ -53,14 +55,21 @@ def main(args:argparse.Namespace):
         )
 
         df = pd.DataFrame({
+            "xi":spectrum.xi,
             "nu":nu_arr,
-            "lnu_th":spectrum.lnu_th.to_value(ua.specific_luminosity)
+            "lnu_th_dimless":spectrum.lnu_th_dimless,
+            "lnu_th":spectrum.lnu_th.to_value(ua.specific_luminosity),
+            "ln_tau":spectrum.ln_tau
         })
 
         metadata = {
-            "t_peak_ref": t_ref,
+            "t": t_ref,
+            "t_unit": t_unit,
             "nu_peak_ref": nu_arr[i],
-            "lnu_peak_ref": lnu_peak_ref_arr[i]
+            "lnu_peak_ref": lnu_peak_ref_arr[i],
+            "xi_peak": scalings.xi_peak,
+            "phi_theta": inputs.phi_theta.value,
+            "phi_unit": inputs.phi_theta.unit
         }
 
         fw.write_csv_with_params(df,metadata,outpath)
