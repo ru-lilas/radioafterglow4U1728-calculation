@@ -1,0 +1,19 @@
+TicksConfigure: &TicksConfigure_tmp
+  xlim: [1.0e+00,1.0e+04]
+  ylim: [1.0e+00,1.0e+07]
+  xscale: "log"
+  yscale: "log"
+  fontsize: 16
+LabelConfigure: &LabelConfigure_tmp
+  xlabel: '$x_{\mathrm{M}} = \phi~/~\phi_{\Theta}$'
+  ylabel: '$L_{\nu,\mathrm{peak}}~/~L_{\Theta}$'
+  fontsize: 24
+
+x_name: "xm_peak"
+y_name: "lnu_peak_dimless"
+z_name: "tau_theta"
+
+cbar:
+  label: '$\tau_{\Theta}$'
+  fontsize: 24
+  tickfontsize: 16
