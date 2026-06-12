@@ -1,10 +1,10 @@
 import argparse
+from typing import cast
 import numpy as np
 from module.models import ThermalSynchrotronScalingValues,InputParameters,SynchrotronSpectrum
 from module import tabular
 from module.utilities import filewriters as fw
 from module.utilities import filereaders as fr
-from module.utilities import unit_aliases as ua
 from pathlib import Path
 import pandas as pd
 import astropy.units as u
@@ -36,12 +36,13 @@ def main(args:argparse.Namespace):
         nu_unit="Hz",
         table=table
     )
+    xm_est = scalings.xi_est
     t_peak_arr = scalings.t_peak
     t_peak_arr_value = np.asarray(t_peak_arr.to_value(u.Unit("s")),dtype=np.float64)
     t_unit = str(t_peak_arr.unit)
     t_peak_list:list[float] = list(t_peak_arr_value)
 
-    lnu_peak_ref_arr = np.asarray(scalings.lnu_peak.to_value(ua.specific_luminosity),dtype=np.float64)
+    lnu_est_arr = np.asarray(scalings.lnu_est_dimless,dtype=np.float64)
     for i,t_ref in enumerate(t_peak_list):
         outpath = outdir/f"{i:03d}.csv"
 
@@ -60,28 +61,30 @@ def main(args:argparse.Namespace):
             "xi":spectrum.xi,
             "nu":nu_arr,
             "lnu_th_dimless":spectrum.lnu_th_dimless,
-            "lnu_th":spectrum.lnu_th.to_value(ua.specific_luminosity),
             "ln_tau":ln_tau,
-            "tau": tau,
-            "exp(-tau)": np.exp(-tau),
             "f_esc": -np.expm1(-tau),
-            "xi_f_esc": spectrum.xi*(-np.expm1(-tau)),
         })
 
-        lnu_ref = lnu_peak_ref_arr[i]
+        lnu_est = lnu_est_arr[i]
         l_theta = scalings.l_theta.value[i]
-        l_unit = scalings.l_theta.unit
+        l_unit = cast(u.UnitBase,scalings.l_theta.unit)
+
+        # peak luminosity
+        row_peak = pd.DataFrame(df.loc[[df["lnu_th_dimless"].idxmax()]])
+        xi_peak = float(row_peak.iloc[0]["xi"])
+        lnu_peak = float(row_peak.iloc[0]["lnu_th_dimless"])
+
         metadata = {
             "t": t_ref,
             "t_unit": t_unit,
-            "nu_peak_ref": nu_arr[i],
-            "lnu_peak_ref": lnu_ref,
+            "xm_est": xm_est,
+            "lnu_est_dimless": lnu_est,
             "l_theta": l_theta,
-            "l_unit": l_unit,
-            "lnu_ref/l_theta": lnu_ref/l_theta,
-            "xi_peak": scalings.xi_peak,
+            "l_unit": l_unit.to_string(format="fits"),
             "phi_theta": inputs.phi_theta.value,
-            "phi_unit": inputs.phi_theta.unit
+            "phi_unit": inputs.phi_theta.unit,
+            "lnu_peak_dimless": lnu_peak,
+            "xm_peak": xi_peak,
         }
 
         fw.write_csv_with_params(df,metadata,outpath)

@@ -110,7 +110,7 @@ class ThermalSynchrotronScalingValues:
         )
 
     @cached_property
-    def xi_peak(self):
+    def xi_est(self):
         tau_theta = self.tau_theta[0]
         def f(xi:NDArray[np.float64]):
             return synchrotron_scaling_values.func_ssa_peak_tabular(xi,tau_theta,self.table)
@@ -118,17 +118,17 @@ class ThermalSynchrotronScalingValues:
         return np.asarray(xi_peak,dtype=np.float64)
 
     @cached_property
-    def lnu_peak_dimless(self):
+    def lnu_est_dimless(self):
         lnu_peak_dimless = synchrotron_scaling_values.calculate_lnu_xi_dimless_tabular(
             tau_theta=self.tau_theta,
-            xi=self.xi_peak,
+            xi=self.xi_est,
             table=self.table
         )
         return lnu_peak_dimless
 
     @cached_property
     def phi_peak(self):
-        phi_peak = u.Quantity(self.xi_peak * self.input.phi_theta)
+        phi_peak = u.Quantity(self.xi_est * self.input.phi_theta)
         return phi_peak
 
     @cached_property
@@ -137,7 +137,7 @@ class ThermalSynchrotronScalingValues:
 
     @cached_property
     def lnu_peak(self):
-        lnu_peak = u.Quantity(self.l_theta*self.lnu_peak_dimless,self.l_theta.unit)
+        lnu_peak = u.Quantity(self.l_theta*self.lnu_est_dimless,self.l_theta.unit)
         return lnu_peak
 
 @dataclass

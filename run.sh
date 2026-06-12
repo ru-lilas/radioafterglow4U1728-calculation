@@ -24,5 +24,5 @@
 
 for i in $(seq 0 63); do
   i_fmt=$(printf "%03d" $i)
-  make fig/test/spectrum/${i_fmt}.pdf
+  make fig/test/test_peak_matching/spectrum/${i_fmt}.pdf
 done

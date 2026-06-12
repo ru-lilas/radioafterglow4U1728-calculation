@@ -1,6 +1,6 @@
 TicksConfigure: &TicksConfigure_tmp
   xlim: [1.0e+00,1.0e+04]
-  ylim: [1.0e-20,1.0e+10]
+  ylim: [1.0e-10,1.0e+10]
   xscale: "log"
   yscale: "log"
   fontsize: 16
@@ -13,56 +13,53 @@ inner_annotation: &inner_annotation_tmp
     prefix: '$x_{\mathrm{M}}(\tau=1)=$'
     fmt: ".2e"
 vlines: &xi_peak_vline
-  xi_peak:
-    label: '$\xi_{\mathrm{peak}}$'
+  xm_est:
+    label: '$x_{\mathrm{M,est}}$'
     ls: '-.'
     color: "#000000"
-TicksConfigure:
-  xlim: [1.0e+06,1.0e+12]
-  ylim: [1.0e+10,1.0e+28]
-  xscale: "log"
-  yscale: "log"
-  fontsize: 16
-
-LabelConfigure:
-  xlabel: '$\nu$ [Hz]'
-  ylabel: '$L_{\nu}$ [erg/s/Hz]'
-  fontsize: 16
-
-x_name: "nu"
-y_name: "lnu_th"
+annotations: &annotations_tmp
+  t:
+    unit: 't_unit'
+    prefix: '$t=$'
+  phi_theta:
+    unit: 'phi_unit'
+    prefix: '$\phi_{\Theta}=$'
+  l_theta:
+    unit: 'l_unit'
+    prefix: '$L_{\Theta}=$'
 
 plot_lnudimless_xi:
   TicksConfigure:
     <<: *TicksConfigure_tmp
-    ylim: [1.0e-10,1.0e+10]
 
   LabelConfigure:
     <<: *LabelConfigure_tmp
 
-  hlines:
-    lnu_ref/l_theta:
-      label: '$L_{\mathrm{ref}}~/~L_{\Theta}$'
-      ls: '--'
-      color: "#000000"
   vlines:
     <<: *xi_peak_vline
 
+  hlines:
+    lnu_est_dimless:
+      label: '$L_{\nu,\mathrm{est}}~/~L_{\Theta}$'
+      ls: '--'
+      color: "#000000"
   annotations:
-    t:
-      unit: 't_unit'
-      prefix: '$t=$'
-    phi_theta:
-      unit: 'phi_unit'
-      prefix: '$\phi_{\Theta}=$'
-    l_theta:
-      unit: 'l_unit'
-      prefix: '$L_{\Theta}=$'
-  inner_annotation:
-    <<: *inner_annotation_tmp
+    <<: *annotations_tmp
 
   x_name: "xi"
   y_name: "lnu_th_dimless"
+
+  peak_errors:
+    x:
+      denom_key: "xm_est"
+      numer_key: "xm_peak"
+      prefix: '$1.0 - x_{\mathrm{M,peak}}~/~x_{\mathrm{M,est}}=$'
+      fmt: '.2e'
+    y:
+      denom_key: "lnu_est_dimless"
+      numer_key: "lnu_peak_dimless"
+      prefix: '$1.0 - L_{\nu,\mathrm{peak}}~/~L_{\nu,\mathrm{est}}=$'
+      fmt: '.2e'
 
 ln_tau:
   TicksConfigure:
@@ -84,150 +81,26 @@ ln_tau:
     <<: *xi_peak_vline
 
   annotations:
-    t:
-      unit: 't_unit'
-      prefix: '$t=$'
-    phi_theta:
-      unit: 'phi_unit'
-      prefix: '$\phi_{\Theta}=$'
-
-  inner_annotation:
-    <<: *inner_annotation_tmp
+    <<: *annotations_tmp
 
   x_name: "xi"
   y_name: "ln_tau"
 
-tau:
-  TicksConfigure:
-    <<: *TicksConfigure_tmp
-    xlim: [1.0e+00,1.0e+04]
-    ylim: [1.0e-20,1.0e+10]
-
-  LabelConfigure:
-    <<: *LabelConfigure_tmp
-    ylabel: '$\tau(x_{\mathrm{M}})$'
-  hlines:
-    solution:
-      value: 1.0
-      label: '$\tau = 1$'
-      ls: '--'
-      color: "#000000"
-  vlines:
-    <<: *xi_peak_vline
-
-  annotations:
-    t:
-      unit: 't_unit'
-      prefix: '$t=$'
-    phi_theta:
-      unit: 'phi_unit'
-      prefix: '$\phi_{\Theta}=$'
-
-  inner_annotation:
-    <<: *inner_annotation_tmp
-
-  x_name: "xi"
-  y_name: "tau"
-
-exp_mtau:
-  TicksConfigure:
-    xlim: [1.0e+00,1.0e+04]
-    ylim: [1.0e-20,1.0e+10]
-    xscale: "log"
-    yscale: "log"
-    fontsize: 16
-
-  LabelConfigure:
-    <<: *LabelConfigure_tmp
-    ylabel: '$\exp(-\tau(x_{\mathrm{M}}))$'
-  hlines:
-    solution:
-      value: 0.36787
-      label: '$\tau = 1/e$'
-      ls: '--'
-      color: "#000000"
-  vlines:
-    <<: *xi_peak_vline
-
-  annotations:
-    t:
-      unit: 't_unit'
-      prefix: '$t=$'
-    phi_theta:
-      unit: 'phi_unit'
-      prefix: '$\phi_{\Theta}=$'
-
-  inner_annotation:
-    <<: *inner_annotation_tmp
-
-  x_name: "xi"
-  y_name: "exp(-tau)"
-
 f_esc:
   TicksConfigure:
-    xlim: [1.0e+00,1.0e+04]
-    ylim: [1.0e-20,1.0e+10]
-    xscale: "log"
-    yscale: "log"
-    fontsize: 16
-
+    <<: *TicksConfigure_tmp
   LabelConfigure:
-    xlabel: '$x_{\mathrm{M}}$'
+    <<: *LabelConfigure_tmp
     ylabel: '$1-\exp(-\tau(x_{\mathrm{M}}))$'
-    fontsize: 24
   hlines:
     solution:
       value: 0.632120
-      label: '$\tau = 1-1/e$'
+      label: '$f_{\mathrm{esc}}= 1-1/e$'
       ls: '--'
       color: "#000000"
   vlines:
     <<: *xi_peak_vline
-
   annotations:
-    t:
-      unit: 't_unit'
-      prefix: '$t=$'
-    phi_theta:
-      unit: 'phi_unit'
-      prefix: '$\phi_{\Theta}=$'
-
-  inner_annotation:
-    <<: *inner_annotation_tmp
-
+    <<: *annotations_tmp
   x_name: "xi"
   y_name: "f_esc"
-
-xi_f_esc:
-  TicksConfigure:
-    xlim: [1.0e+00,1.0e+04]
-    ylim: [1.0e-20,1.0e+10]
-    xscale: "log"
-    yscale: "log"
-    fontsize: 16
-
-  LabelConfigure:
-    <<: *LabelConfigure_tmp
-    ylabel: '$x_{\mathrm{M}}(1-\exp(-\tau(x_{\mathrm{M}})))$'
-  hlines:
-    solution:
-      value: 254.744
-      label: '$x_{\mathrm{M,peak}}(1-1/e)$'
-      ls: '--'
-      color: "#000000"
-  vlines:
-    <<: *xi_peak_vline
-
-  annotations:
-    t:
-      unit: 't_unit'
-      prefix: '$t=$'
-    phi_theta:
-      unit: 'phi_unit'
-      prefix: '$\phi_{\Theta}=$'
-
-  inner_annotation:
-    <<: *inner_annotation_tmp
-
-  x_name: "xi"
-  y_name: "xi_f_esc"

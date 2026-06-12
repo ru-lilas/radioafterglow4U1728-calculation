@@ -3,10 +3,7 @@
 """
 
 from matplotlib.axes import Axes
-from contextlib import contextmanager
 from matplotlib.lines import Line2D
-from matplotlib.backends.backend_pdf import PdfPages
-import matplotlib.pyplot as plt
 from dataclasses import dataclass
 from typing import TypeAlias, Literal
 
@@ -134,3 +131,34 @@ def annotation(
         fontsize=config.fontsize,
         transform=ax.transAxes,ha=config.ha,va=config.va
     )
+
+def hlines(
+    ax:Axes,
+    conf:dict,
+    metadata:dict,
+    legend_handles:list[Line2D]
+):
+    if "hlines" in conf.keys():
+        conf_hlines:dict = conf["hlines"]
+        for key,conf_hline in conf_hlines.items():
+            if key in metadata.keys():
+                ax.axhline(
+                    metadata[key],
+                    color = conf_hline["color"],
+                    ls=conf_hline["ls"],
+                )
+            else:
+                ax.axhline(
+                    conf_hline["value"],
+                    color = "#000000",
+                    ls=conf_hline["ls"],
+                )
+            legend_handles.append(Line2D(
+                [0],[0],
+                color=conf_hline["color"],
+                ls=conf_hline["ls"],
+                label=conf_hline["label"]
+            ))
+    else:
+        pass
+    return
