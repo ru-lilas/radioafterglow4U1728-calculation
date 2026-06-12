@@ -42,7 +42,6 @@ def main(args:argparse.Namespace):
     t_unit = str(t_peak_arr.unit)
     t_peak_list:list[float] = list(t_peak_arr_value)
 
-    lnu_est_arr = np.asarray(scalings.lnu_est_dimless,dtype=np.float64)
     for i,t_ref in enumerate(t_peak_list):
         outpath = outdir/f"{i:03d}.csv"
 
@@ -65,9 +64,9 @@ def main(args:argparse.Namespace):
             "f_esc": -np.expm1(-tau),
         })
 
-        lnu_est = lnu_est_arr[i]
-        l_theta = scalings.l_theta.value[i]
-        l_unit = cast(u.UnitBase,scalings.l_theta.unit)
+        lnu_est = scalings.lnu_est_dimless
+        l_theta = inputs.l_theta.value
+        l_unit = cast(u.UnitBase,inputs.l_theta.unit)
 
         # peak luminosity
         row_peak = pd.DataFrame(df.loc[[df["lnu_th_dimless"].idxmax()]])

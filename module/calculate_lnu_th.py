@@ -4,7 +4,7 @@ from module.tabular import ThermalSynchrotronTable
 
 def dimless_tabular_for_tau_theta(
     x:NDArray[np.float64],
-    tau_theta:float,
+    tau_theta:NDArray[np.float64],
     table:ThermalSynchrotronTable
 )->NDArray[np.float64]:
     log_ip_xi = table.calculate_log_ip(x)

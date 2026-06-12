@@ -139,6 +139,18 @@ def calculate_alpha_theta(
 #     return tau_theta
 #
 def calculate_tau_theta(
+    eps_B: float,
+    mu_e: float,
+    mu: float,
+    theta: float,
+    a_wind: u.Quantity,
+    beta_sh: float
+)->NDArray[np.float64]:
+    quantities = u.Quantity(e*np.sqrt(a_wind)/(m_p*c))
+    dimless_term = 2.0*mu_e/ (3**(2.5)*theta**5*mu*beta_sh*np.sqrt(eps_B))
+    return np.asarray(dimless_term*quantities.to_value(unit.dimensionless),dtype=np.float64)
+
+def calculate_tau_theta_ar(
     alpha_theta: u.Quantity,
     r_theta: u.Quantity,
 )->NDArray[np.float64]:
@@ -174,12 +186,13 @@ def calculate_b_mag_theta(
     return (1.5*np.sqrt(eps_B*a_wind)/t_theta).to(unit.magnetic_field)
 
 def calculate_l_theta(
-    r_theta:u.Quantity,
-    j_theta:u.Quantity,
-    alpha_theta:u.Quantity
+    beta_sh: float,
+    eps_B: float,
+    theta: float,
+    a_wind: u.Quantity
 )->u.Quantity:
-    l_theta = 4.0 * np.pi**2 * r_theta**2 * j_theta / alpha_theta
-    return l_theta.to(unit.specific_luminosity)
+    q = (81.0*beta_sh**2*theta**5*eps_B*a_wind*e**2/(8.0*m_e)).to(unit.specific_luminosity)
+    return u.Quantity(q)
 
 def calculate_ln_tau(
     xi:NDArray[np.float64],

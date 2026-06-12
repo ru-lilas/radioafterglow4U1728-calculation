@@ -42,6 +42,26 @@ class InputParameters:
             eps_B=self.eps_B,
             a_wind=self.a_wind_quantity
         )
+    
+    @cached_property
+    def tau_theta(self):
+        return synchrotron_scaling_values.calculate_tau_theta(
+            eps_B=self.eps_B,
+            mu_e=self.mu_e,
+            mu=self.mu,
+            theta=self.theta,
+            a_wind=self.a_wind_quantity,
+            beta_sh=self.beta_sh
+        )
+
+    @cached_property
+    def l_theta(self):
+        return synchrotron_scaling_values.calculate_l_theta(
+            beta_sh=self.beta_sh,
+            eps_B=self.eps_B,
+            theta=self.theta,
+            a_wind=self.a_wind_quantity,
+        )
 
 @dataclass
 class ThermalSynchrotronScalingValues:
@@ -95,23 +115,12 @@ class ThermalSynchrotronScalingValues:
         return synchrotron_scaling_values.calculate_alpha_theta(self.input.theta,self.n_e_theta,self.b_mag_theta)
 
     @cached_property
-    def l_theta(self):
-        return synchrotron_scaling_values.calculate_l_theta(
-            r_theta=self.r_theta,
-            j_theta=self.j_theta,
-            alpha_theta=self.alpha_theta
-        )
-
-    @cached_property
     def tau_theta(self):
-        return synchrotron_scaling_values.calculate_tau_theta(
-            alpha_theta=self.alpha_theta,
-            r_theta=self.r_theta
-        )
+        return self.input.tau_theta
 
     @cached_property
     def xi_est(self):
-        tau_theta = self.tau_theta[0]
+        tau_theta = self.input.tau_theta
         def f(xi:NDArray[np.float64]):
             return synchrotron_scaling_values.calculate_ln_tau(xi,tau_theta,self.table)
         xi_peak = bisection.bisection(f,1.0e-01,1.0e+04)
@@ -120,7 +129,7 @@ class ThermalSynchrotronScalingValues:
     @cached_property
     def lnu_est_dimless(self):
         lnu_peak_dimless = synchrotron_scaling_values.calculate_lnu_xi_dimless_tabular(
-            tau_theta=self.tau_theta,
+            tau_theta=self.input.tau_theta,
             xi=self.xi_est,
             table=self.table
         )
@@ -194,5 +203,5 @@ class SynchrotronSpectrum:
 
     @property
     def lnu_th(self):
-        q = u.Quantity((self.scalings.l_theta * self.lnu_th_dimless).to(self.scalings.l_theta.unit))
+        q = u.Quantity((self.inputs.l_theta * self.lnu_th_dimless).to(self.scalings.l_theta.unit))
         return q
