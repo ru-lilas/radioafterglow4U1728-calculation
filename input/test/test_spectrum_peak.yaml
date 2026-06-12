@@ -1,0 +1,6 @@
+tau_theta_arr:
+  start: 0.0
+  stop: 12.0
+  num: 512
+
+xi_num: 512

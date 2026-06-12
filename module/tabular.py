@@ -23,9 +23,15 @@ class ThermalSynchrotronTable:
     def log_ip_tabular(self):
         return np.array(self.tabular["ln_ip"], dtype=np.float64)
 
+    @cached_property
+    def xi_min(self):
+        return self.xi_tabular[0]
+
+    @cached_property
+    def xi_max(self):
+        return self.xi_tabular[-1]
+
     def calculate_log_ip(self,xi:NDArray[np.float64])->NDArray[np.float64]:
-        xi_min = self.xi_tabular[0]
-        xi_max = self.xi_tabular[-1]
         # if np.any(xi < xi_min) or np.any(xi > xi_max):
         #     raise ValueError(
         #         f"x={xi} is outside interpolation range [{xi_min}, {xi_max}]"

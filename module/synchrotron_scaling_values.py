@@ -181,7 +181,7 @@ def calculate_l_theta(
     l_theta = 4.0 * np.pi**2 * r_theta**2 * j_theta / alpha_theta
     return l_theta.to(unit.specific_luminosity)
 
-def func_ssa_peak_tabular(
+def calculate_ln_tau(
     xi:NDArray[np.float64],
     tau_theta:NDArray[np.float64],
     table:ThermalSynchrotronTable

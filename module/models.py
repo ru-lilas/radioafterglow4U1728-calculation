@@ -113,7 +113,7 @@ class ThermalSynchrotronScalingValues:
     def xi_est(self):
         tau_theta = self.tau_theta[0]
         def f(xi:NDArray[np.float64]):
-            return synchrotron_scaling_values.func_ssa_peak_tabular(xi,tau_theta,self.table)
+            return synchrotron_scaling_values.calculate_ln_tau(xi,tau_theta,self.table)
         xi_peak = bisection.bisection(f,1.0e-01,1.0e+04)
         return np.asarray(xi_peak,dtype=np.float64)
 
@@ -179,7 +179,7 @@ class SynchrotronSpectrum:
 
     @property
     def ln_tau(self):
-        return synchrotron_scaling_values.func_ssa_peak_tabular(
+        return synchrotron_scaling_values.calculate_ln_tau(
             xi=self.xi,
             tau_theta=self.scalings.tau_theta,
             table=self.tabular
