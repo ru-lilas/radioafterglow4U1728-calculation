@@ -54,19 +54,31 @@ def main(args:argparse.Namespace):
             tabular=table
         )
 
+        ln_tau = spectrum.ln_tau
+        tau = np.exp(ln_tau)
         df = pd.DataFrame({
             "xi":spectrum.xi,
             "nu":nu_arr,
             "lnu_th_dimless":spectrum.lnu_th_dimless,
             "lnu_th":spectrum.lnu_th.to_value(ua.specific_luminosity),
-            "ln_tau":spectrum.ln_tau
+            "ln_tau":ln_tau,
+            "tau": tau,
+            "exp(-tau)": np.exp(-tau),
+            "f_esc": -np.expm1(-tau),
+            "xi_f_esc": spectrum.xi*(-np.expm1(-tau)),
         })
 
+        lnu_ref = lnu_peak_ref_arr[i]
+        l_theta = scalings.l_theta.value[i]
+        l_unit = scalings.l_theta.unit
         metadata = {
             "t": t_ref,
             "t_unit": t_unit,
             "nu_peak_ref": nu_arr[i],
-            "lnu_peak_ref": lnu_peak_ref_arr[i],
+            "lnu_peak_ref": lnu_ref,
+            "l_theta": l_theta,
+            "l_unit": l_unit,
+            "lnu_ref/l_theta": lnu_ref/l_theta,
             "xi_peak": scalings.xi_peak,
             "phi_theta": inputs.phi_theta.value,
             "phi_unit": inputs.phi_theta.unit

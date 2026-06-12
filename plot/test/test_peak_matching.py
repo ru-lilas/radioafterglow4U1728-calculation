@@ -15,6 +15,9 @@ def plot_debag_value(
     t_ref:u.Quantity,
     metadata:dict
 )->None:
+
+    legend_handles:list[Line2D] = []
+
     conftick = plot_utils.TicksConfigure(**conf["TicksConfigure"])
     conflabel = plot_utils.LabelConfigure(**conf["LabelConfigure"])
     xname = str(conf["x_name"])
@@ -33,12 +36,25 @@ def plot_debag_value(
     )
     if "hlines" in conf.keys():
         conf_vlines:dict = conf["hlines"]
-        for _,conf_hline in conf_vlines.items():
-            ax.axhline(
-                conf_hline["value"],
-                color = "#000000",
+        for key,conf_hline in conf_vlines.items():
+            if key in metadata.keys():
+                ax.axhline(
+                    metadata[key],
+                    color = conf_hline["color"],
+                    ls=conf_hline["ls"],
+                )
+            else:
+                ax.axhline(
+                    conf_hline["value"],
+                    color = "#000000",
+                    ls=conf_hline["ls"],
+                )
+            legend_handles.append(Line2D(
+                [0],[0],
+                color=conf_hline["color"],
                 ls=conf_hline["ls"],
-            )
+                label=conf_hline["label"]
+            ))
     if "vlines" in conf.keys():
         conf_vlines:dict = conf["vlines"]
         for key,conf_element in conf_vlines.items():
@@ -54,6 +70,7 @@ def plot_debag_value(
                     color = "#000000",
                     ls=conf_element["ls"],
                 )
+    ax.legend(handles=legend_handles,fontsize=16)
             
     t_ref = metadata["t"]
     t_unit = metadata["t_unit"]
@@ -61,6 +78,9 @@ def plot_debag_value(
     phi_theta_value = metadata["phi_theta"]
     phi_unit = metadata["phi_unit"]
     phi_theta = u.Quantity(phi_theta_value,u.Unit(phi_unit))
+    l_theta_value = metadata["l_theta"]
+    l_unit = metadata["l_unit"]
+    l_theta = u.Quantity(l_theta_value,u.Unit(l_unit))
 
     # if "annotations" in conf.keys():
     #     conf_annot:dict = conf["annotations"]
@@ -98,7 +118,8 @@ def plot_debag_value(
         fontsize=16,
         text = \
         r"$t=$"f"{t:.1e}, " \
-        r'$\phi_{\Theta}=$'f"{phi_theta:.1e}"
+        r'$\phi_{\Theta}=$'f"{phi_theta:.1e}, " \
+        r'$L_{\Theta}=$'f"{l_theta:.1e}"
     )
     plot_utils.annotation(ax,annotconf)
 
@@ -199,6 +220,10 @@ def main(args:argparse.Namespace):
 
         plot_debag_value(pdf,conf["plot_lnudimless_xi"],df,t_ref,metadata)
         plot_debag_value(pdf,conf["ln_tau"],df,t_ref,metadata)
+        plot_debag_value(pdf,conf["tau"],df,t_ref,metadata)
+        plot_debag_value(pdf,conf["exp_mtau"],df,t_ref,metadata)
+        plot_debag_value(pdf,conf["f_esc"],df,t_ref,metadata)
+        plot_debag_value(pdf,conf["xi_f_esc"],df,t_ref,metadata)
 
     return
 
