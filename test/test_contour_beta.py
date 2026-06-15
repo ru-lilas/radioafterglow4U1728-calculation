@@ -8,9 +8,11 @@ from module.utilities import filereaders as fr
 from module.fetch_numerical_table import fetch_numerical_table
 from pathlib import Path
 import pandas as pd
+from dataclasses import asdict
 
 def build_input_parameters(inputs:dict):
-    beta_arr:NDArray[np.float64] = np.linspace(**inputs["beta_arr"],dtype=np.float64)
+    beta_arr:NDArray[np.float64] = \
+        np.logspace(**inputs["beta_arr"],dtype=np.float64)
     inputparams:list[InputParameters] = []
     for beta in beta_arr:
         inputparams.append(InputParameters(
@@ -29,8 +31,6 @@ def main(args:argparse.Namespace):
 
     tabular = fetch_numerical_table(args)
     inputparams = build_input_parameters(inputs)
-    # tau_theta_arr = fetch_tau_theta_arr(inputs)
-
 
     xm_num:int = inputs["xm_num"]
     xm_arr = np.logspace(
@@ -44,7 +44,12 @@ def main(args:argparse.Namespace):
         tau_theta = inputparam.tau_theta
         peak_data = build_peak_property(xm_arr,tau_theta,tabular)
         outdata.append({
-            **peak_data
+            **peak_data,
+            **asdict(inputparam),
+            "phi_theta": inputparam.phi_theta.value,
+            "phi_theta_unit": inputparam.phi_theta.unit,
+            "l_theta": inputparam.l_theta.value,
+            "l_unit": inputparam.l_theta.unit,
         })
     df = pd.DataFrame(outdata)
     fw.write_csv_with_params(df,{},outpath)

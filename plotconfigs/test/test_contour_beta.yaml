@@ -1,19 +1,23 @@
 TicksConfigure: &TicksConfigure_tmp
-  xlim: [1.0e+00,1.0e+04]
-  ylim: [1.0e+00,1.0e+07]
+  xlim: [1.0e+03,1.0e+05]
+  ylim: [1.0e+18,1.0e+23]
   xscale: "log"
   yscale: "log"
   fontsize: 16
 LabelConfigure: &LabelConfigure_tmp
-  xlabel: '$x_{\mathrm{M}} = \phi~/~\phi_{\Theta}$'
-  ylabel: '$L_{\nu,\mathrm{peak}}~/~L_{\Theta}$'
+  xlabel: '$\phi_{\mathrm{peak}}$ [GHz s]'
+  ylabel: '$L_{\nu,\mathrm{peak}}$ [erg/s/Hz]'
   fontsize: 24
 
-x_name: "xm_peak"
-y_name: "lnu_peak_dimless"
-z_name: "tau_theta"
+z_name: "beta_sh"
+zscale: "log"
+
+name_x_normalized: "phi_theta"
+name_x_dimensionless: "xm_peak"
+name_y_normalized: "l_theta"
+name_y_dimensionless: "lnu_peak_dimless"
 
 cbar:
-  label: '$\tau_{\Theta}$'
+  label: '$\beta_{\mathrm{sh}}$'
   fontsize: 24
   tickfontsize: 16

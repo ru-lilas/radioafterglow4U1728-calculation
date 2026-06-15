@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+from numpy.typing import NDArray
+import pandas as pd
 from module.utilities import filereaders as fr
 from module.utilities import plot_utils
 from pathlib import Path
@@ -7,6 +9,47 @@ from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 from matplotlib.colors import LogNorm
 from matplotlib.ticker import LogLocator
+
+def revive_quantity_array(
+    dimensionless_value: NDArray[np.float64],
+    quantity_as_unit: NDArray[np.float64]
+)->NDArray[np.float64]:
+    return dimensionless_value*quantity_as_unit
+
+def fetch_reviving_quantity(
+    df: pd.DataFrame,
+    name_x_dimless: str,
+    name_x_norm: str
+)->tuple[NDArray[np.float64],NDArray[np.float64]]:
+    dimless = np.asarray(df[name_x_dimless],dtype=np.float64)
+    norm = np.asarray(df[name_x_norm],dtype=np.float64)
+    return dimless,norm
+
+def calculate_phi_peak(
+    conf: dict,
+    df: pd.DataFrame
+)->NDArray[np.float64]:
+    name_xm_peak = str(conf["name_x_dimensionless"])
+    name_phi_theta = str(conf["name_x_normalized"])
+    xm_peak,phi_theta = fetch_reviving_quantity(
+        df=df,
+        name_x_dimless=name_xm_peak,
+        name_x_norm=name_phi_theta
+    )
+    return revive_quantity_array(xm_peak,phi_theta)
+
+def calculate_lnu_peak(
+    conf: dict,
+    df: pd.DataFrame
+)->NDArray[np.float64]:
+    name_lnu_peak = str(conf["name_y_dimensionless"])
+    name_l_theta = str(conf["name_y_normalized"])
+    lnu_peak,l_theta = fetch_reviving_quantity(
+        df=df,
+        name_x_dimless=name_lnu_peak,
+        name_x_norm=name_l_theta
+    )
+    return revive_quantity_array(lnu_peak,l_theta)
 
 def main(args:argparse.Namespace):
     inpath:Path = args.input
@@ -19,12 +62,10 @@ def main(args:argparse.Namespace):
 
     conftick = plot_utils.TicksConfigure(**conf["TicksConfigure"])
     conflabel = plot_utils.LabelConfigure(**conf["LabelConfigure"])
-    xname = str(conf["x_name"])
-    yname = str(conf["y_name"])
     zname = str(conf["z_name"])
 
-    x = np.asarray(df[xname],dtype=np.float64)
-    y = np.asarray(df[yname],dtype=np.float64)
+    x = calculate_phi_peak(conf,df)
+    y = calculate_lnu_peak(conf,df)
     z = np.asarray(df[zname],dtype=np.float64)
 
     with PdfPages(outpath) as pdf:
@@ -39,7 +80,7 @@ def main(args:argparse.Namespace):
             x,
             y,
             c=z,
-            norm=LogNorm(),
+            norm=LogNorm() if (conf["zscale"] == "log") else None,
             s=2,
             cmap="cividis_r",
         )

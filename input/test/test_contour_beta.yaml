@@ -1,7 +1,7 @@
 beta_arr:
-  start: 0.1
-  stop: 0.5
-  num: 128
+  start: -1.0
+  stop: -0.3
+  num: 2048
 
 fixed:
   eps_th: 1.0
