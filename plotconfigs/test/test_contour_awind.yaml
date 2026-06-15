@@ -9,7 +9,7 @@ LabelConfigure: &LabelConfigure_tmp
   ylabel: '$L_{\nu,\mathrm{peak}}$ [erg/s/Hz]'
   fontsize: 24
 
-z_name: "beta_sh"
+z_name: "a_wind_value"
 zscale: "log"
 x:
   column_dimensionless: "xm_peak" 
@@ -24,6 +24,6 @@ name_y_normalized: "l_theta"
 name_y_dimensionless: "lnu_peak_dimless"
 
 cbar:
-  label: '$\beta_{\mathrm{sh}}$'
+  label: '$A_{\mathrm{w}}$ [g/cm]'
   fontsize: 24
   tickfontsize: 16

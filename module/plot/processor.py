@@ -1,0 +1,25 @@
+from numpy.typing import NDArray
+import pandas as pd
+import numpy as np
+
+def revive_quantity_array(
+    dimensionless_value: NDArray[np.float64],
+    quantity_as_unit: NDArray[np.float64]
+)->NDArray[np.float64]:
+    return dimensionless_value*quantity_as_unit
+
+def fetch_reviving_quantity(
+    df: pd.DataFrame,
+    column_dimless: str,
+    column_norm: str
+)->tuple[NDArray[np.float64],NDArray[np.float64]]:
+    dimless = np.asarray(df[column_dimless],dtype=np.float64)
+    norm = np.asarray(df[column_norm],dtype=np.float64)
+    return dimless,norm
+
+def build_axis_array(conf:dict,df:pd.DataFrame,direction:str="x"):
+    conf_axis = conf[direction]
+    column_dimless = str(conf_axis["column_dimensionless"])
+    column_norm = str(conf_axis["column_normalization"])
+    dimless_arr, norm_arr = fetch_reviving_quantity(df,column_dimless,column_norm)
+    return revive_quantity_array(dimless_arr,norm_arr)
