@@ -17,9 +17,12 @@ def fetch_reviving_quantity(
     norm = np.asarray(df[column_norm],dtype=np.float64)
     return dimless,norm
 
-def build_axis_array(conf:dict,df:pd.DataFrame,direction:str="x"):
-    conf_axis = conf[direction]
-    column_dimless = str(conf_axis["column_dimensionless"])
-    column_norm = str(conf_axis["column_normalization"])
-    dimless_arr, norm_arr = fetch_reviving_quantity(df,column_dimless,column_norm)
-    return revive_quantity_array(dimless_arr,norm_arr)
+def build_axis_array(conf:dict,df:pd.DataFrame):
+    if "column" in conf.keys():
+        column_name = str(conf["column"])
+        return np.asarray(df[column_name],dtype=np.float64)
+    else:
+        column_dimless = str(conf["column_dimensionless"])
+        column_norm = str(conf["column_normalization"])
+        dimless_arr, norm_arr = fetch_reviving_quantity(df,column_dimless,column_norm)
+        return revive_quantity_array(dimless_arr,norm_arr)

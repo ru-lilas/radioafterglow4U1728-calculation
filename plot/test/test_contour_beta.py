@@ -12,7 +12,7 @@ def main(args:argparse.Namespace):
     conf = fr.read_yaml(confpath)
     df = fr.read_csv(inpath)
 
-    contour.contour(
+    contour.plot_colormaps(
         conf=conf,
         df=df,
         outpath=outpath

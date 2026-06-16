@@ -1,29 +1,26 @@
-TicksConfigure: &TicksConfigure_tmp
-  xlim: [1.0e+03,1.0e+05]
-  ylim: [1.0e+18,1.0e+23]
-  xscale: "log"
-  yscale: "log"
-  fontsize: 16
-LabelConfigure: &LabelConfigure_tmp
-  xlabel: '$\phi_{\mathrm{peak}}$ [GHz s]'
-  ylabel: '$L_{\nu,\mathrm{peak}}$ [erg/s/Hz]'
-  fontsize: 24
-
-z_name: "beta_sh"
-zscale: "log"
-x:
-  column_dimensionless: "xm_peak" 
-  column_normalization: "phi_theta"
-y:
-  column_dimensionless: "lnu_peak_dimless"
-  column_normalization: "l_theta"
-
-name_x_normalized: "phi_theta"
-name_x_dimensionless: "xm_peak"
-name_y_normalized: "l_theta"
-name_y_dimensionless: "lnu_peak_dimless"
-
-cbar:
-  label: '$\beta_{\mathrm{sh}}$'
-  fontsize: 24
-  tickfontsize: 16
+common:
+  TicksConfigure: &TicksConfigure_tmp
+    xlim: [1.0e+03,1.0e+05]
+    ylim: [1.0e+18,1.0e+23]
+    xscale: "log"
+    yscale: "log"
+    fontsize: 16
+  LabelConfigure: &LabelConfigure_tmp
+    xlabel: '$\phi_{\mathrm{peak}}$ [GHz s]'
+    ylabel: '$L_{\nu,\mathrm{peak}}$ [erg/s/Hz]'
+    fontsize: 24
+  x:
+    column_dimensionless: "xm_peak" 
+    column_normalization: "phi_theta"
+  y:
+    column_dimensionless: "lnu_peak_dimless"
+    column_normalization: "l_theta"
+contour:
+colormap:
+  z:
+    name: "beta_sh"
+    scale: "log"
+  cbar:
+    label: '$\beta_{\mathrm{sh}}$'
+    fontsize: 24
+    tickfontsize: 16

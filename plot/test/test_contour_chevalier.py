@@ -12,7 +12,7 @@ def main(args:argparse.Namespace):
     conf = fr.read_yaml(confpath)
     df = fr.read_csv(inpath)
 
-    contour.plot_colormaps(
+    contour.plot_parameter_curves(
         conf=conf,
         df=df,
         outpath=outpath
@@ -43,3 +43,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     main(args)
+

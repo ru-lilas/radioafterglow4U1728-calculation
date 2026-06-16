@@ -1,0 +1,59 @@
+common:
+  TicksConfigure: &TicksConfigure_tmp
+    xlim: [1.0e+03,1.0e+05]
+    ylim: [1.0e+18,1.0e+23]
+    xscale: "log"
+    yscale: "log"
+    fontsize: 16
+  LabelConfigure: &LabelConfigure_tmp
+    xlabel: '$\phi_{\mathrm{peak}}$ [GHz s]'
+    ylabel: '$L_{\nu,\mathrm{peak}}$ [erg/s/Hz]'
+    fontsize: 24
+  x:
+    column_dimensionless: "xm_peak" 
+    column_normalization: "phi_theta"
+  y:
+    column_dimensionless: "lnu_peak_dimless"
+    column_normalization: "l_theta"
+parameter_curves:
+  awind:
+    logscale: True
+    column_name: "a_wind_value"
+    legend_name: '$A_{\mathrm{w}}$ [g/cm]'
+    levels:
+      - 1.0e+06
+      - 1.0e+07
+      - 1.0e+08
+    label: &pclabel_tmp
+      prefix: '$A_{\mathrm{w}}=$'
+      suffix: ' g/cm'
+      fmt: ".1e"
+      fontsize: 16
+      facecolor: "#FFFFFF"
+      pad: 1
+      rotation: 30
+      ha: "center"
+      va: "center"
+    dex_tol: 1.0e-02
+    linestyle: "-"
+    linewidth: 2.0
+    color: "#000000"
+  beta_sh:
+    logscale: False
+    column_name: "beta_sh"
+    legend_name: '$\beta_{\mathrm{sh}}$'
+    levels:
+      - 0.10
+      - 0.20
+      - 0.30
+      - 0.40
+      - 0.50
+    label:
+      <<: *pclabel_tmp
+      fmt: ".1f"
+      prefix: '$\beta_{\mathrm{sh}}=$'
+      suffix: ''
+    rtol: 1.0e-02
+    linestyle: "--"
+    linewidth: 2.0
+    color: "#000000"
