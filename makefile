@@ -17,6 +17,7 @@ TIME_YAML  := $(INPUTDIR)/template/$(RESO)/time.yaml
 FREQ_YAML := $(INPUTDIR)/template/$(RESO)/frequency.yaml
 VARYING_YAML := $(INPUTDIR)/template/$(RESO)/varying_beta.yaml
 FIXED_YAML := $(INPUTDIR)/template/$(RESO)/$(BETA_DIR)/base.yaml
+TABLE := integral_table
 
 $(FIGDIR)/test/test_peak_matching/spectrum/%.pdf: \
 	$(DATADIR)/test/test_peak_matching/spectrum/%.csv \
@@ -111,15 +112,21 @@ data/test/tau_theta_dependence.csv: test/test_tau_theta__xi.py data/tabular/xi.c
 		$@ \
 		--tabular $(lastword $^)
 
-data/tabular/xi.csv: \
-	input/tabular/xi.yaml \
-		tabulate_integrals.py
-	python $(lastword $^) $< --output $@
-
 $(DATADIR)/table_%.csv: \
 	input/table_%.yaml \
+		$(DATADIR)/$(TABLE).csv \
 		scripts/table_%.py
-	python -m $(subst /,.,$(basename $(lastword $^))) $< --output $@
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--output $@ \
+		--table $(word 2,$^)
+
+$(DATADIR)/$(TABLE).csv: \
+	input/$(TABLE).yaml \
+		scripts/$(TABLE).py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--output $@
 
 .SECONDEXPANSION:
 

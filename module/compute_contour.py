@@ -9,16 +9,32 @@ from dataclasses import asdict
 from tqdm import tqdm
 
 def build_xm_arr(
-    inputs:dict,
+    input_conf:dict,
     tabular:ThermalSynchrotronTable
 )->NDArray[np.float64]:
-    xm_num:int = inputs["xm_num"]
+    xm_num:int = input_conf["xm_num"]
     return np.logspace(
         start=np.log(tabular.xi_min),
         stop=np.log(tabular.xi_max),
         num=xm_num,
         dtype=np.float64
     )
+
+def build_tau_theta_arr(
+    input_conf:dict[str,Any],
+)->NDArray[np.float64]:
+    return np.logspace(
+        **input_conf["tau_theta_arr"],
+        dtype=np.float64
+    )
+
+def peak_table(
+    xm_arr:NDArray[np.float64],
+    tau_theta_arr:NDArray[np.float64],
+    integral_table:ThermalSynchrotronTable,
+):
+    peak_data = build_peak_property(xm_arr,tau_theta_arr,integral_table)
+    return peak_data
 
 def varying(
     xm_arr:NDArray[np.float64],

@@ -2,12 +2,12 @@
 beta_arr:
   start: -1.0
   stop: -0.3
-  num: 128
+  num: 2048
 
 a_wind_arr:
   start: 6.0
   stop: 9.0
-  num: 128
+  num: 1024
 
 fixed:
   eps_th: 1.0
