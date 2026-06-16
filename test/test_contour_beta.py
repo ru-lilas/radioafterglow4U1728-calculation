@@ -16,7 +16,7 @@ def main(args:argparse.Namespace):
     tabular = fetch_numerical_table(args)
     inputparams = build_input_parameters.beta(inputs)
     xm_arr = compute_contour.build_xm_arr(inputs,tabular)
-    metadata, df = compute_contour.single_varing(
+    metadata, df = compute_contour.varying(
         xm_arr=xm_arr,
         tabular=tabular,
         inputparams=inputparams

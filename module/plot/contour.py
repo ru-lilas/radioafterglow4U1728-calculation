@@ -102,7 +102,7 @@ def level_curve(
         linewidth=parameter_conf["linewidth"],
         color=parameter_conf["color"],
     )
-    idx = len(x_curve) // 2
+    idx = int(0.5*len(x_curve))
 
     labelconf = parameter_conf["label"]
     fmt = labelconf["fmt"]
@@ -116,6 +116,7 @@ def level_curve(
         rotation = labelconf["rotation"],
         ha=labelconf["ha"],
         va=labelconf["va"],
+        clip_on=True,
         bbox={
             "facecolor": labelconf["facecolor"],
             "edgecolor": "none",

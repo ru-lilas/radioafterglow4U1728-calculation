@@ -31,7 +31,7 @@ parameter_curves:
       fontsize: 16
       facecolor: "#FFFFFF"
       pad: 1
-      rotation: 30
+      rotation: 20
       ha: "center"
       va: "center"
     dex_tol: 1.0e-02

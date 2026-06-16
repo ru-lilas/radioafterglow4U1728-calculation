@@ -1,10 +1,11 @@
 import argparse
+from dataclasses import asdict
 from pathlib import Path
-from module import compute_contour
 from module import build_input_parameters
-from module.fetch_numerical_table import fetch_numerical_table
 from module.utilities import filereaders as fr
 from module.utilities import filewriters as fw
+from tqdm import tqdm
+import pandas as pd
 
 def main(args:argparse.Namespace):
     outpath:Path = args.output
@@ -13,15 +14,21 @@ def main(args:argparse.Namespace):
     inpath:Path = args.input
     inputs:dict = fr.read_yaml(inpath)
 
-    tabular = fetch_numerical_table(args)
     inputparams = build_input_parameters.both(inputs)
-    xm_arr = compute_contour.build_xm_arr(inputs,tabular)
-    metadata, df = compute_contour.varying(
-        xm_arr=xm_arr,
-        tabular=tabular,
-        inputparams=inputparams
-    )
-    fw.write_csv_with_params(df,metadata,outpath)
+
+    outdata:list[dict] = []
+    for inputparam in tqdm(inputparams):
+        outdata.append({
+            **asdict(inputparam),
+            "tau_theta": inputparam.tau_theta,
+            "phi_theta": inputparam.phi_theta.value,
+            "phi_theta_unit": inputparam.phi_theta.unit,
+            "l_theta": inputparam.l_theta.value,
+            "l_unit": inputparam.l_theta.unit,
+        })
+    df = pd.DataFrame(outdata)
+    fw.write_csv_with_params(df,{},outpath)
+    print(f"output {outpath}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -29,11 +36,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "input",
         type=Path,
-    )
-    parser.add_argument(
-        "--tabular",
-        type=Path,
-        required=True
     )
     parser.add_argument(
         "--output",

@@ -116,6 +116,11 @@ data/tabular/xi.csv: \
 		tabulate_integrals.py
 	python $(lastword $^) $< --output $@
 
+$(DATADIR)/table_%.csv: \
+	input/table_%.yaml \
+		scripts/table_%.py
+	python -m $(subst /,.,$(basename $(lastword $^))) $< --output $@
+
 .SECONDEXPANSION:
 
 $(FIGDIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/spectrum/%.pdf: \
@@ -170,6 +175,7 @@ $(DATADIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/spectrum/.done: \
 	mkdir -p $(dir $@)
 	touch $@
 
+
 input/generated/$(MODEL)/$(RESO)/beta/$(BETA_FMT).yaml: \
 	$(VARYING_YAML) \
 	$(FIXED_YAML) \
@@ -185,6 +191,9 @@ input/generated/$(MODEL)/$(RESO)/beta/$(BETA_FMT).yaml: \
 		--outdir input/generated/$(MODEL)/$(RESO)/beta/
 
 
+input/%.yaml:
+	@echo "エラー: インプットファイルがありません $@"
+	@false
 plotconfigs/%.yaml:
 	@echo "エラー: ファイルがありません $@"
 	@false

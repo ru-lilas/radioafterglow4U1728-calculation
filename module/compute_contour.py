@@ -6,6 +6,7 @@ from module.models import InputParameters
 from module.tabular import ThermalSynchrotronTable
 import pandas as pd
 from dataclasses import asdict
+from tqdm import tqdm
 
 def build_xm_arr(
     inputs:dict,
@@ -19,13 +20,13 @@ def build_xm_arr(
         dtype=np.float64
     )
 
-def single_varing(
+def varying(
     xm_arr:NDArray[np.float64],
     tabular:ThermalSynchrotronTable,
     inputparams:list[InputParameters]
 )->tuple[dict[str,Any],pd.DataFrame]:
     outdata:list[dict] = []
-    for inputparam in inputparams:
+    for inputparam in tqdm(inputparams):
         tau_theta = inputparam.tau_theta
         peak_data = build_peak_property(xm_arr,tau_theta,tabular)
         outdata.append({
