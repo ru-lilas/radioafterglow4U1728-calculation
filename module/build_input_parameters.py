@@ -3,6 +3,8 @@ from typing import Any
 from numpy.typing import NDArray
 from module.models import InputParameters
 import numpy as np
+from itertools import product
+from tqdm import tqdm
 
 def beta(inputs:dict):
     beta_arr:NDArray[np.float64] = \
@@ -72,10 +74,9 @@ def table(
         np.logspace(**input["beta_arr"],dtype=np.float64)
 
     table_list:list[dict] = []
-    for beta in beta_arr:
-        for a_wind in a_wind_arr:
-            table_row = _table_row(beta,a_wind,input["fixed"])
-            table_list.append(table_row)
+    for beta,a_wind in tqdm(product(beta_arr,a_wind_arr),total=beta_arr.size*a_wind_arr.size,desc="table"):
+        table_row = _table_row(beta,a_wind,input["fixed"])
+        table_list.append(table_row)
 
     return pd.DataFrame(table_list)
 

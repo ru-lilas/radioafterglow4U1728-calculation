@@ -18,6 +18,7 @@ FREQ_YAML := $(INPUTDIR)/template/$(RESO)/frequency.yaml
 VARYING_YAML := $(INPUTDIR)/template/$(RESO)/varying_beta.yaml
 FIXED_YAML := $(INPUTDIR)/template/$(RESO)/$(BETA_DIR)/base.yaml
 TABLE := integral_table
+PARAMETER_TABLE := parameter_table
 
 $(FIGDIR)/test/test_peak_matching/spectrum/%.pdf: \
 	$(DATADIR)/test/test_peak_matching/spectrum/%.csv \
@@ -116,10 +117,12 @@ fig/synchrotron_functions/%.pdf: \
 		-o $@ \
 		-c $(lastword $^)
 
-data/test/tau_theta_dependence.csv: test/test_tau_theta__xi.py data/tabular/xi.csv
-	python -m test.test_tau_theta__xi \
-		$@ \
-		--tabular $(lastword $^)
+$(DATADIR)/$(PARAMETER_TABLE).csv: \
+	input/$(PARAMETER_TABLE).yaml \
+		scripts/$(PARAMETER_TABLE).py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--output $@ \
 
 $(DATADIR)/table_%.csv: \
 	input/table_%.yaml \
