@@ -16,11 +16,13 @@ def main(args:argparse.Namespace):
     tabular = fetch_numerical_table(args)
     xm_arr = compute_contour.build_xm_arr(inputs,tabular)
     tau_theta_arr = compute_contour.build_tau_theta_arr(inputs)
-    outdata = compute_contour.peak_table(
-        xm_arr=xm_arr,
-        tau_theta_arr=tau_theta_arr,
-        integral_table=tabular,
-    )
+    outdata:list[dict] = []
+    for tau_theta in tau_theta_arr:
+        outdata.append(compute_contour.peak_table(
+            xm_arr=xm_arr,
+            tau_theta_arr=tau_theta,
+            integral_table=tabular,
+        ))
     df = pd.DataFrame(outdata)
     fw.write_csv_with_params(df,{},outpath)
 

@@ -38,6 +38,15 @@ $(FIGDIR)/integral_ip.pdf: \
  		-o $@ \
 		-c $(lastword $^)
 
+$(FIGDIR)/%.pdf: \
+	$(DATADIR)/%.csv \
+		plot/%.py \
+		plotconfigs/%.yaml
+	python -m $(subst /,.,$(basename $(word 2,$^))) \
+		$< \
+ 		-o $@ \
+		-c $(lastword $^)
+
 $(FIGDIR)/test/%.pdf: \
 	$(DATADIR)/test/%.csv \
 		plot/test/%.py \

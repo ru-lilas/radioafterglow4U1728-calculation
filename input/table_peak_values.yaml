@@ -2,5 +2,5 @@ xm_num: 4096
 tau_theta_arr:
   start: 0.0
   stop: 20.0
-  num: 4096 
+  num: 1024
 
