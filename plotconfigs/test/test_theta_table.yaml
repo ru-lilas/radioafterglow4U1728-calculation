@@ -1,0 +1,23 @@
+common:
+  TicksConfigure: &TicksConfigure_tmp
+    xlim: [1.0e-01,5.0e-01]
+    ylim: [1.0e+06,1.0e+08]
+    xscale: "log"
+    yscale: "log"
+    fontsize: 16
+  LabelConfigure: &LabelConfigure_tmp
+    xlabel: '$\beta_{\mathrm{sh}}$'
+    ylabel: '$A_{\mathrm{w}}$ [g/cm]'
+    fontsize: 24
+  x:
+    column: "beta_sh"
+  y:
+    column: "a_wind_value"
+colormap:
+  z:
+    name: "tau_theta"
+    scale: "log"
+  cbar:
+    label: '$\tau_{\Theta}$'
+    fontsize: 24
+    tickfontsize: 16
