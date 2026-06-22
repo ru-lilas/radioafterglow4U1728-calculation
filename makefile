@@ -20,6 +20,18 @@ FIXED_YAML := $(INPUTDIR)/template/$(RESO)/$(BETA_DIR)/base.yaml
 INTEGRAL_TABLE := integral_table
 PARAMETER_TABLE := parameter_table
 PEAK_TABLE := spectrum_peak_table
+CONTOUR_RAW := contour_raw
+CHEVALIER_DIAGRAM := chevalier_diagram
+
+#=== figures ===#
+$(FIGDIR)/$(CHEVALIER_DIAGRAM).pdf: \
+	$(DATADIR)/$(CHEVALIER_DIAGRAM).csv \
+		plotconfigs/$(CHEVALIER_DIAGRAM).yaml \
+		plot/$(CHEVALIER_DIAGRAM).py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		-c $(word 2,$^) \
+		-o $@
 
 $(FIGDIR)/test/test_peak_matching/spectrum/%.pdf: \
 	$(DATADIR)/test/test_peak_matching/spectrum/%.csv \
@@ -40,14 +52,14 @@ $(FIGDIR)/integral_ip.pdf: \
  		-o $@ \
 		-c $(lastword $^)
 
-$(FIGDIR)/%.pdf: \
-	$(DATADIR)/%.csv \
-		plot/%.py \
-		plotconfigs/%.yaml
-	python -m $(subst /,.,$(basename $(word 2,$^))) \
-		$< \
- 		-o $@ \
-		-c $(lastword $^)
+# $(FIGDIR)/%.pdf: \
+# 	$(DATADIR)/%.csv \
+# 		plot/%.py \
+# 		plotconfigs/%.yaml
+# 	python -m $(subst /,.,$(basename $(word 2,$^))) \
+# 		$< \
+#  		-o $@ \
+# 		-c $(lastword $^)
 
 $(FIGDIR)/test/%.pdf: \
 	$(DATADIR)/test/%.csv \
@@ -57,15 +69,6 @@ $(FIGDIR)/test/%.pdf: \
 		$< \
  		-o $@ \
 		-c $(lastword $^)
-
-# $(DATADIR)/test/%.csv: \
-# 	input/test/%.yaml \
-# 	test/%.py \
-# 	data/tabular/xi.csv
-# 	python -m test.$* \
-# 		$<\
-# 		--output $@ \
-# 		--tabular $(lastword $^)
 
 $(DATADIR)/test/%/spectrum/.done: \
 	input/test/%.yaml \
@@ -119,26 +122,49 @@ fig/synchrotron_functions/%.pdf: \
 		-c $(lastword $^)
 
 #=== csv files ===#
-$(DATADIR)/test/test_contour_chevalier.csv: \
-	$(DATADIR)/test/test_contour_chevalier_using_table.csv \
+$(DATADIR)/$(CHEVALIER_DIAGRAM).csv: \
+	$(DATADIR)/$(CONTOUR_RAW).csv \
 		scripts/extract_contour_data.py
 	python -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
 		--output $@
 
-$(DATADIR)/test/test_contour_chevalier_using_table.csv: \
+$(DATADIR)/test/test_contour_chevalier.csv: \
+	$(DATADIR)/test/test_contour_chevalier_raw.csv \
+		scripts/extract_contour_data.py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--output $@
+
+$(DATADIR)/$(CONTOUR_RAW).csv: \
+	$(DATADIR)/$(PARAMETER_TABLE).csv \
+		$(DATADIR)/$(PEAK_TABLE).csv \
+		scripts/build_$(CONTOUR_RAW).py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--table $(word 2,$^) \
+		--output $@
+
+$(DATADIR)/test/$(CONTOUR_RAW).csv: \
 	$(DATADIR)/test/test_$(PARAMETER_TABLE).csv \
 		$(DATADIR)/$(PEAK_TABLE).csv \
-		test/test_contour_chevalier_using_table.py
+		scripts/build_$(CONTOUR_RAW).py
 	python -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
 		--table $(word 2,$^) \
 		--output $@
 
 #=== tabulating ===#
+$(DATADIR)/$(PARAMETER_TABLE).csv: \
+	input/$(PARAMETER_TABLE).yaml \
+		scripts/$(PARAMETER_TABLE).py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--output $@ \
+
 $(DATADIR)/test/test_$(PARAMETER_TABLE).csv: \
 	input/test/test_$(PARAMETER_TABLE).yaml \
-		test/test_$(PARAMETER_TABLE).py
+		scripts/$(PARAMETER_TABLE).py
 	python -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
 		--output $@ \
