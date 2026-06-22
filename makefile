@@ -183,6 +183,14 @@ $(DATADIR)/$(INTEGRAL_TABLE).csv: \
 		$< \
 		--output $@
 
+#=== arrange observation data ===#
+$(DATADIR)/observation_arranged.csv: \
+	$(DATADIR)/observation_raw/4U1728_stacked_1min.dat \
+		scripts/arrange_observation_data.py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--output $@
+
 .SECONDEXPANSION:
 
 $(FIGDIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/spectrum/%.pdf: \

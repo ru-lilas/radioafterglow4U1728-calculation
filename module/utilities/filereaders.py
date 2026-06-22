@@ -4,11 +4,12 @@ import pandas as pd
 from pathlib import Path
 import warnings
 
-def read_csv(filepath:Path):
+def read_csv(filepath:Path,sep:str=","):
     df = pd.read_csv(
-            filepath,
-            index_col=None,
-            comment = "#",
+        filepath,
+        index_col=None,
+        comment = "#",
+        sep=sep,
     )
     return df
 
