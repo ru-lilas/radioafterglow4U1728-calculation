@@ -17,8 +17,9 @@ TIME_YAML  := $(INPUTDIR)/template/$(RESO)/time.yaml
 FREQ_YAML := $(INPUTDIR)/template/$(RESO)/frequency.yaml
 VARYING_YAML := $(INPUTDIR)/template/$(RESO)/varying_beta.yaml
 FIXED_YAML := $(INPUTDIR)/template/$(RESO)/$(BETA_DIR)/base.yaml
-TABLE := integral_table
+INTEGRAL_TABLE := integral_table
 PARAMETER_TABLE := parameter_table
+PEAK_TABLE := spectrum_peak_table
 
 $(FIGDIR)/test/test_peak_matching/spectrum/%.pdf: \
 	$(DATADIR)/test/test_peak_matching/spectrum/%.csv \
@@ -57,14 +58,14 @@ $(FIGDIR)/test/%.pdf: \
  		-o $@ \
 		-c $(lastword $^)
 
-$(DATADIR)/test/%.csv: \
-	input/test/%.yaml \
-	test/%.py \
-	data/tabular/xi.csv
-	python -m test.$* \
-		$<\
-		--output $@ \
-		--tabular $(lastword $^)
+# $(DATADIR)/test/%.csv: \
+# 	input/test/%.yaml \
+# 	test/%.py \
+# 	data/tabular/xi.csv
+# 	python -m test.$* \
+# 		$<\
+# 		--output $@ \
+# 		--tabular $(lastword $^)
 
 $(DATADIR)/test/%/spectrum/.done: \
 	input/test/%.yaml \
@@ -117,25 +118,41 @@ fig/synchrotron_functions/%.pdf: \
 		-o $@ \
 		-c $(lastword $^)
 
-$(DATADIR)/$(PARAMETER_TABLE).csv: \
-	input/$(PARAMETER_TABLE).yaml \
-		scripts/$(PARAMETER_TABLE).py
+#=== csv files ===#
+$(DATADIR)/test/test_contour_chevalier.csv: \
+	$(DATADIR)/test/test_contour_chevalier_using_table.csv \
+		scripts/extract_contour_data.py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--output $@
+
+$(DATADIR)/test/test_contour_chevalier_using_table.csv: \
+	$(DATADIR)/test/test_$(PARAMETER_TABLE).csv \
+		$(DATADIR)/$(PEAK_TABLE).csv \
+		test/test_contour_chevalier_using_table.py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--table $(word 2,$^) \
+		--output $@
+
+#=== tabulating ===#
+$(DATADIR)/test/test_$(PARAMETER_TABLE).csv: \
+	input/test/test_$(PARAMETER_TABLE).yaml \
+		test/test_$(PARAMETER_TABLE).py
 	python -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
 		--output $@ \
 
-$(DATADIR)/table_%.csv: \
-	input/table_%.yaml \
-		$(DATADIR)/$(TABLE).csv \
-		scripts/table_%.py
+$(DATADIR)/$(PEAK_TABLE).csv: \
+	input/$(PEAK_TABLE).yaml \
+		scripts/$(PEAK_TABLE).py
 	python -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
 		--output $@ \
-		--table $(word 2,$^)
 
-$(DATADIR)/$(TABLE).csv: \
-	input/$(TABLE).yaml \
-		scripts/$(TABLE).py
+$(DATADIR)/$(INTEGRAL_TABLE).csv: \
+	input/$(INTEGRAL_TABLE).yaml \
+		scripts/$(INTEGRAL_TABLE).py
 	python -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
 		--output $@

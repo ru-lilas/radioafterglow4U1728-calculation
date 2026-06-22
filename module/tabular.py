@@ -37,3 +37,57 @@ class ThermalSynchrotronTable:
         #         f"x={xi} is outside interpolation range [{xi_min}, {xi_max}]"
         #     )
         return np.interp(xi, self.xi_tabular, self.log_ip_tabular)
+
+@dataclass
+class TauThetaTable:
+    table: pd.DataFrame
+
+    @cached_property
+    def tabular_tau_theta(self):
+        return np.array(self.table["tau_theta"], dtype=np.float64)
+
+    @cached_property
+    def tabular_lnu_peak_dimless(self):
+        return np.array(self.table["lnu_peak_dimless"], dtype=np.float64)
+
+    @cached_property
+    def tabular_xm_peak(self):
+        return np.array(self.table["xm_peak"], dtype=np.float64)
+
+    @cached_property
+    def tau_theta_min(self):
+        return self.tabular_tau_theta[0]
+
+    @cached_property
+    def tau_theta_max(self):
+        return self.tabular_tau_theta[-1]
+
+    def can_interp(self,tau_theta_arr:NDArray[np.float64]):
+        if np.any(tau_theta_arr < self.tau_theta_min) or np.any(tau_theta_arr > self.tau_theta_max):
+            raise ValueError(
+                f"x={tau_theta_arr} is outside interpolation range [{self.tau_theta_min}, {self.tau_theta_max}]"
+            )
+        else:
+            return
+
+    def calculate_xm_peak(
+        self,
+        tau_theta_arr:NDArray[np.float64]
+    )->NDArray[np.float64]:
+        self.can_interp(tau_theta_arr)
+        return np.interp(
+            tau_theta_arr,
+            self.tabular_tau_theta,
+            self.tabular_xm_peak
+        )
+
+    def calculate_lnu_peak_dimless(
+        self,
+        tau_theta_arr:NDArray[np.float64]
+    )->NDArray[np.float64]:
+        self.can_interp(tau_theta_arr)
+        return np.interp(
+            tau_theta_arr,
+            self.tabular_tau_theta,
+            self.tabular_lnu_peak_dimless
+        )

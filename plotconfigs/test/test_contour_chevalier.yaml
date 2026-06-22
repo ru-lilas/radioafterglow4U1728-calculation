@@ -10,11 +10,9 @@ common:
     ylabel: '$L_{\nu,\mathrm{peak}}$ [erg/s/Hz]'
     fontsize: 24
   x:
-    column_dimensionless: "xm_peak" 
-    column_normalization: "phi_theta"
+    column: "phi_peak" 
   y:
-    column_dimensionless: "lnu_peak_dimless"
-    column_normalization: "l_theta"
+    column: "l_peak"
 parameter_curves:
   awind:
     logscale: True
@@ -34,7 +32,7 @@ parameter_curves:
       rotation: 20
       ha: "center"
       va: "center"
-    dex_tol: 1.0e-02
+    dex_tol: 2.0e-02
     linestyle: "-"
     linewidth: 2.0
     color: "#000000"

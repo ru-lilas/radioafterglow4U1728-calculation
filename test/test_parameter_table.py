@@ -23,11 +23,6 @@ if __name__ == "__main__":
         type=Path,
     )
     parser.add_argument(
-        "--tabular",
-        type=Path,
-        required=True
-    )
-    parser.add_argument(
         "--output",
         type=Path,
         required=True

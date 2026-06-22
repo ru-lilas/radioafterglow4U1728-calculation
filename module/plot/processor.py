@@ -8,6 +8,16 @@ def revive_quantity_array(
 )->NDArray[np.float64]:
     return dimensionless_value*quantity_as_unit
 
+def calcualte_product_two_columns(
+    df: pd.DataFrame,
+    columns: tuple[str,str],
+)->NDArray[np.float64]:
+    arrs = [
+        np.asarray(df[column],dtype=np.float64)
+        for column in columns
+    ]
+    return arrs[0]*arrs[1]
+
 def fetch_reviving_quantity(
     df: pd.DataFrame,
     column_dimless: str,
