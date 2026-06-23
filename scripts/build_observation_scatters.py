@@ -45,9 +45,14 @@ def main(args:argparse.Namespace):
         d_unit=d_unit,
         l_unit=l_unit
     )
+    labels = [
+        "Russell+24 (5.5 GHz)",
+        "Russell+24 (9.0 GHz)",
+    ]
     phi_peaks = [phi_peak_5,phi_peak_9]
     l_peaks = [l_peak_5,l_peak_9]
     output_data:dict[str,Any] = {
+        "label": labels,
         "phi_peak": phi_peaks,
         "phi_unit": phi_unit,
         "l_peak": l_peaks,

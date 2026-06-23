@@ -1,7 +1,8 @@
+figsize: [12,12]
 common:
   TicksConfigure: &TicksConfigure_tmp
-    xlim: [1.0e+03,1.0e+05]
-    ylim: [1.0e+18,1.0e+23]
+    xlim: [1.0e+03,1.0e+04]
+    ylim: [1.0e+18,1.0e+21]
     xscale: "log"
     yscale: "log"
     fontsize: 16
@@ -55,3 +56,11 @@ parameter_curves:
     linestyle: "--"
     linewidth: 2.0
     color: "#000000"
+annotations:
+  use: True
+  fontsize: 16
+  values:
+    - "eps_B"
+    - "eps_th"
+    - "mu"
+    - "mu_e"

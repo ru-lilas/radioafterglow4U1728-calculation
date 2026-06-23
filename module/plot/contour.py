@@ -3,7 +3,6 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from numpy.typing import NDArray
-from module.utilities import plot_utils
 from pathlib import Path
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
@@ -11,6 +10,7 @@ from matplotlib.colors import LogNorm
 from matplotlib.ticker import LogLocator
 from module.plot import processor
 import pandas as pd
+from module.plot import plot_utils
 
 def common(
     ax:Axes,
@@ -155,31 +155,29 @@ def plot_colormaps(
         plt.close(fig)
 
 def plot_parameter_curves(
+    ax:Axes,
     conf:dict[str,Any],
     df:pd.DataFrame,
-    outpath: Path
 ):
+    x,y = common(ax,conf,df)
 
-    with PdfPages(outpath) as pdf:
+    pcconf:dict[str,Any] = conf["parameter_curves"]
+    for _, param_conf in pcconf.items():
+        column_name = param_conf["column_name"]
+        z = np.asarray(df[column_name],dtype=np.float64)
+        parameter_curves(
+            ax,
+            param_conf,
+            x,y,z
+        )
 
-        figsize=(12,12)
-        fig,ax = plt.subplots(figsize=figsize)
-        fig.set_layout_engine("constrained")
-        x,y = common(ax,conf,df)
-
-        pcconf:dict[str,Any] = conf["parameter_curves"]
-        for _, param_conf in pcconf.items():
-            column_name = param_conf["column_name"]
-            z = np.asarray(df[column_name],dtype=np.float64)
-            parameter_curves(
-                ax,
-                param_conf,
-                x,y,z
-            )
-
-        pdf.savefig(fig)
-
-        plt.close(fig)
+def plot_scatters(
+    ax:Axes,
+    conf:dict[str,Any],
+    df_scatters:pd.DataFrame,
+):
+    ax.scatter(df_scatters["phi_peak"],df_scatters["l_peak"])
+    return
 
 def plot_contours(
     conf:dict[str,Any],

@@ -26,11 +26,13 @@ CHEVALIER_DIAGRAM := chevalier_diagram
 #=== figures ===#
 $(FIGDIR)/$(CHEVALIER_DIAGRAM).pdf: \
 	$(DATADIR)/$(CHEVALIER_DIAGRAM).csv \
+		$(DATADIR)/chevalier_diagram_obsscats.csv \
 		plotconfigs/$(CHEVALIER_DIAGRAM).yaml \
 		plot/$(CHEVALIER_DIAGRAM).py
 	python -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
-		-c $(word 2,$^) \
+		-s $(word 2,$^) \
+		-c $(word 3,$^) \
 		-o $@
 
 $(FIGDIR)/test/test_peak_matching/spectrum/%.pdf: \
