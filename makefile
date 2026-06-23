@@ -52,15 +52,6 @@ $(FIGDIR)/integral_ip.pdf: \
  		-o $@ \
 		-c $(lastword $^)
 
-# $(FIGDIR)/%.pdf: \
-# 	$(DATADIR)/%.csv \
-# 		plot/%.py \
-# 		plotconfigs/%.yaml
-# 	python -m $(subst /,.,$(basename $(word 2,$^))) \
-# 		$< \
-#  		-o $@ \
-# 		-c $(lastword $^)
-
 $(FIGDIR)/test/%.pdf: \
 	$(DATADIR)/test/%.csv \
 		plot/test/%.py \
@@ -124,6 +115,7 @@ fig/synchrotron_functions/%.pdf: \
 #=== csv files ===#
 $(DATADIR)/$(CHEVALIER_DIAGRAM).csv: \
 	$(DATADIR)/$(CONTOUR_RAW).csv \
+		$(DATADIR)/$(CONTOUR_RAW).csv \
 		scripts/extract_contour_data.py
 	python -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
@@ -147,7 +139,7 @@ $(DATADIR)/$(CONTOUR_RAW).csv: \
 
 $(DATADIR)/test/$(CONTOUR_RAW).csv: \
 	$(DATADIR)/test/test_$(PARAMETER_TABLE).csv \
-		$(DATADIR)/$(PEAK_TABLE).csv \
+		$(DATADIR)/observation_arranged.csv \
 		scripts/build_$(CONTOUR_RAW).py
 	python -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
@@ -184,6 +176,13 @@ $(DATADIR)/$(INTEGRAL_TABLE).csv: \
 		--output $@
 
 #=== arrange observation data ===#
+$(DATADIR)/chevalier_diagram_obsscats.csv: \
+	$(DATADIR)/observation_arranged.csv \
+		scripts/build_observation_scatters.py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--output $@
+
 $(DATADIR)/observation_arranged.csv: \
 	$(DATADIR)/observation_raw/4U1728_stacked_1min.dat \
 		scripts/arrange_observation_data.py

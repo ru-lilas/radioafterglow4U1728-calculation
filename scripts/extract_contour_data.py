@@ -10,7 +10,7 @@ def main(args:argparse.Namespace):
 
     inpath:Path = args.input
     df_input = fr.read_csv(inpath)
-    metadata = fr.read_keyvalue(inpath)
+    metadata_input = fr.read_keyvalue(inpath)
 
     columns:list[str] = [
         "beta_sh",
@@ -22,9 +22,11 @@ def main(args:argparse.Namespace):
     ]
 
     df_output = pd.DataFrame(df_input[columns])
+    metadata_output = {
+        **metadata_input
+    }
 
-
-    fw.write_csv_with_params(df_output,metadata,outpath)
+    fw.write_csv_with_params(df_output,metadata_output,outpath)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
