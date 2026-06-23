@@ -24,6 +24,19 @@ CONTOUR_RAW := contour_raw
 CHEVALIER_DIAGRAM := chevalier_diagram
 
 #=== figures ===#
+$(FIGDIR)/test/chevalier_overlap.pdf: \
+	$(DATADIR)/$(CHEVALIER_DIAGRAM).csv \
+		$(DATADIR)/chevalier_diagram_obsscats.csv \
+		$(DATADIR)/estimated_parameters.csv \
+		plotconfigs/$(CHEVALIER_DIAGRAM).yaml \
+		plot/test/chevalier_overlap.py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--scatters $(word 2,$^) \
+		--estimated $(word 3,$^) \
+		--config $(word 4,$^) \
+		--output $@
+
 $(FIGDIR)/$(CHEVALIER_DIAGRAM).pdf: \
 	$(DATADIR)/$(CHEVALIER_DIAGRAM).csv \
 		$(DATADIR)/chevalier_diagram_obsscats.csv \
@@ -34,25 +47,6 @@ $(FIGDIR)/$(CHEVALIER_DIAGRAM).pdf: \
 		-s $(word 2,$^) \
 		-c $(word 3,$^) \
 		-o $@
-
-$(FIGDIR)/test/test_peak_matching/spectrum/%.pdf: \
-	$(DATADIR)/test/test_peak_matching/spectrum/%.csv \
-	$(DATADIR)/test/test_peak_matching/spectrum/.done \
-		plot/test/test_peak_matching.py \
-		plotconfigs/test/test_peak_matching.yaml
-	python -m plot.test.test_peak_matching \
-		$< \
- 		-o $@ \
-		-c $(lastword $^)
-
-$(FIGDIR)/integral_ip.pdf: \
-	$(DATADIR)/tabular/xi.csv \
-		plot/integral_tabular.py \
-		plotconfigs/integral_tabular.yaml
-	python -m plot.integral_tabular \
-		$< \
- 		-o $@ \
-		-c $(lastword $^)
 
 $(FIGDIR)/test/%.pdf: \
 	$(DATADIR)/test/%.csv \
@@ -73,46 +67,6 @@ $(DATADIR)/test/%/spectrum/.done: \
 		--tabular $(lastword $^)
 	mkdir -p $(dir $@)
 	touch $@
-
-data/test/peak_time_for_given_nu.csv: test/test_peak_time_for_given_nu.py data/tabular/xi.csv
-	python -m test.test_peak_time_for_given_nu \
-		--tabular $(lastword $^)
-
-fig/test/tau_theta__lnu_peak.pdf: \
-	data/test/tau_theta_dependence.csv\
-	plot/test/test_tau_theta_dependence.py\
-	plotconfigs/tau_theta__lnu_peak.yaml
-	python -m plot.test.test_tau_theta_dependence \
-		$< \
-		-o $@ \
-		-c $(lastword $^)
-
-fig/test/tau_theta__tau_peak.pdf: \
-	data/test/tau_theta_dependence.csv\
-	plot/test/test_tau_theta_dependence.py\
-	plotconfigs/tau_theta__tau_peak.yaml
-	python -m plot.test.test_tau_theta_dependence \
-		$< \
-		-o $@ \
-		-c $(lastword $^)
-
-fig/test/tau_theta__xi_peak.pdf: \
-	data/test/tau_theta_dependence.csv\
-	plot/test/test_tau_theta_dependence.py\
-	plotconfigs/tau_theta__xi_peak.yaml
-	python -m plot.test.test_tau_theta_dependence \
-		$< \
-		-o $@ \
-		-c $(lastword $^)
-
-fig/synchrotron_functions/%.pdf: \
-	data/tabular/xi.csv \
-	plot/test/test_tau_theta_dependence.py \
-	plotconfigs/&.yaml
-	python -m plot.test.test_tau_theta_dependence \
-		$< \
-		-o $@ \
-		-c $(lastword $^)
 
 #=== csv files ===#
 $(DATADIR)/estimated_parameters.csv: \
@@ -202,88 +156,10 @@ $(DATADIR)/observation_arranged.csv: \
 		$< \
 		--output $@
 
-.SECONDEXPANSION:
-
-$(FIGDIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/spectrum/%.pdf: \
-	$(DATADIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/spectrum/.done \
-		pipelines/plot/spectrum.py \
-		plotconfigs/spectrum.yaml
-	python -m pipelines.plot.spectrum \
-		$(DATADIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/spectrum/$*.csv \
- 		-o $@ \
-		-c $(lastword $^)
-
-$(FIGDIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/$(SPECTRUM_PEAK_EVOLUTION).pdf: \
-	$(DATADIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/$(SPECTRUM_PEAK_EVOLUTION).csv \
-	pipelines/plot/$(SPECTRUM_PEAK_EVOLUTION).py \
-	plotconfigs/$(SPECTRUM_PEAK_EVOLUTION).yaml
-	python -m pipelines.plot.$(SPECTRUM_PEAK_EVOLUTION) \
-		$< \
-		-o $@ \
-		-c $(lastword $^)
-
-$(FIGDIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/lightcurve.pdf: \
-	$$(wildcard $(DATADIR)/$(MODEL)/$(RESO)/beta/$$*/spectrum/[0-9][0-9][0-9].csv) \
-	$(DATADIR)/$(MODEL)/$(RESO)/beta/$$*/spectrum/.done \
-	pipelines/plot/lightcurve.py \
-	plotconfigs/lightcurve.yaml
-	python -m pipelines.plot.lightcurve \
-		$(filter %.csv,$^) \
-		-o $@ \
-		-c $(lastword $^)
-
-.SECONDARY:
-$(DATADIR)/test/test_peak_deviations.csv: \
-	$$(wildcard $(DATADIR)/test/test_peak_matching/spectrum/[0-9][0-9][0-9].csv) \
-		$(DATADIR)/test/test_peak_matching/spectrum/.done
-	python -m test.test_peak_deviations \
-		$(filter %.csv,$^) \
-		-o $@
-
-$(DATADIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/$(SPECTRUM_PEAK_EVOLUTION).csv: \
-	$$(wildcard $(DATADIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/spectrum/[0-9][0-9][0-9].csv) \
-	pipelines/spectrum_peak_evolution.py
-	python -m pipelines.spectrum_peak_evolution \
-		$(filter %.csv,$^) \
-		-o $@ \
-
-$(DATADIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/spectrum/.done: \
-	input/generated/$(MODEL)/$(RESO)/beta/$(BETA_FMT).yaml \
-		pipelines/compute.py
-	python -m pipelines.compute \
-		$< \
-		--outdir $(DATADIR)/$(MODEL)/$(RESO)/beta/$(BETA_FMT)/spectrum
-	mkdir -p $(dir $@)
-	touch $@
-
-
-input/generated/$(MODEL)/$(RESO)/beta/$(BETA_FMT).yaml: \
-	$(VARYING_YAML) \
-	$(FIXED_YAML) \
-	$(TIME_YAML) \
-	$(FREQ_YAML) \
-	pipelines/build_input_parameters.py
-
-	python -m pipelines.build_input_parameters \
-		--varying $< \
-		--fixed $(FIXED_YAML) \
-		--time $(TIME_YAML) \
-		--frequency $(FREQ_YAML) \
-		--outdir input/generated/$(MODEL)/$(RESO)/beta/
-
-
+#=== config files ===#
 input/%.yaml:
 	@echo "エラー: インプットファイルがありません $@"
 	@false
 plotconfigs/%.yaml:
-	@echo "エラー: ファイルがありません $@"
-	@false
-plotconfigs/test/%.yaml:
-	@echo "エラー: プロットコンフィグファイルがありません $@"
-	@false
-test/test_tau_xi_dependence.py:
-	@echo "エラー: ファイルがありません $@"
-	@false
-plotconfigs/tau_xi_dependence.yaml:
-	@echo "エラー: ファイルがありません $@"
+	@echo "エラー: プロットコンフィグがありません $@"
 	@false
