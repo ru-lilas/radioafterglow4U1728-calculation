@@ -115,6 +115,15 @@ fig/synchrotron_functions/%.pdf: \
 		-c $(lastword $^)
 
 #=== csv files ===#
+$(DATADIR)/estimated_parameters.csv: \
+	$(DATADIR)/$(CHEVALIER_DIAGRAM).csv \
+		$(DATADIR)/chevalier_diagram_obsscats.csv \
+		scripts/extract_estimated_parameters.py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--scatters $(word 2,$^) \
+		--output $@
+
 $(DATADIR)/$(CHEVALIER_DIAGRAM).csv: \
 	$(DATADIR)/$(CONTOUR_RAW).csv \
 		$(DATADIR)/$(CONTOUR_RAW).csv \

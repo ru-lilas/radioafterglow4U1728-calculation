@@ -17,11 +17,18 @@ def main(args:argparse.Namespace):
     d_unit = "kpc"
     l_unit = "erg s-1 Hz-1"
     phi_unit = "GHz s"
+    nu_values:list[float] = [5.5,9.0]
+    nu_unit = metadata_obs["nu_unit"]
+    t_unit = metadata_obs["t_unit"]
+    t_peak_values = [
+        metadata_obs["f5_peak_time"],
+        metadata_obs["f9_peak_time"]
+    ]
     phi_peak_5 = arrange_observation_data.calculate_phi_peak(
-        nu_value=5.5,
-        nu_unit=metadata_obs["nu_unit"],
-        t_peak_value=metadata_obs["f5_peak_time"],
-        t_unit=metadata_obs["t_unit"],
+        nu_value=nu_values[0],
+        nu_unit=nu_unit,
+        t_peak_value=t_peak_values[0],
+        t_unit=t_unit,
         phi_unit=phi_unit
     )
     l_peak_5 = arrange_observation_data.convert_fnu_into_lnu(
@@ -32,10 +39,10 @@ def main(args:argparse.Namespace):
         l_unit=l_unit
     )
     phi_peak_9 = arrange_observation_data.calculate_phi_peak(
-        nu_value=9.0,
-        nu_unit=metadata_obs["nu_unit"],
-        t_peak_value=metadata_obs["f9_peak_time"],
-        t_unit=metadata_obs["t_unit"],
+        nu_value=nu_values[1],
+        nu_unit=nu_unit,
+        t_peak_value=t_peak_values[1],
+        t_unit=t_unit,
         phi_unit=phi_unit
     )
     l_peak_9 = arrange_observation_data.convert_fnu_into_lnu(
@@ -45,24 +52,22 @@ def main(args:argparse.Namespace):
         d_unit=d_unit,
         l_unit=l_unit
     )
-    labels = [
-        "Russell+24 (5.5 GHz)",
-        "Russell+24 (9.0 GHz)",
-    ]
     phi_peaks = [phi_peak_5,phi_peak_9]
     l_peaks = [l_peak_5,l_peak_9]
     output_data:dict[str,Any] = {
-        "label": labels,
+        "nu_value": nu_values,
+        "t_peak_value": t_peak_values,
         "phi_peak": phi_peaks,
-        "phi_unit": phi_unit,
         "l_peak": l_peaks,
-        "l_unit": l_unit
     }
-
 
     metadata = {
         "d_value": d_value,
-        "d_unit": d_unit
+        "d_unit": d_unit,
+        "nu_unit": nu_unit,
+        "t_unit": t_unit,
+        "phi_unit": phi_unit,
+        "l_unit": l_unit
     }
     df_output = pd.DataFrame(output_data)
 
