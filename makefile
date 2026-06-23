@@ -19,7 +19,7 @@ VARYING_YAML := $(INPUTDIR)/template/$(RESO)/varying_beta.yaml
 FIXED_YAML := $(INPUTDIR)/template/$(RESO)/$(BETA_DIR)/base.yaml
 INTEGRAL_TABLE := integral_table
 PARAMETER_TABLE := parameter_table
-PEAK_TABLE := spectrum_peak_table
+PEAK_TABLE := peak_table
 CONTOUR_RAW := contour_raw
 CHEVALIER_DIAGRAM := chevalier_diagram
 
@@ -168,6 +168,7 @@ $(DATADIR)/$(PEAK_TABLE).csv: \
 		scripts/$(PEAK_TABLE).py
 	python -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
+		--table $(DATADIR)/$(INTEGRAL_TABLE).csv \
 		--output $@ \
 
 $(DATADIR)/$(INTEGRAL_TABLE).csv: \

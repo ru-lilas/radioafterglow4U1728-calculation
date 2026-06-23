@@ -5,8 +5,8 @@ beta_arr:
   num: 1024
 
 a_wind_arr:
-  start: 6.0
-  stop: 8.0
+  start: 5.0
+  stop: 7.0
   num: 1024
 
 fixed:

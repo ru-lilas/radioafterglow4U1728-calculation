@@ -1,7 +1,7 @@
 figsize: [12,12]
 common:
   TicksConfigure: &TicksConfigure_tmp
-    xlim: [1.0e+03,1.0e+04]
+    xlim: [1.0e+02,1.0e+04]
     ylim: [1.0e+18,1.0e+21]
     xscale: "log"
     yscale: "log"
@@ -20,9 +20,9 @@ parameter_curves:
     column_name: "a_wind_value"
     legend_name: '$A_{\mathrm{w}}$ [g/cm]'
     levels:
+      - 1.0e+05
       - 1.0e+06
       - 1.0e+07
-      - 1.0e+08
     label: &pclabel_tmp
       prefix: '$A_{\mathrm{w}}=$'
       suffix: ' g/cm'
