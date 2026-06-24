@@ -9,10 +9,13 @@ def main(args:argparse.Namespace):
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
     inpath:Path = args.input
-    inputs:dict = fr.read_yaml(inpath)
+    config_data:dict = fr.read_yaml(inpath)
 
-    df = build_input_parameters.table(inputs)
-    metadata = inputs["fixed"]
+    df = build_input_parameters.table(config_data)
+    metadata = {
+        **config_data["fixed"],
+        **config_data["units"]
+    }
     fw.write_csv_with_params(df,metadata,outpath)
 
 if __name__ == "__main__":

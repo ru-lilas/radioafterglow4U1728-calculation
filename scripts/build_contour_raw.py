@@ -23,11 +23,11 @@ def main(args:argparse.Namespace):
     )
     phi_peak_arr = processor.calcualte_product_two_columns(
         df=df_output,
-        columns=("phi_theta","xm_peak")
+        columns=("phi_theta_value","xm_peak")
     )
     l_peak_arr = processor.calcualte_product_two_columns(
         df=df_output,
-        columns=("l_theta","lnu_peak_dimless")
+        columns=("l_theta_value","lnu_peak_dimless")
     )
     df_output = df_output.assign(
         phi_peak=phi_peak_arr,

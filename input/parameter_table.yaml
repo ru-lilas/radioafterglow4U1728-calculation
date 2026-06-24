@@ -16,3 +16,6 @@ fixed:
   mu_e: 1.18
   a_wind_unit: "g/cm"
 
+units:
+  phi_unit: "GHz s"
+  l_unit: "erg s-1 Hz-1"

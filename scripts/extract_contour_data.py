@@ -16,9 +16,9 @@ def main(args:argparse.Namespace):
         "beta_sh",
         "a_wind_value",
         "phi_peak",
-        "phi_unit",
         "l_peak",
-        "l_unit",
+        "phi_theta_value",
+        "l_theta_value"
     ]
 
     df_output = pd.DataFrame(df_input[columns])

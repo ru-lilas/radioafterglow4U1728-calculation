@@ -22,6 +22,8 @@ def main(args:argparse.Namespace):
     l_peak_bg = np.asarray(df_contour["l_peak"],dtype=np.float64)
     phi_peak_pt = np.asarray(df_scatters["phi_peak"],dtype=np.float64)
     l_peak_pt = np.asarray(df_scatters["l_peak"],dtype=np.float64)
+    phi_theta_arr = np.asarray(df_contour["phi_theta_value"],dtype=np.float64)
+    l_theta_arr = np.asarray(df_contour["l_theta_value"],dtype=np.float64)
 
     log10_phi_peak_bg = np.log10(phi_peak_bg)
     log10_l_peak_bg = np.log10(l_peak_bg)
@@ -37,10 +39,12 @@ def main(args:argparse.Namespace):
     a_wind_arr = np.asarray(df_contour["a_wind_value"],dtype=np.float64)
     beta_sh_arr = np.asarray(df_contour["beta_sh"],dtype=np.float64)
 
-    df_output["phi_peak_est"] = phi_peak_bg[idx]
-    df_output["l_peak_est"] = l_peak_bg[idx]
-    df_output["a_wind_est"] = a_wind_arr[idx]
+    df_output["phi_peak_est_value"] = phi_peak_bg[idx]
+    df_output["l_peak_est_value"] = l_peak_bg[idx]
+    df_output["a_wind_est_value"] = a_wind_arr[idx]
     df_output["beta_sh_est"] = beta_sh_arr[idx]
+    df_output["phi_theta_value"] = phi_theta_arr[idx]
+    df_output["l_theta_value"] = l_theta_arr[idx]
 
     metadata_output = {
         **metadata_scatters,
