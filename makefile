@@ -69,6 +69,17 @@ $(DATADIR)/test/%/spectrum/.done: \
 	touch $@
 
 #=== csv files ===#
+$(DATADIR)/estimated_lightcurve.csv: \
+	$(DATADIR)/estimated_parameters.csv \
+		$(INPUTDIR)/lightcurve.yaml \
+		$(DATADIR)/$(INTEGRAL_TABLE).csv \
+		scripts/compute_estimated_lightcurve.py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--config $(word 2,$^) \
+		--table $(word 3,$^) \
+		--output $@
+
 $(DATADIR)/estimated_parameters.csv: \
 	$(DATADIR)/$(CHEVALIER_DIAGRAM).csv \
 		$(DATADIR)/chevalier_diagram_obsscats.csv \

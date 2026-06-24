@@ -24,6 +24,7 @@ def main(args:argparse.Namespace):
     l_peak_pt = np.asarray(df_scatters["l_peak"],dtype=np.float64)
     phi_theta_arr = np.asarray(df_contour["phi_theta_value"],dtype=np.float64)
     l_theta_arr = np.asarray(df_contour["l_theta_value"],dtype=np.float64)
+    tau_theta_arr = np.asarray(df_contour["tau_theta"],dtype=np.float64)
 
     log10_phi_peak_bg = np.log10(phi_peak_bg)
     log10_l_peak_bg = np.log10(l_peak_bg)
@@ -45,6 +46,7 @@ def main(args:argparse.Namespace):
     df_output["beta_sh_est"] = beta_sh_arr[idx]
     df_output["phi_theta_value"] = phi_theta_arr[idx]
     df_output["l_theta_value"] = l_theta_arr[idx]
+    df_output["tau_theta"] = tau_theta_arr[idx]
 
     metadata_output = {
         **metadata_scatters,

@@ -18,7 +18,8 @@ def main(args:argparse.Namespace):
         "phi_peak",
         "l_peak",
         "phi_theta_value",
-        "l_theta_value"
+        "l_theta_value",
+        "tau_theta"
     ]
 
     df_output = pd.DataFrame(df_input[columns])

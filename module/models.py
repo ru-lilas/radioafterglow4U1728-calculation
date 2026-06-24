@@ -128,9 +128,9 @@ class ThermalSynchrotronScalingValues:
 
     @cached_property
     def lnu_est_dimless(self):
-        lnu_peak_dimless = synchrotron_scaling_values.calculate_lnu_xi_dimless_tabular(
+        lnu_peak_dimless = synchrotron_scaling_values.calculate_lambda_using_table(
             tau_theta=self.input.tau_theta,
-            xi=self.xi_est,
+            xm=self.xi_est,
             table=self.table
         )
         return lnu_peak_dimless

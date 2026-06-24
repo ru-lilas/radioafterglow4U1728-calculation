@@ -7,26 +7,23 @@ from module.tabular import ThermalSynchrotronTable
 import pandas as pd
 from dataclasses import asdict
 from tqdm import tqdm
+from module.utilities import build_nparray
 
 def build_xm_arr(
     input_conf:dict,
     tabular:ThermalSynchrotronTable
 )->NDArray[np.float64]:
-    xm_num:int = input_conf["xm_num"]
-    return np.logspace(
-        start=np.log(tabular.xi_min),
-        stop=np.log(tabular.xi_max),
-        num=xm_num,
-        dtype=np.float64
-    )
+    arr_conf = {
+        "start": np.log(tabular.xi_min),
+        "stop": np.log(tabular.xi_max),
+        "num": input_conf["xm_num"],
+    }
+    return build_nparray.log(arr_conf)
 
 def build_tau_theta_arr(
     input_conf:dict[str,Any],
 )->NDArray[np.float64]:
-    return np.logspace(
-        **input_conf["tau_theta_arr"],
-        dtype=np.float64
-    )
+    return build_nparray.log(input_conf["tau_theta_arr"])
 
 def peak_table(
     xm_arr:NDArray[np.float64],
