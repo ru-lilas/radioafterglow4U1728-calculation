@@ -22,8 +22,20 @@ PARAMETER_TABLE := parameter_table
 PEAK_TABLE := peak_table
 CONTOUR_RAW := contour_raw
 CHEVALIER_DIAGRAM := chevalier_diagram
+ESTIMATED_LIGHTCURVE := estimated_lightcurve
 
 #=== figures ===#
+$(FIGDIR)/$(ESTIMATED_LIGHTCURVE).pdf: \
+	$(DATADIR)/$(ESTIMATED_LIGHTCURVE).csv \
+		$(DATADIR)/observation_arranged.csv \
+		plotconfigs/$(ESTIMATED_LIGHTCURVE).yaml \
+		plot/$(ESTIMATED_LIGHTCURVE).py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--observation $(word 2,$^) \
+		--config $(word 3,$^) \
+		--output $@
+
 $(FIGDIR)/test/chevalier_overlap.pdf: \
 	$(DATADIR)/$(CHEVALIER_DIAGRAM).csv \
 		$(DATADIR)/chevalier_diagram_obsscats.csv \
@@ -69,11 +81,11 @@ $(DATADIR)/test/%/spectrum/.done: \
 	touch $@
 
 #=== csv files ===#
-$(DATADIR)/estimated_lightcurve.csv: \
+$(DATADIR)/$(ESTIMATED_LIGHTCURVE).csv: \
 	$(DATADIR)/estimated_parameters.csv \
 		$(INPUTDIR)/lightcurve.yaml \
 		$(DATADIR)/$(INTEGRAL_TABLE).csv \
-		scripts/compute_estimated_lightcurve.py
+		scripts/compute_$(ESTIMATED_LIGHTCURVE).py
 	python -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
 		--config $(word 2,$^) \

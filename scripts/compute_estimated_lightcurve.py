@@ -1,6 +1,7 @@
 import argparse
 from functools import cached_property
-from module import fetch_numerical_table
+from typing import Any, cast
+from module import fetch_numerical_table, quantity_converter
 from pathlib import Path
 import numpy as np
 from numpy.typing import NDArray
@@ -88,23 +89,38 @@ def main(args:argparse.Namespace):
         tau_theta = np.asarray(df_input["tau_theta"],dtype=np.float64),
         table=table
     )
-    metadata = {
+    d_value = float(metadata_input["d_value"])
+    d_unit = u.Unit(metadata_input["d_unit"])
+    d_quantity = u.Quantity(d_value,d_unit)
+    fnu = quantity_converter.lnu_into_fnu(
+        lnu=inputarrs.lnu_arr,
+        distance=d_quantity
+    )
+    fnu_unit = u.Unit(conf["fnu_unit"])
+
+    metadata:dict[str,Any] = {
         "t_unit": inputarrs.t_unit.to_string(),
         "lnu_unit": inputarrs.l_unit.to_string(),
-        "nu_unit": inputarrs.nu_unit.to_string()
+        "nu_unit": inputarrs.nu_unit.to_string(),
+        "fnu_unit": fnu_unit.to_string(),
+        "d_value": d_value,
+        "d_unit": d_unit.to_string()
     }
+    dfs: list[pd.DataFrame] = []
+
+    for i, nu in enumerate(inputarrs.nu_values):
+        lnu_arr_nu = cast(u.Quantity,inputarrs.lnu_arr[i])
+        fnu_arr_nu = cast(u.Quantity,fnu[i])
+        df_lc = pd.DataFrame({
+            "t_value": inputarrs.t_value_arr,
+            "lnu_value": lnu_arr_nu.to_value(inputarrs.l_unit),
+            "fnu_value": fnu_arr_nu.to_value(fnu_unit),
+            "nu_value": nu,
+        })
+
+        dfs.append(df_lc)
     df = pd.concat(
-        [
-            pd.DataFrame({
-                "t_value": inputarrs.t_value_arr,
-                "lnu_value": lnu.value,
-                "nu_value": nu,
-            })
-            for nu, lnu in zip(
-                inputarrs.nu_values,
-                inputarrs.lnu_arr,
-            )
-        ],
+        dfs,
         ignore_index=True,
     )
     fw.write_csv_with_params(df,metadata,outpath)
@@ -133,4 +149,3 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     main(args)
-

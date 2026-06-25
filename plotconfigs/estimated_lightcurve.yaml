@@ -1,0 +1,26 @@
+figsize: [12,12]
+TicksConfigure: &TicksConfigure_tmp
+  xlim: [-2.0,10.0]
+  ylim: [0.2,0.8]
+  xscale: "linear"
+  yscale: "linear"
+  fontsize: 16
+LabelConfigure: &LabelConfigure_tmp
+  xlabel: 'time since X-ray burst [min]'
+  ylabel: 'net specific flux [mJy]'
+  fontsize: 24
+nu_values:
+  - 5.5
+  - 9.0
+nu_unit: "GHz"
+t_unit: "min"
+fnu_unit: "mJy"
+calculation:
+  linestyle: "-"
+  linewidth: 2
+  color: "#000000"
+  label: ""
+observation_scatter:
+  size: 30
+  color: "#FF4B00"
+  marker: "o"

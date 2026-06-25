@@ -3,3 +3,4 @@ t_value_arr:
   stop: 3.0
   num: 128
 t_unit: "s"
+fnu_unit: "mJy"
