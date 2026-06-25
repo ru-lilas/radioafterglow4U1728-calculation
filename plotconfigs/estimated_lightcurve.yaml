@@ -1,10 +1,10 @@
-figsize: [12,12]
+figsize: [16,12]
 TicksConfigure: &TicksConfigure_tmp
-  xlim: [-2.0,10.0]
-  ylim: [0.2,0.8]
+  xlim: [-10.0,30.0]
+  ylim: [0.5,1.5]
   xscale: "linear"
   yscale: "linear"
-  fontsize: 16
+  fontsize: 24
 LabelConfigure: &LabelConfigure_tmp
   xlabel: 'time since X-ray burst [min]'
   ylabel: 'net specific flux [mJy]'
@@ -22,5 +22,30 @@ calculation:
   label: ""
 observation_scatter:
   size: 30
-  color: "#FF4B00"
+  color: "#005AFF"
   marker: "o"
+annotation:
+  config:
+    use: True
+    fontsize: 16
+    pos: [1.00,1.01]
+    ha: "right"
+    va: "bottom"
+  elements:
+    eps_B:
+      prefix: '$\varepsilon_{\mathrm{B}}$'
+      fmt: '.1e'
+    eps_th:
+      prefix: '$\varepsilon_{\mathrm{th}}$'
+      fmt: '.1e'
+    mu:
+      prefix: '$\mu$'
+      fmt: '.2f'
+    mu_e:
+      prefix: '$\mu_e$'
+      fmt: '.2f'
+hlines:
+  f9_per:
+    color: "#000000"
+    ls: "--"
+    label: ""

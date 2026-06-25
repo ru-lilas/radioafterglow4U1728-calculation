@@ -1,6 +1,6 @@
 t_value_arr:
   start: 0.0
-  stop: 3.0
-  num: 128
+  stop: 4.0
+  num: 256
 t_unit: "s"
 fnu_unit: "mJy"

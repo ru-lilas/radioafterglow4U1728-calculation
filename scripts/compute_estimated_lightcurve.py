@@ -71,32 +71,32 @@ def main(args:argparse.Namespace):
     table = fetch_numerical_table.fetch_numerical_table(args)
 
     confpath:Path = args.config
-    conf = fr.read_yaml(confpath)
+    calculation_input = fr.read_yaml(confpath)
 
     inpath:Path = args.input
-    df_input = fr.read_csv(inpath)
-    metadata_input = fr.read_keyvalue(inpath)
+    df_estimated = fr.read_csv(inpath)
+    metadata_estimated = fr.read_keyvalue(inpath)
 
     inputarrs = InputArrays(
-        t_value_arr= build_nparray.log(conf["t_value_arr"]),
-        t_unit = u.Unit(conf["t_unit"]),
-        phi_theta_values = np.asarray(df_input["phi_theta_value"],dtype=np.float64),
-        phi_unit = u.Unit(metadata_input["phi_unit"]),
-        nu_values = np.asarray(df_input["nu_value"],dtype=np.float64),
-        nu_unit = u.Unit(metadata_input["nu_unit"]),
-        l_theta_values= np.asarray(df_input["l_theta_value"],dtype=np.float64),
-        l_unit = u.Unit(metadata_input["l_unit"]),
-        tau_theta = np.asarray(df_input["tau_theta"],dtype=np.float64),
+        t_value_arr= build_nparray.log(calculation_input["t_value_arr"]),
+        t_unit = u.Unit(calculation_input["t_unit"]),
+        phi_theta_values = np.asarray(df_estimated["phi_theta_value"],dtype=np.float64),
+        phi_unit = u.Unit(metadata_estimated["phi_unit"]),
+        nu_values = np.asarray(df_estimated["nu_value"],dtype=np.float64),
+        nu_unit = u.Unit(metadata_estimated["nu_unit"]),
+        l_theta_values= np.asarray(df_estimated["l_theta_value"],dtype=np.float64),
+        l_unit = u.Unit(metadata_estimated["l_unit"]),
+        tau_theta = np.asarray(df_estimated["tau_theta"],dtype=np.float64),
         table=table
     )
-    d_value = float(metadata_input["d_value"])
-    d_unit = u.Unit(metadata_input["d_unit"])
+    d_value = float(metadata_estimated["d_value"])
+    d_unit = u.Unit(metadata_estimated["d_unit"])
     d_quantity = u.Quantity(d_value,d_unit)
     fnu = quantity_converter.lnu_into_fnu(
         lnu=inputarrs.lnu_arr,
         distance=d_quantity
     )
-    fnu_unit = u.Unit(conf["fnu_unit"])
+    fnu_unit = u.Unit(calculation_input["fnu_unit"])
 
     metadata:dict[str,Any] = {
         "t_unit": inputarrs.t_unit.to_string(),
@@ -104,7 +104,12 @@ def main(args:argparse.Namespace):
         "nu_unit": inputarrs.nu_unit.to_string(),
         "fnu_unit": fnu_unit.to_string(),
         "d_value": d_value,
-        "d_unit": d_unit.to_string()
+        "d_unit": d_unit.to_string(),
+        "eps_B": metadata_estimated["eps_B"],
+        "eps_th": metadata_estimated["eps_th"],
+        "mu": metadata_estimated["mu"],
+        "mu_e": metadata_estimated["mu_e"],
+        "a_wind_unit": metadata_estimated["a_wind_unit"]
     }
     dfs: list[pd.DataFrame] = []
 

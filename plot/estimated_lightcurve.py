@@ -6,9 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from module.plot import plot_utils
 import numpy as np
-from module import quantity
 from module.plot import plot_scatter
-from module import dataframe_processors as dfp
 import pandas as pd
 
 def main(args:argparse.Namespace):
@@ -27,17 +25,37 @@ def main(args:argparse.Namespace):
 
     nu_values:list[float] = conf["nu_values"]
     df_nu = pd.DataFrame(df_calc[np.isclose(df_calc["nu_value"], nu_values[1])].reset_index(drop=True))
+
+    fnu_per = metadata_obs["f9_per"]
+    df_nu["fnu_value_add"] = df_nu["fnu_value"] + fnu_per
     
-    t_sec = quantity.QuantityData(
-        value = dfp.convert_ndarray(df_nu,"t_value"),
-        unit = metadata_calc["t_unit"]
+    t_min = curve.build_axisarray(
+        df_nu,
+        "t_value",
+        metadata_calc["t_unit"],
+        conf["t_unit"]
     )
-    t_min = t_sec.unit_convert(conf["t_unit"])
-    fnu_mjy = dfp.convert_ndarray(df_nu,"fnu_value")
+    fnu_mjy = curve.build_axisarray(
+        df_nu,
+        "fnu_value_add",
+        metadata_calc["fnu_unit"],
+        conf["fnu_unit"]
+    )
     curveconf = plot_utils.CurveConfigure(**conf["calculation"])
     curveconf.label = f"{nu_values[1]} {conf['nu_unit']}"
 
     scatterconf = plot_scatter.ScatterConfigure(**conf["observation_scatter"])
+    text = ""
+    for key,element in conf["annotation"]["elements"].items():
+        value = metadata_calc[key]
+        prefix = element["prefix"]
+        fmt = element["fmt"]
+        text += f"{prefix}={value:{fmt}} "
+
+    annot = plot_utils.AnnotationConfigure(
+        **conf["annotation"]["config"],
+        text=text
+    )
 
     with PdfPages(outpath) as pdf:
         figsize=conf["figsize"]
@@ -52,26 +70,19 @@ def main(args:argparse.Namespace):
             ax,
             plot_utils.TicksConfigure(**conf["TicksConfigure"])
         )
-        # calculation lightcurve
-        curve.curve(ax,t_min.value,fnu_mjy,curveconf)
-        plot_scatter.scatter_only(
+        curve.curve(ax,t_min,fnu_mjy,curveconf)
+        plot_scatter.with_errorbar(
             ax,
             np.asarray(df_obs["t"]),
-            np.asarray(df_obs["f9_net"]),
+            np.asarray(df_obs["f9"]),
+            np.asarray(df_obs["t_err"]),
+            np.asarray(df_obs["f9_err"]),
             scatterconf
         )
-        # annot = plot_utils.AnnotationConfigure(
-        #     use=True,
-        #     fontsize=16,
-        #     text=\
-        #         r"$\varepsilon_{B}=$"f"{metadata_contour['eps_B']}"
-        #         r", $\varepsilon_\mathrm{th}=$"f"{metadata_contour['eps_th']}"
-        #         r", $\mu=$"f"{metadata_contour['mu']}"
-        #         r", $\mu_e=$"f"{metadata_contour['mu_e']}"
-        # )
-        # plot_utils.annotation(ax,annot)
+        legend_handles = []
+        plot_utils.hlines(ax,conf,metadata_obs,legend_handles)
+        plot_utils.annotation(ax,annot)
         ax.legend()
-
 
         pdf.savefig(fig)
         plt.close(fig)

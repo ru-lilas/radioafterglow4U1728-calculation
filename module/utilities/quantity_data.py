@@ -15,3 +15,9 @@ class QuantityData:
 
     def unit_convert(self,unit:str):
         return u.Quantity(self.quantity.to(u.Unit(unit)))
+
+    def to_ndarray(self,unit:str):
+        return np.asarray(
+            self.quantity.to_value(u.Unit(unit)),
+            dtype=np.float64
+        )

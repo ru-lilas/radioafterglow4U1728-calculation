@@ -29,6 +29,7 @@ def main(args:argparse.Namespace):
         "nu_unit": "GHz"
     }
     df_output = df_input.copy()
+    df_output["t_err"] = 1.0
     arrange_observation_data.build_arranged_df(metadata,df_output)
 
     fw.write_csv_with_params(
