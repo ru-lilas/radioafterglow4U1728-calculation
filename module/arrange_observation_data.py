@@ -31,10 +31,17 @@ def arrange_df_for_band(
     flux_net = calculate_net_flux(df,flux_column,flux_per)
     df[f"{flux_column}_net"] = flux_net
 
-    t_peak, flux_peak = dfp.extract_largest2_mean(
+    # t_peak, flux_peak = dfp.extract_largest2_mean(
+    #     df,
+    #     column_x="t",
+    #     column_y=f"{flux_column}_net"
+    # )
+    t_peak, flux_peak = dfp.extract_peak_quadratic(
         df,
         column_x="t",
-        column_y=f"{flux_column}_net"
+        column_y=f"{flux_column}_net",
+        column_yerr=f"{flux_column}_err",
+        n_sample=4
     )
     metadata[f"{flux_column}_per"] = flux_per
     metadata[f"{flux_column}_peak_time"] = t_peak
