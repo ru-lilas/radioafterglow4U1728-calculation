@@ -81,6 +81,15 @@ $(DATADIR)/test/%/spectrum/.done: \
 	touch $@
 
 #=== csv files ===#
+$(DATADIR)/estimated_ejecta_property.csv: \
+	$(DATADIR)/estimated_parameters.csv \
+		$(INPUTDIR)/property_4u1728.yaml \
+		scripts/estimate_ejecta_property.py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--burster_property $(word 2,$^) \
+		--output $@
+
 $(DATADIR)/$(ESTIMATED_LIGHTCURVE).csv: \
 	$(DATADIR)/estimated_parameters.csv \
 		$(INPUTDIR)/lightcurve.yaml \

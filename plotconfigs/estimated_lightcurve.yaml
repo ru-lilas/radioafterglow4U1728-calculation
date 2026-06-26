@@ -48,4 +48,7 @@ hlines:
   f9_per:
     color: "#000000"
     ls: "--"
-    label: ""
+    label_conf:
+      prefix: '$F_{\nu,\mathrm{per}}$'
+      fmt: '.2f'
+      unit: "mJy"

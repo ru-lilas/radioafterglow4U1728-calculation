@@ -9,6 +9,8 @@ import numpy as np
 from module.plot import plot_scatter
 import pandas as pd
 
+from module.utilities import quantity_data
+
 def main(args:argparse.Namespace):
     inpath:Path = args.input
     confpath:Path = args.config
@@ -26,7 +28,10 @@ def main(args:argparse.Namespace):
     nu_values:list[float] = conf["nu_values"]
     df_nu = pd.DataFrame(df_calc[np.isclose(df_calc["nu_value"], nu_values[1])].reset_index(drop=True))
 
-    fnu_per = metadata_obs["f9_per"]
+    fnu_per = quantity_data.QuantityData(
+        value=metadata_obs["f9_per"],
+        unit=metadata_obs["fnu_unit"]
+    )
     df_nu["fnu_value_add"] = df_nu["fnu_value"] + fnu_per
     
     t_min = curve.build_axisarray(

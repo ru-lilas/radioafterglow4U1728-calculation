@@ -2,10 +2,12 @@
 
 """
 
+from functools import cached_property
 from matplotlib.axes import Axes
 from matplotlib.lines import Line2D
 from dataclasses import dataclass
-from typing import TypeAlias, Literal
+from typing import Any, TypeAlias, Literal
+from module.utilities import quantity_data
 
 FloatPair:TypeAlias = tuple[float,float]
 PlotScale = Literal["linear","log"]
@@ -55,6 +57,31 @@ class AnnotationConfigure:
     pos:FloatPair=(1.00,1.01)
     ha:str="right"
     va:str="bottom"
+
+@dataclass
+class QuantityLabel:
+    prefix: str
+    value: float
+    fmt: str
+    unit: str = ""
+
+    @cached_property
+    def text(self):
+        return f"{self.prefix}={self.value:{self.fmt}} {self.unit}"
+
+@dataclass
+class LineConfigure:
+    quantity: quantity_data.QuantityData
+    unit: str
+    color: str
+    linestyle: str
+    linewidth: int
+    label_conf: dict[str,Any] 
+
+    @cached_property
+    def label(self):
+        return
+
 
 def configure_tick(ax:Axes,config_tick:TicksConfigure):
     """軸の目盛およびスケール設定を行う。
