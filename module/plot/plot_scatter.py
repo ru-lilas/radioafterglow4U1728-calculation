@@ -28,8 +28,8 @@ def with_errorbar(
     ax:Axes,
     x:NDArray[np.float64],
     y:NDArray[np.float64],
-    xerr: NDArray[np.float64],
-    yerr: NDArray[np.float64],
+    xerr: NDArray[np.float64]|None,
+    yerr: NDArray[np.float64]|None,
     conf:ScatterConfigure
 ):
     ax.scatter(

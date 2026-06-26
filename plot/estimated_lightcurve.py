@@ -29,10 +29,10 @@ def main(args:argparse.Namespace):
     df_nu = pd.DataFrame(df_calc[np.isclose(df_calc["nu_value"], nu_values[1])].reset_index(drop=True))
 
     fnu_per = quantity_data.QuantityData(
-        value=metadata_obs["f9_per"],
-        unit=metadata_obs["fnu_unit"]
+        value=np.asarray(metadata_obs["f9_per"],dtype=np.float64),
+        unit=metadata_obs["flux_unit"]
     )
-    df_nu["fnu_value_add"] = df_nu["fnu_value"] + fnu_per
+    df_nu["fnu_value_add"] = df_nu["fnu_value"] + fnu_per.value
     
     t_min = curve.build_axisarray(
         df_nu,

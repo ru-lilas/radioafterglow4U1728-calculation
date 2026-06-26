@@ -23,11 +23,12 @@ PEAK_TABLE := peak_table
 CONTOUR_RAW := contour_raw
 CHEVALIER_DIAGRAM := chevalier_diagram
 ESTIMATED_LIGHTCURVE := estimated_lightcurve
+OBSERVATION_LIGHTCURVE := observation_lightcurve
 
 #=== figures ===#
 $(FIGDIR)/$(ESTIMATED_LIGHTCURVE).pdf: \
 	$(DATADIR)/$(ESTIMATED_LIGHTCURVE).csv \
-		$(DATADIR)/observation_arranged.csv \
+		$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv \
 		plotconfigs/$(ESTIMATED_LIGHTCURVE).yaml \
 		plot/$(ESTIMATED_LIGHTCURVE).py
 	python -m $(subst /,.,$(basename $(lastword $^))) \
@@ -136,7 +137,7 @@ $(DATADIR)/$(CONTOUR_RAW).csv: \
 
 $(DATADIR)/test/$(CONTOUR_RAW).csv: \
 	$(DATADIR)/test/test_$(PARAMETER_TABLE).csv \
-		$(DATADIR)/observation_arranged.csv \
+		$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv \
 		scripts/build_$(CONTOUR_RAW).py
 	python -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
@@ -175,13 +176,13 @@ $(DATADIR)/$(INTEGRAL_TABLE).csv: \
 
 #=== arrange observation data ===#
 $(DATADIR)/chevalier_diagram_obsscats.csv: \
-	$(DATADIR)/observation_arranged.csv \
+	$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv \
 		scripts/build_observation_scatters.py
 	python -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
 		--output $@
 
-$(DATADIR)/observation_arranged.csv: \
+$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv: \
 	$(DATADIR)/observation_raw/4U1728_stacked_1min.dat \
 		scripts/arrange_observation_data.py
 	python -m $(subst /,.,$(basename $(lastword $^))) \
