@@ -5,12 +5,18 @@ import astropy.units as u
 from module import quantity_converter
 from module import dataframe_processors as dfp
 
-def extract_df_before_xrb(df:pd.DataFrame)->pd.DataFrame:
-    mask:list[bool] = df["t"] < 0.0
+def extract_df_before_xrb(
+    df:pd.DataFrame,
+    column:str = "t_value"
+):
+    mask:list[bool] = df[column] < 0.0
     return pd.DataFrame(df[mask])
 
-def calculate_time_avaraged_flux(df:pd.DataFrame,column:str):
-    arr = np.asarray(df[column],dtype=np.float64)
+def calculate_time_avaraged_flux(
+    df:pd.DataFrame,
+    column:str = "fnu_value"
+):
+    arr = dfp.convert_ndarray(df,column)
     return float(arr.mean())
 
 def calculate_net_flux(
@@ -20,6 +26,14 @@ def calculate_net_flux(
 ):
     flux_arr = np.asarray(df[column_flux],dtype=np.float64)
     return np.maximum(flux_arr - flux_per, 0.0)
+
+def build_net_flux_arr(
+    df:pd.DataFrame,
+):
+    df_before_xrb = extract_df_before_xrb(df)
+    fnu_per_value = calculate_time_avaraged_flux(df_before_xrb)
+    fnu_value_arr = dfp.convert_ndarray(df,"fnu_value")
+    return
 
 def arrange_df_for_band(
     df:pd.DataFrame,
@@ -31,17 +45,13 @@ def arrange_df_for_band(
     flux_net = calculate_net_flux(df,flux_column,flux_per)
     df[f"{flux_column}_net"] = flux_net
 
-    # t_peak, flux_peak = dfp.extract_largest2_mean(
-    #     df,
-    #     column_x="t",
-    #     column_y=f"{flux_column}_net"
-    # )
     t_peak, flux_peak = dfp.extract_peak_quadratic(
         df,
         column_x="t",
         column_y=f"{flux_column}_net",
         column_yerr=f"{flux_column}_err",
-        n_sample=4
+        n_sample=4,
+        n_margin=0
     )
     metadata[f"{flux_column}_per"] = flux_per
     metadata[f"{flux_column}_peak_time"] = t_peak
@@ -49,7 +59,7 @@ def arrange_df_for_band(
     return
 
 def build_arranged_df(metadata:dict[str,Any],df:pd.DataFrame):
-    df_before_xrb = extract_df_before_xrb(df)
+    df_before_xrb = extract_df_before_xrb(df,column="t")
     arrange_df_for_band(df,df_before_xrb,metadata,"f5")
     arrange_df_for_band(df,df_before_xrb,metadata,"f9")
 

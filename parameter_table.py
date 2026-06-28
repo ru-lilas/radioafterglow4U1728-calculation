@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from module import build_input_parameters
+from module import compute_scaling_parameters
 from module.utilities import filereaders as fr
 from module.utilities import filewriters as fw
 
@@ -11,10 +11,10 @@ def main(args:argparse.Namespace):
     inpath:Path = args.input
     config_data:dict = fr.read_yaml(inpath)
 
-    df = build_input_parameters.table(config_data)
+    df = compute_scaling_parameters.table(config_data)
     metadata = {
         **config_data["fixed"],
-        **config_data["units"]
+        **config_data["units"],
     }
     fw.write_csv_with_params(df,metadata,outpath)
 

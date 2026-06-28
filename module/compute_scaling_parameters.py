@@ -57,15 +57,15 @@ def _table_row(
         a_wind_value=a_wind_value,
     )
     phi_unit = u.Unit(units_designated["phi_unit"])
-    l_unit = u.Unit(units_designated["l_unit"])
+    lnu_unit = u.Unit(units_designated["lnu_unit"])
     phi_theta_value = params.phi_theta.to_value(phi_unit)
-    l_theta_value = params.l_theta.to_value(l_unit)
+    lnu_theta_value = params.l_theta.to_value(lnu_unit)
 
     return {
         "beta_sh": beta_sh,
-        "a_wind_value": a_wind_value,
-        "phi_theta_value": phi_theta_value,
-        "l_theta_value": l_theta_value,
+        "a_wind": a_wind_value,
+        "phi_theta": phi_theta_value,
+        "lnu_theta": lnu_theta_value,
         "tau_theta": params.tau_theta,
     }
 

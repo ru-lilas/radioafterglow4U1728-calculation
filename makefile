@@ -24,6 +24,7 @@ CONTOUR_RAW := contour_raw
 CHEVALIER_DIAGRAM := chevalier_diagram
 ESTIMATED_LIGHTCURVE := estimated_lightcurve
 OBSERVATION_LIGHTCURVE := observation_lightcurve
+OBSERVATION_PEAK_DATA := observation_peak_data
 
 #=== figures ===#
 $(FIGDIR)/$(ESTIMATED_LIGHTCURVE).pdf: \
@@ -147,8 +148,8 @@ $(DATADIR)/test/$(CONTOUR_RAW).csv: \
 #=== tabulating ===#
 $(DATADIR)/$(PARAMETER_TABLE).csv: \
 	input/$(PARAMETER_TABLE).yaml \
-		scripts/$(PARAMETER_TABLE).py
-	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$(PARAMETER_TABLE).py
+	python $(lastword $^) \
 		$< \
 		--output $@ \
 
@@ -175,17 +176,17 @@ $(DATADIR)/$(INTEGRAL_TABLE).csv: \
 		--output $@
 
 #=== arrange observation data ===#
-$(DATADIR)/chevalier_diagram_obsscats.csv: \
+$(DATADIR)/$(OBSERVATION_PEAK_DATA).csv: \
 	$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv \
-		scripts/build_observation_scatters.py
-	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$(OBSERVATION_PEAK_DATA).py
+	python $(lastword $^) \
 		$< \
 		--output $@
 
 $(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv: \
 	$(DATADIR)/observation_raw/4U1728_stacked_1min.dat \
-		scripts/arrange_observation_data.py
-	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$(OBSERVATION_LIGHTCURVE).py
+	python $(lastword $^) \
 		$< \
 		--output $@
 

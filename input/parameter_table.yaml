@@ -18,4 +18,5 @@ fixed:
 
 units:
   phi_unit: "GHz s"
-  l_unit: "erg s-1 Hz-1"
+  lnu_unit: "erg s-1 Hz-1"
+  fnu_unit: "mJy"

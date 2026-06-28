@@ -14,16 +14,22 @@ def extract_maximum(df:pd.DataFrame,column_x:str,column_y:str):
 def extract_df_largest_sample(
     df:pd.DataFrame,
     column_y:str,
-    n_sample: int
+    n_sample: int,
+    n_margin: int
 ):
-    return df.nlargest(n_sample,column_y)
+    df_peak = df.nlargest(n_sample,column_y)
+    idx = np.sort(df_peak.index.to_numpy())
+    i0 = max(0, idx[0] - n_margin)
+    i1 = min(len(df) - 1, idx[-1] + n_margin)
+
+    return df.iloc[i0 : i1 + 1]
 
 def extract_largest2_mean(
     df:pd.DataFrame,
     column_x:str,
     column_y:str
 ):
-    df_peak = extract_df_largest_sample(df,column_y,2)
+    df_peak = extract_df_largest_sample(df,column_y,2,1)
     x_peak = float(convert_ndarray(df_peak,column_x).mean())
     y_peak = float(convert_ndarray(df_peak,column_y).mean())
     return (x_peak,y_peak)
@@ -33,9 +39,10 @@ def extract_peak_quadratic(
     column_x:str,
     column_y:str,
     column_yerr: str,
-    n_sample: int
+    n_sample: int,
+    n_margin: int
 ):
-    df_sample = extract_df_largest_sample(df,column_y,n_sample)
+    df_sample = extract_df_largest_sample(df,column_y,n_sample,n_margin)
     x = convert_ndarray(df_sample,column_x)
     y = convert_ndarray(df_sample,column_y)
     yerr = convert_ndarray(df_sample,column_yerr)
