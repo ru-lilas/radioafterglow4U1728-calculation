@@ -120,6 +120,8 @@ def main(args:argparse.Namespace):
             "lnu": lnu_arr_nu.to_value(inputarrs.lnu_theta.unit),
             "fnu": fnu_arr_nu.to_value(fnu_unit),
             "nu": nu,
+            "a_wind":df_estimated["a_wind_est"][i],
+            "beta_sh":df_estimated["beta_sh_est"][i]
         })
 
         dfs.append(df_lc)

@@ -48,7 +48,7 @@ for nu,df in df_lc.groupby("nu", sort=False):
         column_y="fnu_net",
         column_yerr="fnu_err",
         n_sample=4,
-        n_margin=1
+        n_margin=0
     )
     phi_peak = arrange_observation_data.calculate_phi_peak(
         nu_value = nu,
@@ -65,7 +65,6 @@ for nu,df in df_lc.groupby("nu", sort=False):
     })
 df_output = pd.DataFrame(output_data)
 
-print(df_output)
 fw.write_csv_with_params(
     df_output,
     asdict(units),

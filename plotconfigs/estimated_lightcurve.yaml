@@ -7,7 +7,7 @@ TicksConfigure: &TicksConfigure_tmp
   fontsize: 24
 LabelConfigure: &LabelConfigure_tmp
   xlabel: 'time since X-ray burst [min]'
-  ylabel: 'net specific flux [mJy]'
+  ylabel: 'specific flux density [mJy]'
   fontsize: 24
 nu_values:
   - 5.5
@@ -44,6 +44,18 @@ annotation:
     mu_e:
       prefix: '$\mu_e$'
       fmt: '.2f'
+  from_tabledata:
+    a_wind:
+      with_unit: True
+      tendency: "unique"
+      prefix: '$A_{\mathrm{w}}$'
+      fmt: '.1e'
+    beta_sh:
+      with_unit: False
+      tendency: "unique"
+      prefix: '$\beta_{\mathrm{sh}}$'
+      fmt: '.2f'
+
 hlines:
   f9_per:
     color: "#000000"

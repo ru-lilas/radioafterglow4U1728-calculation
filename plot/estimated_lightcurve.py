@@ -1,4 +1,5 @@
 from typing import cast
+from module import dataframe_processors
 from module.utilities import filereaders as fr
 from pathlib import Path
 import argparse
@@ -31,8 +32,10 @@ def main(args:argparse.Namespace):
         nu_obs = cast(float,nu_obs)
         df_nu = pd.DataFrame(df_calc_raw[np.isclose(df_calc_raw["nu"], nu_obs)].reset_index(drop=True))
 
+        fnu_bg_value = np.asarray(df_obs["fnu_bg"],dtype=np.float64)[0]
+
         fnu_bg = quantity_data.QuantityData(
-            value=np.asarray(df_obs["fnu_bg"],dtype=np.float64)[0],
+            value=fnu_bg_value,
             unit=metadata_obs["fnu_unit"]
         )
         df_nu["fnu_with_bg"] = df_nu["fnu"] + fnu_bg.value
@@ -59,6 +62,19 @@ def main(args:argparse.Namespace):
             prefix = element["prefix"]
             fmt = element["fmt"]
             text += f"{prefix}={value:{fmt}} "
+
+        for key,element in conf["annotation"]["from_tabledata"].items():
+            prefix = element["prefix"]
+            fmt = element["fmt"]
+            value_arr = dataframe_processors.convert_ndarray(df_nu,key)
+            # if element["tendency"] == "unique":
+            value = float(value_arr[0])
+            if element["with_unit"]:
+                unit = metadata_calc[f"{key}_unit"]
+                text += f"{prefix}={value:{fmt}} {unit} "
+            else:
+                text += f"{prefix}={value:{fmt}} "
+
 
         annot = plot_utils.AnnotationConfigure(
             **conf["annotation"]["config"],
@@ -88,6 +104,7 @@ def main(args:argparse.Namespace):
                 scatterconf
             )
             legend_handles = []
+            ax.axhline(fnu_bg_value,ls="--",color="#000000")
             # plot_utils.hlines(ax,conf,metadata_obs,legend_handles)
             plot_utils.annotation(ax,annot)
             ax.legend()
