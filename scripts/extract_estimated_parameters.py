@@ -4,6 +4,7 @@ from pathlib import Path
 import argparse
 import numpy as np
 from module import nearest_neighbor_search
+from module import dataframe_processors as dfp
 
 def main(args:argparse.Namespace):
     inpath:Path = args.input
@@ -18,34 +19,37 @@ def main(args:argparse.Namespace):
 
     df_output = df_scatters.copy()
 
-    phi_peak_bg = np.asarray(df_contour["phi_peak"],dtype=np.float64)
-    l_peak_bg = np.asarray(df_contour["l_peak"],dtype=np.float64)
-    phi_peak_pt = np.asarray(df_scatters["phi_peak"],dtype=np.float64)
-    l_peak_pt = np.asarray(df_scatters["l_peak"],dtype=np.float64)
-    phi_theta_arr = np.asarray(df_contour["phi_theta_value"],dtype=np.float64)
-    l_theta_arr = np.asarray(df_contour["l_theta_value"],dtype=np.float64)
+    phi_peak_bg = dfp.convert_ndarray(df_contour,"phi_peak")
+    fnu_net_peak_bg = dfp.convert_ndarray(df_contour,"fnu_net_peak")
+
+    phi_peak_pt = dfp.convert_ndarray(df_scatters,"phi_peak")
+    fnu_net_peak_pt = dfp.convert_ndarray(df_scatters,"fnu_net_peak")
+
+    phi_theta_arr = dfp.convert_ndarray(df_contour,"phi_theta")
+    lnu_theta_arr = dfp.convert_ndarray(df_contour,"lnu_theta")
+
     tau_theta_arr = np.asarray(df_contour["tau_theta"],dtype=np.float64)
 
     log10_phi_peak_bg = np.log10(phi_peak_bg)
-    log10_l_peak_bg = np.log10(l_peak_bg)
+    log10_fnu_net_peak_bg = np.log10(fnu_net_peak_bg)
     log10_phi_peak_pt = np.log10(phi_peak_pt)
-    log10_l_peak_pt = np.log10(l_peak_pt)
+    log10_fnu_net_peak_pt = np.log10(fnu_net_peak_pt)
 
     idx = nearest_neighbor_search.linear(
         log10x_bg=log10_phi_peak_bg,
-        log10y_bg=log10_l_peak_bg,
+        log10y_bg=log10_fnu_net_peak_bg,
         log10x_pt=log10_phi_peak_pt,
-        log10y_pt=log10_l_peak_pt
+        log10y_pt=log10_fnu_net_peak_pt
     )
-    a_wind_arr = np.asarray(df_contour["a_wind_value"],dtype=np.float64)
+    a_wind_arr = np.asarray(df_contour["a_wind"],dtype=np.float64)
     beta_sh_arr = np.asarray(df_contour["beta_sh"],dtype=np.float64)
 
-    df_output["phi_peak_est_value"] = phi_peak_bg[idx]
-    df_output["l_peak_est_value"] = l_peak_bg[idx]
-    df_output["a_wind_est_value"] = a_wind_arr[idx]
+    df_output["phi_peak_est"] = phi_peak_bg[idx]
+    df_output["fnu_net_peak_est"] = fnu_net_peak_bg[idx]
+    df_output["a_wind_est"] = a_wind_arr[idx]
     df_output["beta_sh_est"] = beta_sh_arr[idx]
-    df_output["phi_theta_value"] = phi_theta_arr[idx]
-    df_output["l_theta_value"] = l_theta_arr[idx]
+    df_output["phi_theta"] = phi_theta_arr[idx]
+    df_output["lnu_theta"] = lnu_theta_arr[idx]
     df_output["tau_theta"] = tau_theta_arr[idx]
 
     metadata_output = {

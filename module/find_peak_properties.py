@@ -21,5 +21,5 @@ def build_peak_property(
     return{
         "tau_theta": tau_theta,
         "xm_peak": xm_peak,
-        "lnu_peak_dimless": lnu_peak_dimless
+        "lambda_peak": lnu_peak_dimless
     }

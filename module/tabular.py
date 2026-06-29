@@ -43,8 +43,8 @@ class TauThetaTable:
         return np.array(self.table["tau_theta"], dtype=np.float64)
 
     @cached_property
-    def tabular_lnu_peak_dimless(self):
-        return np.array(self.table["lnu_peak_dimless"], dtype=np.float64)
+    def tabular_lambda_peak(self):
+        return np.array(self.table["lambda_peak"], dtype=np.float64)
 
     @cached_property
     def tabular_xm_peak(self):
@@ -77,7 +77,7 @@ class TauThetaTable:
             self.tabular_xm_peak
         )
 
-    def calculate_lnu_peak_dimless(
+    def calculate_lambda_peak(
         self,
         tau_theta_arr:NDArray[np.float64]
     )->NDArray[np.float64]:
@@ -85,5 +85,5 @@ class TauThetaTable:
         return np.interp(
             tau_theta_arr,
             self.tabular_tau_theta,
-            self.tabular_lnu_peak_dimless
+            self.tabular_lambda_peak
         )

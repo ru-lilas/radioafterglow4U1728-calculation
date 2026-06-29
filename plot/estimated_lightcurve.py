@@ -1,3 +1,4 @@
+from typing import cast
 from module.utilities import filereaders as fr
 from pathlib import Path
 import argparse
@@ -12,85 +13,87 @@ import pandas as pd
 from module.utilities import quantity_data
 
 def main(args:argparse.Namespace):
-    inpath:Path = args.input
+    path_calclc:Path = args.calculation_lc
     confpath:Path = args.config
     outpath:Path = args.output
     outpath.parent.mkdir(parents=True,exist_ok=True)
-    obspath:Path = args.observation
+    path_obslc:Path = args.observation_lc
 
-    metadata_obs = fr.read_keyvalue(obspath)
-    df_obs = fr.read_csv(obspath)
+    metadata_obs = fr.read_keyvalue(path_obslc)
+    df_obs_raw = fr.read_csv(path_obslc)
 
     conf = fr.read_yaml(confpath)
-    df_calc = fr.read_csv(inpath)
-    metadata_calc = fr.read_keyvalue(inpath)
+    df_calc_raw = fr.read_csv(path_calclc)
+    metadata_calc = fr.read_keyvalue(path_calclc)
 
-    nu_values:list[float] = conf["nu_values"]
-    df_nu = pd.DataFrame(df_calc[np.isclose(df_calc["nu_value"], nu_values[1])].reset_index(drop=True))
+    for nu_obs, df_obs in df_obs_raw.groupby("nu",sort=False):
+        df_obs = df_obs.reset_index(drop=True)
+        nu_obs = cast(float,nu_obs)
+        df_nu = pd.DataFrame(df_calc_raw[np.isclose(df_calc_raw["nu"], nu_obs)].reset_index(drop=True))
 
-    fnu_per = quantity_data.QuantityData(
-        value=np.asarray(metadata_obs["f9_per"],dtype=np.float64),
-        unit=metadata_obs["flux_unit"]
-    )
-    df_nu["fnu_value_add"] = df_nu["fnu_value"] + fnu_per.value
+        fnu_bg = quantity_data.QuantityData(
+            value=np.asarray(df_obs["fnu_bg"],dtype=np.float64)[0],
+            unit=metadata_obs["fnu_unit"]
+        )
+        df_nu["fnu_with_bg"] = df_nu["fnu"] + fnu_bg.value
     
-    t_min = curve.build_axisarray(
-        df_nu,
-        "t_value",
-        metadata_calc["t_unit"],
-        conf["t_unit"]
-    )
-    fnu_mjy = curve.build_axisarray(
-        df_nu,
-        "fnu_value_add",
-        metadata_calc["fnu_unit"],
-        conf["fnu_unit"]
-    )
-    curveconf = plot_utils.CurveConfigure(**conf["calculation"])
-    curveconf.label = f"{nu_values[1]} {conf['nu_unit']}"
-
-    scatterconf = plot_scatter.ScatterConfigure(**conf["observation_scatter"])
-    text = ""
-    for key,element in conf["annotation"]["elements"].items():
-        value = metadata_calc[key]
-        prefix = element["prefix"]
-        fmt = element["fmt"]
-        text += f"{prefix}={value:{fmt}} "
-
-    annot = plot_utils.AnnotationConfigure(
-        **conf["annotation"]["config"],
-        text=text
-    )
-
-    with PdfPages(outpath) as pdf:
-        figsize=conf["figsize"]
-        fig,ax = plt.subplots(figsize=figsize)
-        fig.set_layout_engine("constrained")
-
-        plot_utils.configure_label(
-            ax,
-            plot_utils.LabelConfigure(**conf["LabelConfigure"])
+        t_min = curve.build_axisarray(
+            df_nu,
+            "t",
+            metadata_calc["t_unit"],
+            conf["t_unit"]
         )
-        plot_utils.configure_tick(
-            ax,
-            plot_utils.TicksConfigure(**conf["TicksConfigure"])
+        fnu_mjy = curve.build_axisarray(
+            df_nu,
+            "fnu_with_bg",
+            metadata_calc["fnu_unit"],
+            conf["fnu_unit"]
         )
-        curve.curve(ax,t_min,fnu_mjy,curveconf)
-        plot_scatter.with_errorbar(
-            ax,
-            np.asarray(df_obs["t"]),
-            np.asarray(df_obs["f9"]),
-            np.asarray(df_obs["t_err"]),
-            np.asarray(df_obs["f9_err"]),
-            scatterconf
-        )
-        legend_handles = []
-        plot_utils.hlines(ax,conf,metadata_obs,legend_handles)
-        plot_utils.annotation(ax,annot)
-        ax.legend()
+        curveconf = plot_utils.CurveConfigure(**conf["calculation"])
+        curveconf.label = f"{nu_obs} {conf['nu_unit']}"
 
-        pdf.savefig(fig)
-        plt.close(fig)
+        scatterconf = plot_scatter.ScatterConfigure(**conf["observation_scatter"])
+        text = ""
+        for key,element in conf["annotation"]["elements"].items():
+            value = metadata_calc[key]
+            prefix = element["prefix"]
+            fmt = element["fmt"]
+            text += f"{prefix}={value:{fmt}} "
+
+        annot = plot_utils.AnnotationConfigure(
+            **conf["annotation"]["config"],
+            text=text
+        )
+
+        with PdfPages(outpath) as pdf:
+            figsize=conf["figsize"]
+            fig,ax = plt.subplots(figsize=figsize)
+            fig.set_layout_engine("constrained")
+
+            plot_utils.configure_label(
+                ax,
+                plot_utils.LabelConfigure(**conf["LabelConfigure"])
+            )
+            plot_utils.configure_tick(
+                ax,
+                plot_utils.TicksConfigure(**conf["TicksConfigure"])
+            )
+            curve.curve(ax,t_min,fnu_mjy,curveconf)
+            plot_scatter.with_errorbar(
+                ax,
+                np.asarray(df_obs["t"]),
+                np.asarray(df_obs["fnu"]),
+                np.asarray(df_obs["t_err"]),
+                np.asarray(df_obs["fnu_err"]),
+                scatterconf
+            )
+            legend_handles = []
+            # plot_utils.hlines(ax,conf,metadata_obs,legend_handles)
+            plot_utils.annotation(ax,annot)
+            ax.legend()
+
+            pdf.savefig(fig)
+            plt.close(fig)
 
     return
 
@@ -98,11 +101,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
     parser.add_argument(
-        "input",
+        "calculation_lc",
         type=Path,
     )
     parser.add_argument(
-        "--observation",
+        "--observation_lc",
         type=Path,
         required=True
     )

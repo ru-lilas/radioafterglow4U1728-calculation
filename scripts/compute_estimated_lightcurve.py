@@ -13,6 +13,8 @@ import pandas as pd
 import astropy.units as u
 from dataclasses import dataclass
 from module.synchrotron_scaling_values import calculate_lambda_using_table
+from module.utilities import quantity_data
+from module import dataframe_processors as dfp
 
 @dataclass
 class InputArrays:
@@ -22,8 +24,7 @@ class InputArrays:
     phi_unit: u.Unit
     nu_values: NDArray[np.float64]
     nu_unit: u.Unit
-    l_theta_values: NDArray[np.float64]
-    l_unit: u.Unit
+    lnu_theta: quantity_data.QuantityData
     tau_theta: NDArray[np.float64]
     table:ThermalSynchrotronTable
 
@@ -38,10 +39,6 @@ class InputArrays:
     @cached_property
     def nu_quantities(self):
         return u.Quantity(self.nu_values,self.nu_unit)
-
-    @cached_property
-    def l_quantities(self):
-        return u.Quantity(self.l_theta_values,self.l_unit)
 
     @cached_property
     def phi_arr(self):
@@ -62,7 +59,7 @@ class InputArrays:
 
     @cached_property
     def lnu_arr(self):
-        return u.Quantity(self.lambda_arr*self.l_quantities[:,None])
+        return u.Quantity(self.lambda_arr*self.lnu_theta.quantity[:,None])
 
 def main(args:argparse.Namespace):
     outpath:Path = args.output
@@ -80,12 +77,14 @@ def main(args:argparse.Namespace):
     inputarrs = InputArrays(
         t_value_arr= build_nparray.log(calculation_input["t_value_arr"]),
         t_unit = u.Unit(calculation_input["t_unit"]),
-        phi_theta_values = np.asarray(df_estimated["phi_theta_value"],dtype=np.float64),
+        phi_theta_values = np.asarray(df_estimated["phi_theta"],dtype=np.float64),
         phi_unit = u.Unit(metadata_estimated["phi_unit"]),
-        nu_values = np.asarray(df_estimated["nu_value"],dtype=np.float64),
+        nu_values = np.asarray(df_estimated["nu"],dtype=np.float64),
         nu_unit = u.Unit(metadata_estimated["nu_unit"]),
-        l_theta_values= np.asarray(df_estimated["l_theta_value"],dtype=np.float64),
-        l_unit = u.Unit(metadata_estimated["l_unit"]),
+        lnu_theta = quantity_data.QuantityData(
+            value = dfp.convert_ndarray(df_estimated,"lnu_theta"),
+            unit = metadata_estimated["lnu_unit"]
+        ),
         tau_theta = np.asarray(df_estimated["tau_theta"],dtype=np.float64),
         table=table
     )
@@ -100,7 +99,7 @@ def main(args:argparse.Namespace):
 
     metadata:dict[str,Any] = {
         "t_unit": inputarrs.t_unit.to_string(),
-        "lnu_unit": inputarrs.l_unit.to_string(),
+        "lnu_unit": inputarrs.lnu_theta.unit,
         "nu_unit": inputarrs.nu_unit.to_string(),
         "fnu_unit": fnu_unit.to_string(),
         "d_value": d_value,
@@ -117,10 +116,10 @@ def main(args:argparse.Namespace):
         lnu_arr_nu = cast(u.Quantity,inputarrs.lnu_arr[i])
         fnu_arr_nu = cast(u.Quantity,fnu[i])
         df_lc = pd.DataFrame({
-            "t_value": inputarrs.t_value_arr,
-            "lnu_value": lnu_arr_nu.to_value(inputarrs.l_unit),
-            "fnu_value": fnu_arr_nu.to_value(fnu_unit),
-            "nu_value": nu,
+            "t": inputarrs.t_value_arr,
+            "lnu": lnu_arr_nu.to_value(inputarrs.lnu_theta.unit),
+            "fnu": fnu_arr_nu.to_value(fnu_unit),
+            "nu": nu,
         })
 
         dfs.append(df_lc)

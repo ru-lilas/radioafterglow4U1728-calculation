@@ -19,7 +19,7 @@ def main(args:argparse.Namespace):
 
     df_output = df_input.assign(
         xm_peak=table.calculate_xm_peak(tau_theta_arr),
-        lnu_peak_dimless=table.calculate_lnu_peak_dimless(tau_theta_arr),
+        lambda_peak=table.calculate_lambda_peak(tau_theta_arr),
     )
     phi_peak_arr = processor.calcualte_product_two_columns(
         df=df_output,
@@ -27,11 +27,11 @@ def main(args:argparse.Namespace):
     )
     l_peak_arr = processor.calcualte_product_two_columns(
         df=df_output,
-        columns=("l_theta","lnu_peak_dimless")
+        columns=("lnu_theta","lambda_peak")
     )
     df_output = df_output.assign(
         phi_peak=phi_peak_arr,
-        l_peak=l_peak_arr,
+        lnu_peak=l_peak_arr,
     )
     fw.write_csv_with_params(df_output,metadata,outpath)
 

@@ -42,7 +42,6 @@ output_data:list[dict] = []
 for nu,df in df_lc.groupby("nu", sort=False):
     df = df.reset_index(drop=True)
     nu = cast(float,nu)
-    print(df)
     t_peak, fnu_peak = processor.extract_peak_quadratic(
         df=df,
         column_x="t",

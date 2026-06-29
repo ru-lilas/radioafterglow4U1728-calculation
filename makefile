@@ -105,7 +105,7 @@ $(DATADIR)/$(ESTIMATED_LIGHTCURVE).csv: \
 
 $(DATADIR)/estimated_parameters.csv: \
 	$(DATADIR)/$(CHEVALIER_DIAGRAM).csv \
-		$(DATADIR)/chevalier_diagram_obsscats.csv \
+		$(DATADIR)/$(OBSERVATION_PEAK_DATA).csv \
 		scripts/extract_estimated_parameters.py
 	python -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
@@ -115,9 +115,11 @@ $(DATADIR)/estimated_parameters.csv: \
 $(DATADIR)/$(CHEVALIER_DIAGRAM).csv: \
 	$(DATADIR)/$(CONTOUR_RAW).csv \
 		$(DATADIR)/$(CONTOUR_RAW).csv \
+		$(INPUTDIR)/$(CHEVALIER_DIAGRAM).yaml \
 		scripts/extract_contour_data.py
 	python -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
+		--config $(word 2,$^) \
 		--output $@
 
 $(DATADIR)/test/test_contour_chevalier.csv: \
