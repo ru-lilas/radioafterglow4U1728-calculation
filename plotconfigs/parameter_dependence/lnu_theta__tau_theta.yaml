@@ -1,0 +1,18 @@
+figsize: [16,9]
+
+TicksConfigure: &TicksConfigure_tmp
+  xlim: [1.0e-02,1.0e+20]
+  ylim: [1.0e+12,1.0e+20]
+  xscale: "log"
+  yscale: "log"
+  fontsize: 16
+LabelConfigure: &LabelConfigure_tmp
+  xlabel: '$\tau_{\Theta}$'
+  ylabel: '$L_{\nu,\Theta}$ [erg s-1 Hz-1]'
+  fontsize: 24
+x:
+  column: "tau_theta"
+  unit: ""
+y:
+  column: "lnu_theta" 
+  unit: "lnu_unit"

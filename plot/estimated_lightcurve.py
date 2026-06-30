@@ -12,7 +12,7 @@ from module.plot import plot_scatter
 import pandas as pd
 
 from module.utilities import quantity_data
-from module.keynames import KeyNames
+from module.strenums import KeyNames
 
 def build_chevalier_xy(
     df_nu:pd.DataFrame,

@@ -10,3 +10,6 @@ class KeyNames(StrEnum):
     FNU_WITH_BG = auto()
     NU = auto()
     NU_UNIT = auto()
+
+class PlotConfigNames(StrEnum):
+    FIGSIZE = auto()

@@ -62,6 +62,15 @@ $(FIGDIR)/$(CHEVALIER_DIAGRAM).pdf: \
 		-c $(word 3,$^) \
 		-o $@
 
+$(FIGDIR)/parameter_dependence/%.pdf: \
+	$(DATADIR)/$(PARAMETER_TABLE).csv \
+		plotconfigs/parameter_dependence/%.yaml \
+		plot/parameter_dependence/%.py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		-c $(word 2,$^) \
+		-o $@
+
 $(FIGDIR)/test/%.pdf: \
 	$(DATADIR)/test/%.csv \
 		plot/test/%.py \
