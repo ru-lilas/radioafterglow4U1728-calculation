@@ -173,10 +173,11 @@ def plot_parameter_curves(
 
 def plot_scatters(
     ax:Axes,
-    conf:dict[str,Any],
+    nu: float,
     df_scatters:pd.DataFrame,
 ):
-    ax.scatter(df_scatters["phi_peak"],df_scatters["l_peak"])
+    df_scatter = pd.DataFrame(df_scatters[np.isclose(df_scatters["nu"], nu)].reset_index(drop=True))
+    ax.scatter(df_scatter["phi_peak"],df_scatter["fnu_net_peak"])
     return
 
 def plot_contours(

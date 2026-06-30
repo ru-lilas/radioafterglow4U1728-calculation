@@ -47,8 +47,8 @@ for nu,df in df_lc.groupby("nu", sort=False):
         column_x="t",
         column_y="fnu_net",
         column_yerr="fnu_err",
-        n_sample=4,
-        n_margin=0
+        n_sample=2,
+        n_margin=2
     )
     phi_peak = arrange_observation_data.calculate_phi_peak(
         nu_value = nu,

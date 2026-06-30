@@ -1,4 +1,4 @@
-from typing import cast
+from typing import Any, cast
 from module import dataframe_processors
 from module.utilities import filereaders as fr
 from pathlib import Path
@@ -12,6 +12,26 @@ from module.plot import plot_scatter
 import pandas as pd
 
 from module.utilities import quantity_data
+from module.keynames import KeyNames
+
+def build_chevalier_xy(
+    df_nu:pd.DataFrame,
+    metadata_calc:dict[str,Any],
+    conf:dict[str,Any]
+):
+    t_min = curve.build_axisarray(
+        df_nu,
+        KeyNames.T,
+        metadata_calc[KeyNames.T_UNIT],
+        conf[KeyNames.T_UNIT]
+    )
+    fnu_mjy = curve.build_axisarray(
+        df_nu,
+        KeyNames.FNU_WITH_BG,
+        metadata_calc[KeyNames.FNU_UNIT],
+        conf[KeyNames.FNU_UNIT]
+    )
+    return t_min, fnu_mjy
 
 def main(args:argparse.Namespace):
     path_calclc:Path = args.calculation_lc
@@ -27,61 +47,53 @@ def main(args:argparse.Namespace):
     df_calc_raw = fr.read_csv(path_calclc)
     metadata_calc = fr.read_keyvalue(path_calclc)
 
-    for nu_obs, df_obs in df_obs_raw.groupby("nu",sort=False):
-        df_obs = df_obs.reset_index(drop=True)
-        nu_obs = cast(float,nu_obs)
-        df_nu = pd.DataFrame(df_calc_raw[np.isclose(df_calc_raw["nu"], nu_obs)].reset_index(drop=True))
+    with PdfPages(outpath) as pdf:
+        for nu_obs, df_obs in df_obs_raw.groupby(KeyNames.NU,sort=False):
+            df_obs = df_obs.reset_index(drop=True)
+            nu_obs = cast(float,nu_obs)
+            df_nu = pd.DataFrame(df_calc_raw[np.isclose(df_calc_raw[KeyNames.NU], nu_obs)].reset_index(drop=True))
 
-        fnu_bg_value = np.asarray(df_obs["fnu_bg"],dtype=np.float64)[0]
+            fnu_bg_value = np.asarray(df_obs["fnu_bg"],dtype=np.float64)[0]
 
-        fnu_bg = quantity_data.QuantityData(
-            value=fnu_bg_value,
-            unit=metadata_obs["fnu_unit"]
-        )
-        df_nu["fnu_with_bg"] = df_nu["fnu"] + fnu_bg.value
-    
-        t_min = curve.build_axisarray(
-            df_nu,
-            "t",
-            metadata_calc["t_unit"],
-            conf["t_unit"]
-        )
-        fnu_mjy = curve.build_axisarray(
-            df_nu,
-            "fnu_with_bg",
-            metadata_calc["fnu_unit"],
-            conf["fnu_unit"]
-        )
-        curveconf = plot_utils.CurveConfigure(**conf["calculation"])
-        curveconf.label = f"{nu_obs} {conf['nu_unit']}"
+            fnu_bg = quantity_data.QuantityData(
+                value=fnu_bg_value,
+                unit=metadata_obs[KeyNames.FNU_UNIT]
+            )
+            df_nu[KeyNames.FNU_WITH_BG] = df_nu[KeyNames.FNU] + fnu_bg.value
 
-        scatterconf = plot_scatter.ScatterConfigure(**conf["observation_scatter"])
-        text = ""
-        for key,element in conf["annotation"]["elements"].items():
-            value = metadata_calc[key]
-            prefix = element["prefix"]
-            fmt = element["fmt"]
-            text += f"{prefix}={value:{fmt}} "
+            t_min,fnu_mjy = build_chevalier_xy(
+                df_nu,metadata_calc,conf
+            )
 
-        for key,element in conf["annotation"]["from_tabledata"].items():
-            prefix = element["prefix"]
-            fmt = element["fmt"]
-            value_arr = dataframe_processors.convert_ndarray(df_nu,key)
-            # if element["tendency"] == "unique":
-            value = float(value_arr[0])
-            if element["with_unit"]:
-                unit = metadata_calc[f"{key}_unit"]
-                text += f"{prefix}={value:{fmt}} {unit} "
-            else:
+            curveconf = plot_utils.CurveConfigure(**conf["calculation"])
+            curveconf.label = f"{nu_obs} {conf[KeyNames.NU_UNIT]}"
+
+            scatterconf = plot_scatter.ScatterConfigure(**conf["observation_scatter"])
+            text = ""
+            for key,element in conf["annotation"]["elements"].items():
+                value = metadata_calc[key]
+                prefix = element["prefix"]
+                fmt = element["fmt"]
                 text += f"{prefix}={value:{fmt}} "
 
+            for key,element in conf["annotation"]["from_tabledata"].items():
+                prefix = element["prefix"]
+                fmt = element["fmt"]
+                value_arr = dataframe_processors.convert_ndarray(df_nu,key)
+                # if element["tendency"] == "unique":
+                value = float(value_arr[0])
+                if element["with_unit"]:
+                    unit = metadata_calc[f"{key}_unit"]
+                    text += f"{prefix}={value:{fmt}} {unit} "
+                else:
+                    text += f"{prefix}={value:{fmt}} "
 
-        annot = plot_utils.AnnotationConfigure(
-            **conf["annotation"]["config"],
-            text=text
-        )
 
-        with PdfPages(outpath) as pdf:
+            annot = plot_utils.AnnotationConfigure(
+                **conf["annotation"]["config"],
+                text=text
+            )
+
             figsize=conf["figsize"]
             fig,ax = plt.subplots(figsize=figsize)
             fig.set_layout_engine("constrained")
@@ -97,10 +109,11 @@ def main(args:argparse.Namespace):
             curve.curve(ax,t_min,fnu_mjy,curveconf)
             plot_scatter.with_errorbar(
                 ax,
-                np.asarray(df_obs["t"]),
-                np.asarray(df_obs["fnu"]),
-                np.asarray(df_obs["t_err"]),
-                np.asarray(df_obs["fnu_err"]),
+                np.asarray(df_obs[KeyNames.T]),
+                np.asarray(df_obs[KeyNames.FNU]),
+                # np.asarray(df_obs[KeyNames.T_ERR]),
+                None,
+                np.asarray(df_obs[KeyNames.FNU_ERR]),
                 scatterconf
             )
             legend_handles = []
@@ -140,5 +153,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     main(args)
-
-

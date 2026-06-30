@@ -2,22 +2,22 @@ figsize: [12,12]
 common:
   TicksConfigure: &TicksConfigure_tmp
     xlim: [1.0e+02,1.0e+04]
-    ylim: [1.0e+18,1.0e+21]
+    ylim: [1.0e-02,1.0e+02]
     xscale: "log"
     yscale: "log"
     fontsize: 16
   LabelConfigure: &LabelConfigure_tmp
     xlabel: '$\phi_{\mathrm{peak}}$ [GHz s]'
-    ylabel: '$L_{\nu,\mathrm{peak}}$ [erg/s/Hz]'
+    ylabel: '$F_{\nu,\mathrm{net,peak}}$ [mJy]'
     fontsize: 24
   x:
     column: "phi_peak" 
   y:
-    column: "l_peak"
+    column: "fnu_net_peak"
 parameter_curves:
   awind:
     logscale: True
-    column_name: "a_wind_value"
+    column_name: "a_wind"
     legend_name: '$A_{\mathrm{w}}$ [g/cm]'
     levels:
       - 1.0e+05
@@ -56,6 +56,8 @@ parameter_curves:
     linestyle: "--"
     linewidth: 2.0
     color: "#000000"
+observation_scatters:
+  - 9.0
 annotations:
   use: True
   fontsize: 16
@@ -64,3 +66,9 @@ annotations:
     - "eps_th"
     - "mu"
     - "mu_e"
+  quantities:
+    d:
+      value: "d_value"
+      unit : "d_unit"
+      prefix: '$d=$'
+      fmt: ".1f"

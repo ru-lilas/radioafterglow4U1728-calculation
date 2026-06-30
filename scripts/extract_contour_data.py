@@ -16,9 +16,11 @@ def main(args:argparse.Namespace):
 
     confpath:Path = args.config
     conf = fr.read_yaml(confpath)
+    d_value = float(conf["d_value"])
+    d_unit = conf["d_unit"]
     dst_xrb = QuantityData(
-        value = np.asarray(conf["d_value"],dtype=np.float64),
-        unit = conf["d_unit"]
+        value = np.asarray(d_value,dtype=np.float64),
+        unit = d_unit
     )
 
     inpath:Path = args.input
@@ -58,7 +60,9 @@ def main(args:argparse.Namespace):
     df_output["fnu_net_peak"] = fnu_peak_value
     metadata_output = {
         **metadata_input,
-        **conf
+        **conf,
+        "d_value": d_value,
+        "d_unit": d_unit
     }
 
     fw.write_csv_with_params(df_output,metadata_output,outpath)

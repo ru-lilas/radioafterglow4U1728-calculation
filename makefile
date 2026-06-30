@@ -53,7 +53,7 @@ $(FIGDIR)/test/chevalier_overlap.pdf: \
 
 $(FIGDIR)/$(CHEVALIER_DIAGRAM).pdf: \
 	$(DATADIR)/$(CHEVALIER_DIAGRAM).csv \
-		$(DATADIR)/chevalier_diagram_obsscats.csv \
+		$(DATADIR)/$(OBSERVATION_PEAK_DATA).csv \
 		plotconfigs/$(CHEVALIER_DIAGRAM).yaml \
 		plot/$(CHEVALIER_DIAGRAM).py
 	python -m $(subst /,.,$(basename $(lastword $^))) \

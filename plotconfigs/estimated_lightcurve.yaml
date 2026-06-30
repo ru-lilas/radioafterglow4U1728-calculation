@@ -7,7 +7,7 @@ TicksConfigure: &TicksConfigure_tmp
   fontsize: 24
 LabelConfigure: &LabelConfigure_tmp
   xlabel: 'time since X-ray burst [min]'
-  ylabel: 'specific flux density [mJy]'
+  ylabel: 'Flux Density [mJy]'
   fontsize: 24
 nu_values:
   - 5.5

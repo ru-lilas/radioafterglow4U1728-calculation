@@ -5,6 +5,20 @@ from module.plot import contour
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from module.plot import plot_utils
+from module.utilities.quantity_data import QuantityData
+
+def annotation_quantity(conf:dict,metadata:dict):
+    value_keyname = conf["value"]
+    unit_keyname = conf["unit"]
+    value = metadata[value_keyname]
+    unit = metadata[unit_keyname]
+    q_data = QuantityData(
+        value=value,
+        unit=unit
+    )
+    prefix = conf["prefix"]
+    fmt = conf["fmt"]
+    return f"{prefix}{q_data.quantity:{fmt}}"
 
 def main(args:argparse.Namespace):
     inpath:Path = args.input
@@ -28,8 +42,10 @@ def main(args:argparse.Namespace):
             conf=conf,
             df=df_contour,
         )
-        contour.plot_scatters(ax,conf,df_scatters)
+        contour.plot_scatters(ax,conf["observation_scatters"],df_scatters)
 
+        d_text = annotation_quantity(conf["annotations"]["quantities"]["d"],metadata_contour)
+        
         annot = plot_utils.AnnotationConfigure(
             use=True,
             fontsize=16,
@@ -38,6 +54,8 @@ def main(args:argparse.Namespace):
                 r", $\varepsilon_\mathrm{th}=$"f"{metadata_contour['eps_th']}"
                 r", $\mu=$"f"{metadata_contour['mu']}"
                 r", $\mu_e=$"f"{metadata_contour['mu_e']}"
+                r", $\mu_e=$"f"{metadata_contour['mu_e']}"
+                f", {d_text}"
         )
         plot_utils.annotation(ax,annot)
 
