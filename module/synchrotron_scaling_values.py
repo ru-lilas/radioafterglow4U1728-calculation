@@ -22,25 +22,6 @@ def calculate_t_peak_nu(
         )
     return t_peak.to(u.s) 
 
-def calculate_P0(b_mag:u.Quantity):
-    return (np.sqrt(3)*e**3*b_mag/(m_e*c**2)).to(u.erg/u.s/u.Hz)
-
-def calculate_j0(
-    nu_B:u.Quantity,
-    n_ele:u.Quantity,
-)->u.Quantity:
-    quantity = (n_ele*e**2*nu_B/(np.sqrt(3.0)*c)).to(unit.emissivity)
-    return quantity
-
-def calculate_alpha0(
-    nu_B:u.Quantity,
-    n_ele:u.Quantity,
-    pnu0:u.Quantity
-)->u.Quantity:
-    quantity = (n_ele*pnu0/(8.0*m_e*nu_B**2)).to(unit.absorption_coefficient)
-    value = np.clip(quantity.value,1.0e-300,None)
-    return value * quantity.unit
-
 def convert_nu_into_omega(nu:u.Quantity)->u.Quantity:
     return nu/(2.0*np.pi)
 
@@ -91,20 +72,6 @@ def calculate_phi_theta(
         )
     return nu_t.to(u.s*u.GHz)
 
-# def calculate_tau_theta(
-#     eps_B: float,
-#     theta: float,
-#     mu: float,
-#     mu_e: float,
-#     beta_sh: float,
-#     a_wind: u.Quantity
-# ):
-#     tau = (
-#         2.0*e*mu_e/(3**(2.5)*theta**5*mu*m_p*c*beta_sh)
-#             *np.sqrt(a_wind/eps_B)
-#     )
-#     return tau.to(u.dimensionless_unscaled)
-
 def calculate_j_theta(
         theta:float,
         n_ele_theta:u.Quantity,
@@ -131,13 +98,6 @@ def calculate_alpha_theta(
         )
     return alpha_theta.to(unit.absorption_coefficient)
 
-# def calculate_tau_theta(
-#     alpha_theta:u.Quantity,
-#     r_theta:u.Quantity,
-# )->np.ndarray:
-#     tau_theta = np.atleast_1d((alpha_theta*r_theta).to_value(u.dimensionless_unscaled))
-#     return tau_theta
-#
 def calculate_tau_theta(
     eps_B: float,
     mu_e: float,
@@ -209,7 +169,7 @@ def calculate_lambda_using_table(
 )->NDArray[np.float64]:
     log_ip_xi = table.calculate_log_ip(xm)
     ip_xi = np.exp(log_ip_xi)
-    tauip = ip_xi*tau_theta[:,None]
+    tauip = ip_xi*tau_theta
     f_esc = -np.expm1(-tauip/xm)
     xm2 = xm**2
     return xm2 * f_esc

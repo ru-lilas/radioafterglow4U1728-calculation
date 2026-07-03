@@ -5,7 +5,7 @@ beta_arr:
   num: 1024
 
 a_wind_arr:
-  start: 5.0
+  start: 4.0
   stop: 7.0
   num: 1024
 
@@ -15,6 +15,10 @@ fixed:
   mu: 0.62
   mu_e: 1.18
   a_wind_unit: "g/cm"
+
+distance:
+  d_value: 5.0
+  d_unit: "kpc"
 
 units:
   phi_unit: "GHz s"

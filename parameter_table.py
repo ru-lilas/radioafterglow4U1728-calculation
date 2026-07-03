@@ -3,6 +3,7 @@ from pathlib import Path
 from module import compute_scaling_parameters
 from module.utilities import filereaders as fr
 from module.utilities import filewriters as fw
+from module.strenums import KeyNames
 
 def main(args:argparse.Namespace):
     outpath:Path = args.output
@@ -14,6 +15,7 @@ def main(args:argparse.Namespace):
     df = compute_scaling_parameters.table(config_data)
     metadata = {
         **config_data["fixed"],
+        **config_data[KeyNames.DISTANCE],
         **config_data["units"],
     }
     fw.write_csv_with_params(df,metadata,outpath)

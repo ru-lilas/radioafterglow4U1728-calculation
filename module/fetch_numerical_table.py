@@ -12,3 +12,6 @@ def fetch_tau_table(args:Namespace):
     df_table = tabular.read_tabular(tabular_path)
     return tabular.TauThetaTable(df_table)
 
+def fetch_numerical_table_path(tablepath:Path):
+    df_table = tabular.read_tabular(tablepath)
+    return tabular.ThermalSynchrotronTable(df_table)

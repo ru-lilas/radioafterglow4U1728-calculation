@@ -13,6 +13,13 @@ from module.utilities import bisection, unit_aliases as unit
 from module import calculate_lnu_th
 
 @dataclass
+class MicroscopicParameters:
+    eps_th: float
+    eps_B: float
+    mu: float
+    mu_e: float
+
+@dataclass
 class InputParameters:
     eps_th: float
     eps_B: float

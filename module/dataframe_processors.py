@@ -52,3 +52,18 @@ def extract_peak_quadratic(
     x_peak = -b / (2 * a)
     y_peak = a * x_peak**2 + b * x_peak + c
     return (x_peak,y_peak)
+
+def filter_df_value_window(
+    df: pd.DataFrame,
+    column_name: str,
+    min: float | None = None,
+    max: float | None = None,
+) -> pd.DataFrame:
+    mask = pd.Series(True, index=df.index)
+
+    if min is not None:
+        mask &= df[column_name] >= min
+    if max is not None:
+        mask &= df[column_name] <= max
+
+    return pd.DataFrame(df[mask])

@@ -74,6 +74,11 @@ def main(args:argparse.Namespace):
     df_estimated = fr.read_csv(inpath)
     metadata_estimated = fr.read_keyvalue(inpath)
 
+    t = quantity_data.QuantityData(
+        build_nparray.log(calculation_input["t_value_arr"]),
+        calculation_input["t_unit"]
+    )
+
     inputarrs = InputArrays(
         t_value_arr= build_nparray.log(calculation_input["t_value_arr"]),
         t_unit = u.Unit(calculation_input["t_unit"]),

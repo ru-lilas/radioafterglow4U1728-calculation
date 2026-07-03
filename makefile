@@ -51,6 +51,15 @@ $(FIGDIR)/test/chevalier_overlap.pdf: \
 		--config $(word 4,$^) \
 		--output $@
 
+$(FIGDIR)/$(CHEVALIER_DIAGRAM)_background.pdf: \
+	$(DATADIR)/$(CHEVALIER_DIAGRAM).csv \
+		plotconfigs/$(CHEVALIER_DIAGRAM)_background.yaml \
+		plot/$(CHEVALIER_DIAGRAM)_background.py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		-c $(word 2,$^) \
+		-o $@
+
 $(FIGDIR)/$(CHEVALIER_DIAGRAM).pdf: \
 	$(DATADIR)/$(CHEVALIER_DIAGRAM).csv \
 		$(DATADIR)/$(OBSERVATION_PEAK_DATA).csv \
@@ -154,6 +163,19 @@ $(DATADIR)/test/$(CONTOUR_RAW).csv: \
 	python -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
 		--table $(word 2,$^) \
+		--output $@
+
+$(DATADIR)/chi2fit_parameters.csv: \
+	$(DATADIR)/$(PARAMETER_TABLE).csv \
+		$(DATADIR)/$(INTEGRAL_TABLE).csv \
+		$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv \
+		$(INPUTDIR)/estimate_chi2fit_parameters.yaml \
+		scripts/estimate_chi2fit_parameters.py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--integral_table $(word 2,$^) \
+		--observation_lc $(word 3,$^) \
+		--config $(word 4,$^) \
 		--output $@
 
 #=== tabulating ===#
