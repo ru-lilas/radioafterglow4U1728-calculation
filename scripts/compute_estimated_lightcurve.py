@@ -1,6 +1,6 @@
 import argparse
 from typing import Any
-from module import fetch_numerical_table
+from module import dataframe_utils, fetch_numerical_table
 from pathlib import Path
 import numpy as np
 from module.utilities import filereaders as fr
@@ -73,8 +73,9 @@ doppler_delta = np.asarray(df_params_estimated[KeyNames.DOPPLER_DELTA],dtype=np.
 
 fnu_unit = config_calc[KeyNames.FNU_UNIT]
 
-a_wind_arr = np.asarray(df_params_estimated[KeyNames.A_WIND],dtype=np.float64)
-beta_sh_arr = np.asarray(df_params_estimated[KeyNames.BETA_SH],dtype=np.float64)
+a_wind_arr = dataframe_utils.extract_column_as_ndarray(df_params_estimated,KeyNames.A_WIND)
+beta_sh_arr = dataframe_utils.extract_column_as_ndarray(df_params_estimated,KeyNames.BETA_SH)
+chi2_arr = dataframe_utils.extract_column_as_ndarray(df_params_estimated,KeyNames.CHI2)
 
 dfs: list[pd.DataFrame] = []
 for i,nu in enumerate(nu_values):
@@ -117,7 +118,8 @@ for i,nu in enumerate(nu_values):
         KeyNames.PHI: phi_value,
         KeyNames.FNU_NET: fnu_quantity.unit_convert(fnu_unit),
         KeyNames.A_WIND: a_wind_arr[i],
-        KeyNames.BETA_SH: beta_sh_arr[i]
+        KeyNames.BETA_SH: beta_sh_arr[i],
+        "chi2": chi2_arr[i]
     }))
 metadata:dict[str,Any] = {
     KeyNames.T_UNIT: t.unit,

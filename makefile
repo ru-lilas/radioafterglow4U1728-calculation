@@ -32,7 +32,7 @@ RESO := a0256b0256
 
 #=== figures ===#
 $(FIGDIR)/$(RESO)/$(CHEVALIER_DIAGRAM).pdf: \
-	$(DATADIR)/$(CHEVALIER_DIAGRAM).csv \
+	$(DATADIR)/$(RESO)/chevalier_contour.csv \
 		$(DATADIR)/$(RESO)/$(CHEVALIER_SCATTERS).csv \
 		plotconfigs/$(CHEVALIER_DIAGRAM).yaml \
 		plot/$(CHEVALIER_DIAGRAM).py
@@ -119,14 +119,23 @@ $(DATADIR)/$(CHEVALIER_DIAGRAM).csv: \
 		--config $(word 2,$^) \
 		--output $@
 
-# $(DATADIR)/$(CONTOUR_RAW).csv: \
-# 	$(DATADIR)/$(PARAMETER_TABLE).csv \
-# 		$(DATADIR)/$(PEAK_TABLE).csv \
-# 		scripts/build_$(CONTOUR_RAW).py
-# 	python -m $(subst /,.,$(basename $(lastword $^))) \
-# 		$< \
-# 		--table $(word 2,$^) \
-# 		--output $@
+$(DATADIR)/$(RESO)/chevalier_contour.csv: \
+	$(DATADIR)/$(RESO)/$(PARAMETER_TABLE).csv \
+		$(DATADIR)/$(PEAK_TABLE).csv \
+		scripts/build_chevalier_contour.py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--peak_table $(word 2,$^) \
+		--output $@
+
+$(DATADIR)/$(CONTOUR_RAW).csv: \
+	$(DATADIR)/$(PARAMETER_TABLE).csv \
+		$(DATADIR)/$(PEAK_TABLE).csv \
+		scripts/build_$(CONTOUR_RAW).py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--table $(word 2,$^) \
+		--output $@
 #
 # $(DATADIR)/test/$(CONTOUR_RAW).csv: \
 # 	$(DATADIR)/test/test_$(PARAMETER_TABLE).csv \

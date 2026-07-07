@@ -1,7 +1,7 @@
 figsize: [16,12]
 TicksConfigure: &TicksConfigure_tmp
   xlim: [-10.0,30.0]
-  ylim: [0.5,2.0]
+  ylim: [0.5,1.8]
   xscale: "linear"
   yscale: "linear"
   fontsize: 24
@@ -55,6 +55,11 @@ annotation:
       tendency: "unique"
       prefix: '$\beta_{\mathrm{sh}}$'
       fmt: '.2f'
+    chi2:
+      with_unit: False
+      tendency: "unique"
+      prefix: '$\chi^2$'
+      fmt: '.1f'
 
 hlines:
   f9_per:

@@ -13,7 +13,7 @@ common:
   x:
     column: "phi_peak" 
   y:
-    column: "fnu_net_peak"
+    column: "fnu_peak"
 parameter_curves:
   awind:
     logscale: True

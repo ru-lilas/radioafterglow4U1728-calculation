@@ -34,3 +34,12 @@ def beta_into_doppler_delta(
         真正面からの寄与以外を無視した場合の近似式
     """
     return np.sqrt((1.0+beta)/(1.0-beta))
+
+def fnu_src__into__fnu_obs(
+    fnu_src: u.Quantity,
+    doppler_delta: float
+):
+    """
+        静止系でのfnuを観測者系のfnuへ変換する
+    """
+    return
