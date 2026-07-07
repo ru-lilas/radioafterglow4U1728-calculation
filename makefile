@@ -120,16 +120,7 @@ $(DATADIR)/$(CONTOUR_RAW).csv: \
 		$< \
 		--table $(word 2,$^) \
 		--output $@
-#
-# $(DATADIR)/test/$(CONTOUR_RAW).csv: \
-# 	$(DATADIR)/test/test_$(PARAMETER_TABLE).csv \
-# 		$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv \
-# 		scripts/build_$(CONTOUR_RAW).py
-# 	python -m $(subst /,.,$(basename $(lastword $^))) \
-# 		$< \
-# 		--table $(word 2,$^) \
-# 		--output $@
-#
+
 .PRECIOUS: $(DATADIR)/$(RESO)/chi2fit_parameters.csv
 $(DATADIR)/$(RESO)/chi2fit_parameters.csv: \
 	$(DATADIR)/$(RESO)/$(PARAMETER_TABLE).csv \
