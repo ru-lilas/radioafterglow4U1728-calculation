@@ -13,7 +13,7 @@ from module.synchrotron_scaling_values import calculate_lambda_using_table
 class Lightcurve:
     t: QuantityData
     nu: QuantityData
-    table:ThermalSynchrotronTable
+    table_integral:ThermalSynchrotronTable
 
     @cached_property
     def t_quantity(self):
@@ -42,7 +42,7 @@ class Lightcurve:
         return calculate_lambda_using_table(
             xm=self.xm_arr(phi_theta),
             tau_theta=tau_theta,
-            table=self.table
+            table=self.table_integral
         )
 
     def lnu_arr(

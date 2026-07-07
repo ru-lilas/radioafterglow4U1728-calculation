@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from module.fetch_numerical_table import fetch_tau_table
+from module.fetch_numerical_table import fetch_peak_table
 from module.utilities import filereaders as fr
 from module.utilities import filewriters as fw
 import numpy as np
@@ -14,7 +14,7 @@ def main(args:argparse.Namespace):
     df_input = fr.read_csv(inpath)
     metadata = fr.read_keyvalue(inpath)
 
-    table = fetch_tau_table(args)
+    table = fetch_peak_table(args)
     tau_theta_arr = np.asarray(df_input["tau_theta"],dtype=np.float64)
 
     df_output = df_input.assign(

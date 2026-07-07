@@ -23,6 +23,9 @@ class KeyNames(StrEnum):
     LNU_THETA = auto()
     TAU_THETA = auto()
     CHI2 = auto()
+    EPS_B = "eps_B"
+    EPS_TH = auto()
+    PHI = auto()
 
 class PlotConfigNames(StrEnum):
     FIGSIZE = auto()
@@ -32,3 +35,7 @@ class EstimationConfigNames(StrEnum):
     MIN = auto()
     MAX = auto()
     UNIT = auto()
+
+class ChevalierContourNames(StrEnum):
+    PHI_PEAK = auto()
+    FNU_NET_PEAK = auto()

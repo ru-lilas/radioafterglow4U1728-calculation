@@ -20,6 +20,7 @@ parameter_curves:
     column_name: "a_wind"
     legend_name: '$A_{\mathrm{w}}$ [g/cm]'
     levels:
+      - 1.0e+04
       - 1.0e+05
       - 1.0e+06
       - 1.0e+07
@@ -33,7 +34,7 @@ parameter_curves:
       rotation: 20
       ha: "center"
       va: "center"
-    dex_tol: 1.0e-03
+    dex_tol: 1.0e-02
     linestyle: "-"
     linewidth: 2.0
     color: "#000000"
@@ -52,7 +53,7 @@ parameter_curves:
       fmt: ".1f"
       prefix: '$\beta_{\mathrm{sh}}=$'
       suffix: ''
-    rtol: 1.0e-03
+    rtol: 1.0e-02
     linestyle: "--"
     linewidth: 2.0
     color: "#000000"

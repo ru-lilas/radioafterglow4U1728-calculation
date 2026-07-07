@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from module.plot import plot_utils
 from module.utilities.quantity_data import QuantityData
+from module.strenums import KeyNames
 
 def annotation_quantity(conf:dict,metadata:dict):
     value_keyname = conf["value"]
@@ -50,15 +51,13 @@ def main(args:argparse.Namespace):
             use=True,
             fontsize=16,
             text=\
-                r"$\varepsilon_{B}=$"f"{metadata_contour['eps_B']}"
-                r", $\varepsilon_\mathrm{th}=$"f"{metadata_contour['eps_th']}"
+                r"$\varepsilon_{B}=$"f"{metadata_contour[KeyNames.EPS_B]}"
+                r", $\varepsilon_\mathrm{th}=$"f"{metadata_contour[KeyNames.EPS_TH]}"
                 r", $\mu=$"f"{metadata_contour['mu']}"
-                r", $\mu_e=$"f"{metadata_contour['mu_e']}"
                 r", $\mu_e=$"f"{metadata_contour['mu_e']}"
                 f", {d_text}"
         )
         plot_utils.annotation(ax,annot)
-
 
         pdf.savefig(fig)
         plt.close(fig)

@@ -2,7 +2,7 @@
 beta_arr:
   start: -1.0
   stop: -0.3
-  num: 512
+  num: 256
 
 a_wind_arr:
   start: 4.0

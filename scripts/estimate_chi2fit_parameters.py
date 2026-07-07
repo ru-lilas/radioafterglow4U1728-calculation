@@ -95,6 +95,8 @@ for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
     df_obs_nu = df_obs_nu.reset_index(drop=True)
     nu_obs = np.asarray(cast(float,nu_obs),dtype=np.float64)
     nu = QuantityData(nu_obs,nu_unit)
+    print(f"nu = {nu_obs:.2e} {nu_unit}")
+    print(df_obs_nu)
     t_value = np.asarray(df_obs_nu[KeyNames.T],dtype=np.float64)
     t_unit = metadata_obs[KeyNames.T_UNIT]
     fnu_net_obs = QuantityData(
@@ -109,9 +111,10 @@ for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
     lc = compute_lightcurve.Lightcurve(
         t = QuantityData(t_value,t_unit),
         nu = nu,
-        table = data_integral
+        table_integral = data_integral
     )
 
+    # create array of chi**2 in advance
     chi2_arr = np.empty(len(df_param_table),dtype=np.float64)
 
     for idx,(phi_theta_value,lnu_theta_value,tau_theta) \
@@ -146,11 +149,15 @@ for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
     idx_best = np.argmin(chi2_arr)
     chi2_min = chi2_arr[idx_best]
     param_best = pd.Series(df_param_table.iloc[idx_best])
-    param_best[KeyNames.NU] = nu
+    param_best[KeyNames.NU] = nu.value
     param_best[KeyNames.CHI2] = chi2_min
 
     bestfit_rows.append(param_best)
 
 df_output = pd.DataFrame(bestfit_rows)
+metadata_output = {
+    **metadata_param_table,
+    KeyNames.NU_UNIT: nu_unit
+}
 
-fw.write_csv_with_params(df_output,metadata_param_table,outpath)
+fw.write_csv_with_params(df_output,metadata_output,outpath)

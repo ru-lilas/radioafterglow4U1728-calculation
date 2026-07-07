@@ -1,162 +1,132 @@
 import argparse
-from functools import cached_property
-from typing import Any, cast
-from module import fetch_numerical_table, quantity_converter
+from typing import Any
+from module import fetch_numerical_table
 from pathlib import Path
 import numpy as np
-from numpy.typing import NDArray
-from module.tabular import ThermalSynchrotronTable
 from module.utilities import filereaders as fr
 from module.utilities import filewriters as fw
 from module.utilities import build_nparray
 import pandas as pd
-import astropy.units as u
-from dataclasses import dataclass
-from module.synchrotron_scaling_values import calculate_lambda_using_table
 from module.utilities import quantity_data
 from module import dataframe_processors as dfp
+from module import compute_lightcurve
+from module.strenums import KeyNames
+import astropy.units as u
 
-@dataclass
-class InputArrays:
-    t_value_arr: NDArray[np.float64]
-    t_unit: u.Unit
-    phi_theta_values: NDArray[np.float64]
-    phi_unit: u.Unit
-    nu_values: NDArray[np.float64]
-    nu_unit: u.Unit
-    lnu_theta: quantity_data.QuantityData
-    tau_theta: NDArray[np.float64]
-    table:ThermalSynchrotronTable
+parser = argparse.ArgumentParser()
 
-    @cached_property
-    def t_quantity_arr(self):
-        return u.Quantity(self.t_value_arr,self.t_unit)
+parser.add_argument(
+    "input",
+    type=Path,
+)
+parser.add_argument(
+    "--config",
+    type=Path,
+    required=True
+)
+parser.add_argument(
+    "--table_integral",
+    type=Path,
+    required=True
+)
+parser.add_argument(
+    "--output",
+    type=Path,
+    required=True
+)
+args = parser.parse_args()
 
-    @cached_property
-    def phi_theta_quantites(self):
-        return u.Quantity(self.phi_theta_values,self.phi_unit)
+outpath:Path = args.output
+outpath.parent.mkdir(parents=True,exist_ok=True)
 
-    @cached_property
-    def nu_quantities(self):
-        return u.Quantity(self.nu_values,self.nu_unit)
+table_integral = fetch_numerical_table.fetch_numerical_table_path(args.table_integral)
 
-    @cached_property
-    def phi_arr(self):
-        phi = u.Quantity(self.t_quantity_arr[None,:]*self.nu_quantities[:,None])
-        return u.Quantity(phi.to(self.phi_unit))
+confpath:Path = args.config
+config_calc = fr.read_yaml(confpath)
 
-    @cached_property
-    def xm_arr(self):
-        return self.phi_arr/self.phi_theta_quantites[:,None]
+inpath:Path = args.input
+df_params_estimated = fr.read_csv(inpath)
+metadata_params_estimated = fr.read_keyvalue(inpath)
 
-    @cached_property
-    def lambda_arr(self):
-        return calculate_lambda_using_table(
-            xm=self.xm_arr,
-            tau_theta=self.tau_theta,
-            table=self.table
-        )
+t = quantity_data.QuantityData(
+    build_nparray.log(config_calc["t_value_arr"]),
+    config_calc["t_unit"]
+)
 
-    @cached_property
-    def lnu_arr(self):
-        return u.Quantity(self.lambda_arr*self.lnu_theta.quantity[:,None])
+d_value = np.asarray(metadata_params_estimated[KeyNames.D_VALUE],dtype=np.float64)
+d_unit = metadata_params_estimated[KeyNames.D_UNIT]
+d_src = quantity_data.QuantityData(
+    value = d_value,
+    unit = d_unit
+)
+nu_values = np.asarray(df_params_estimated[KeyNames.NU],dtype=np.float64)
+nu_unit = metadata_params_estimated[KeyNames.NU_UNIT]
 
-def main(args:argparse.Namespace):
-    outpath:Path = args.output
-    outpath.parent.mkdir(parents=True,exist_ok=True)
+lnu_theta_values = dfp.convert_ndarray(df_params_estimated,KeyNames.LNU_THETA)
+lnu_unit = metadata_params_estimated[KeyNames.LNU_UNIT]
 
-    table = fetch_numerical_table.fetch_numerical_table(args)
+phi_theta_values = np.asarray(df_params_estimated[KeyNames.PHI_THETA],dtype=np.float64)
+phi_unit = metadata_params_estimated[KeyNames.PHI_UNIT]
 
-    confpath:Path = args.config
-    calculation_input = fr.read_yaml(confpath)
+tau_theta = np.asarray(df_params_estimated[KeyNames.TAU_THETA],dtype=np.float64)
 
-    inpath:Path = args.input
-    df_estimated = fr.read_csv(inpath)
-    metadata_estimated = fr.read_keyvalue(inpath)
+fnu_unit = config_calc[KeyNames.FNU_UNIT]
 
-    t = quantity_data.QuantityData(
-        build_nparray.log(calculation_input["t_value_arr"]),
-        calculation_input["t_unit"]
+a_wind_arr = np.asarray(df_params_estimated[KeyNames.A_WIND],dtype=np.float64)
+beta_sh_arr = np.asarray(df_params_estimated[KeyNames.BETA_SH],dtype=np.float64)
+
+dfs: list[pd.DataFrame] = []
+for i,nu in enumerate(nu_values):
+    nu_q = quantity_data.QuantityData(
+        value = nu,
+        unit = nu_unit
+    )
+    lnu_theta_q = quantity_data.QuantityData(
+        value = lnu_theta_values[i],
+        unit = lnu_unit
+    )
+    phi_theta_q = quantity_data.QuantityData(
+        value = phi_theta_values[i],
+        unit = phi_unit
     )
 
-    inputarrs = InputArrays(
-        t_value_arr= build_nparray.log(calculation_input["t_value_arr"]),
-        t_unit = u.Unit(calculation_input["t_unit"]),
-        phi_theta_values = np.asarray(df_estimated["phi_theta"],dtype=np.float64),
-        phi_unit = u.Unit(metadata_estimated["phi_unit"]),
-        nu_values = np.asarray(df_estimated["nu"],dtype=np.float64),
-        nu_unit = u.Unit(metadata_estimated["nu_unit"]),
-        lnu_theta = quantity_data.QuantityData(
-            value = dfp.convert_ndarray(df_estimated,"lnu_theta"),
-            unit = metadata_estimated["lnu_unit"]
-        ),
-        tau_theta = np.asarray(df_estimated["tau_theta"],dtype=np.float64),
-        table=table
-    )
-    d_value = float(metadata_estimated["d_value"])
-    d_unit = u.Unit(metadata_estimated["d_unit"])
-    d_quantity = u.Quantity(d_value,d_unit)
-    fnu = quantity_converter.lnu_into_fnu(
-        lnu=inputarrs.lnu_arr,
-        distance=d_quantity
-    )
-    fnu_unit = u.Unit(calculation_input["fnu_unit"])
 
-    metadata:dict[str,Any] = {
-        "t_unit": inputarrs.t_unit.to_string(),
-        "lnu_unit": inputarrs.lnu_theta.unit,
-        "nu_unit": inputarrs.nu_unit.to_string(),
-        "fnu_unit": fnu_unit.to_string(),
-        "d_value": d_value,
-        "d_unit": d_unit.to_string(),
-        "eps_B": metadata_estimated["eps_B"],
-        "eps_th": metadata_estimated["eps_th"],
-        "mu": metadata_estimated["mu"],
-        "mu_e": metadata_estimated["mu_e"],
-        "a_wind_unit": metadata_estimated["a_wind_unit"]
-    }
-    dfs: list[pd.DataFrame] = []
+    lc = compute_lightcurve.Lightcurve(
+        t=t,
+        nu = nu_q,
+        table_integral=table_integral
+    )
+    tau_theta_q = tau_theta[i]
+    fnu_quantity = lc.fnu(
+        phi_theta=phi_theta_q,
+        lnu_theta=lnu_theta_q,
+        tau_theta=tau_theta_q,
+        d_src=d_src
+    )
 
-    for i, nu in enumerate(inputarrs.nu_values):
-        lnu_arr_nu = cast(u.Quantity,inputarrs.lnu_arr[i])
-        fnu_arr_nu = cast(u.Quantity,fnu[i])
-        df_lc = pd.DataFrame({
-            "t": inputarrs.t_value_arr,
-            "lnu": lnu_arr_nu.to_value(inputarrs.lnu_theta.unit),
-            "fnu": fnu_arr_nu.to_value(fnu_unit),
-            "nu": nu,
-            "a_wind":df_estimated["a_wind_est"][i],
-            "beta_sh":df_estimated["beta_sh_est"][i]
-        })
+    phi = u.Quantity(nu_q.quantity*t.quantity)
+    phi_value = phi.to_value(phi_unit)
 
-        dfs.append(df_lc)
-    df = pd.concat(
-        dfs,
-        ignore_index=True,
-    )
-    fw.write_csv_with_params(df,metadata,outpath)
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    
-    parser.add_argument(
-        "input",
-        type=Path,
-    )
-    parser.add_argument(
-        "--config",
-        type=Path,
-        required=True
-    )
-    parser.add_argument(
-        "--table",
-        type=Path,
-        required=True
-    )
-    parser.add_argument(
-        "--output",
-        type=Path,
-        required=True
-    )
-    args = parser.parse_args()
-    main(args)
+    dfs.append(pd.DataFrame({
+        KeyNames.NU: nu,
+        KeyNames.T: t.value,
+        KeyNames.PHI: phi_value,
+        KeyNames.FNU_NET: fnu_quantity.unit_convert(fnu_unit),
+        KeyNames.A_WIND: a_wind_arr[i],
+        KeyNames.BETA_SH: beta_sh_arr[i]
+    }))
+metadata:dict[str,Any] = {
+    KeyNames.T_UNIT: t.unit,
+    KeyNames.LNU_UNIT: lnu_unit,
+    KeyNames.NU_UNIT: nu_unit,
+    KeyNames.FNU_UNIT: fnu_unit,
+    KeyNames.D_VALUE: d_value,
+    KeyNames.D_UNIT: d_unit,
+    "eps_B": metadata_params_estimated["eps_B"],
+    "eps_th": metadata_params_estimated["eps_th"],
+    "mu": metadata_params_estimated["mu"],
+    "mu_e": metadata_params_estimated["mu_e"],
+    "a_wind_unit": metadata_params_estimated["a_wind_unit"]
+}
+df = pd.concat(dfs)
+fw.write_csv_with_params(df,metadata,outpath)

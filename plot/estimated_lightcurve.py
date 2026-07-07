@@ -59,7 +59,7 @@ def main(args:argparse.Namespace):
                 value=fnu_bg_value,
                 unit=metadata_obs[KeyNames.FNU_UNIT]
             )
-            df_nu[KeyNames.FNU_WITH_BG] = df_nu[KeyNames.FNU] + fnu_bg.value
+            df_nu[KeyNames.FNU_WITH_BG] = df_nu[KeyNames.FNU_NET] + fnu_bg.value
 
             t_min,fnu_mjy = build_chevalier_xy(
                 df_nu,metadata_calc,conf

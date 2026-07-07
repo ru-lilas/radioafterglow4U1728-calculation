@@ -23,12 +23,14 @@ PEAK_TABLE := peak_table
 CONTOUR_RAW := contour_raw
 CHEVALIER_DIAGRAM := chevalier_diagram
 ESTIMATED_LIGHTCURVE := estimated_lightcurve
+CHI2FIT_PARAMETERS := chi2fit_parameters
+CHEVALIER_SCATTERS := chevalier_scatters
 OBSERVATION_LIGHTCURVE := observation_lightcurve
 OBSERVATION_PEAK_DATA := observation_peak_data
 
 #=== figures ===#
-$(FIGDIR)/$(ESTIMATED_LIGHTCURVE).pdf: \
-	$(DATADIR)/$(ESTIMATED_LIGHTCURVE).csv \
+$(FIGDIR)/%/$(ESTIMATED_LIGHTCURVE).pdf: \
+	$(DATADIR)/%/$(ESTIMATED_LIGHTCURVE).csv \
 		$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv \
 		plotconfigs/$(ESTIMATED_LIGHTCURVE).yaml \
 		plot/$(ESTIMATED_LIGHTCURVE).py
@@ -60,9 +62,9 @@ $(FIGDIR)/$(CHEVALIER_DIAGRAM)_background.pdf: \
 		-c $(word 2,$^) \
 		-o $@
 
-$(FIGDIR)/$(CHEVALIER_DIAGRAM).pdf: \
+$(FIGDIR)/%/$(CHEVALIER_DIAGRAM).pdf: \
 	$(DATADIR)/$(CHEVALIER_DIAGRAM).csv \
-		$(DATADIR)/$(OBSERVATION_PEAK_DATA).csv \
+		$(DATADIR)/%/$(CHEVALIER_SCATTERS).csv \
 		plotconfigs/$(CHEVALIER_DIAGRAM).yaml \
 		plot/$(CHEVALIER_DIAGRAM).py
 	python -m $(subst /,.,$(basename $(lastword $^))) \
@@ -110,15 +112,22 @@ $(DATADIR)/estimated_ejecta_property.csv: \
 		--burster_property $(word 2,$^) \
 		--output $@
 
-$(DATADIR)/$(ESTIMATED_LIGHTCURVE).csv: \
-	$(DATADIR)/estimated_parameters.csv \
+$(DATADIR)/%/$(CHEVALIER_SCATTERS).csv: \
+	$(DATADIR)/%/$(ESTIMATED_LIGHTCURVE).csv \
+		scripts/build_chi2fit_$(CHEVALIER_SCATTERS).py
+	python -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--output $@
+
+$(DATADIR)/%/$(ESTIMATED_LIGHTCURVE).csv: \
+	$(DATADIR)/%/chi2fit_parameters.csv \
 		$(INPUTDIR)/lightcurve.yaml \
 		$(DATADIR)/$(INTEGRAL_TABLE).csv \
 		scripts/compute_$(ESTIMATED_LIGHTCURVE).py
 	python -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
 		--config $(word 2,$^) \
-		--table $(word 3,$^) \
+		--table_integral $(word 3,$^) \
 		--output $@
 
 $(DATADIR)/estimated_parameters.csv: \
@@ -165,8 +174,8 @@ $(DATADIR)/test/$(CONTOUR_RAW).csv: \
 		--table $(word 2,$^) \
 		--output $@
 
-$(DATADIR)/chi2fit_parameters.csv: \
-	$(DATADIR)/$(PARAMETER_TABLE).csv \
+$(DATADIR)/%/chi2fit_parameters.csv: \
+	$(DATADIR)/%/$(PARAMETER_TABLE).csv \
 		$(DATADIR)/$(INTEGRAL_TABLE).csv \
 		$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv \
 		$(INPUTDIR)/estimate_chi2fit_parameters.yaml \
@@ -179,17 +188,10 @@ $(DATADIR)/chi2fit_parameters.csv: \
 		--output $@
 
 #=== tabulating ===#
-$(DATADIR)/$(PARAMETER_TABLE).csv: \
-	input/$(PARAMETER_TABLE).yaml \
+$(DATADIR)/%/$(PARAMETER_TABLE).csv: \
+	input/%/$(PARAMETER_TABLE).yaml \
 		$(PARAMETER_TABLE).py
 	python $(lastword $^) \
-		$< \
-		--output $@ \
-
-$(DATADIR)/test/test_$(PARAMETER_TABLE).csv: \
-	input/test/test_$(PARAMETER_TABLE).yaml \
-		scripts/$(PARAMETER_TABLE).py
-	python -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
 		--output $@ \
 
