@@ -26,6 +26,7 @@ class KeyNames(StrEnum):
     EPS_B = "eps_B"
     EPS_TH = auto()
     PHI = auto()
+    DOPPLER_DELTA = auto()
 
 class PlotConfigNames(StrEnum):
     FIGSIZE = auto()

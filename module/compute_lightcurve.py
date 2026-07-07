@@ -64,10 +64,11 @@ class Lightcurve:
         self,
         phi_theta:QuantityData,
         lnu_theta: QuantityData,
-        tau_theta: NDArray[np.float64],
+        tau_theta: float,
         d_src: QuantityData
     ):
-        lnu = self.lnu_arr(phi_theta,lnu_theta,tau_theta)
+        tau_theta_arr = np.asarray(tau_theta,dtype=np.float64)
+        lnu = self.lnu_arr(phi_theta,lnu_theta,tau_theta_arr)
         fnu = quantity_converter.lnu_into_fnu(
             lnu=lnu.quantity,
             distance=d_src.quantity
@@ -77,3 +78,20 @@ class Lightcurve:
         )
         fnu_unit = cast(u.Unit,fnu.unit).to_string()
         return QuantityData(fnu_value,fnu_unit)
+
+    def fnu_with_doppler(
+        self,
+        phi_theta:QuantityData,
+        lnu_theta: QuantityData,
+        tau_theta: float,
+        d_src: QuantityData,
+        doppler_delta: float
+    ):
+        fnu_no_doppler = self.fnu(
+            phi_theta,lnu_theta,tau_theta,d_src
+        )
+        fnu_with_doppler = doppler_delta**3 *fnu_no_doppler.value
+        return QuantityData(
+            value = fnu_with_doppler,
+            unit = fnu_no_doppler.unit
+        )

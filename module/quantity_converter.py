@@ -21,3 +21,16 @@ def beta_into_velocity(
     beta: NDArray[np.float64]
 ):
     return u.Quantity(beta*c)
+
+def beta_into_lorentz_gamma(
+    beta: NDArray[np.float64]
+):
+    return 1.0/(np.sqrt(1.0 - beta**2))
+
+def beta_into_doppler_delta(
+    beta: float
+)->float:
+    """
+        真正面からの寄与以外を無視した場合の近似式
+    """
+    return np.sqrt((1.0+beta)/(1.0-beta))

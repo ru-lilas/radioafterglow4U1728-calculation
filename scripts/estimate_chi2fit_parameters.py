@@ -115,11 +115,16 @@ for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
     )
 
     # create array of chi**2 in advance
-    chi2_arr = np.empty(len(df_param_table),dtype=np.float64)
+    chi2_arr_no_doppler = np.empty(len(df_param_table),dtype=np.float64)
+    chi2_arr_with_doppler = np.empty(len(df_param_table),dtype=np.float64)
 
-    for idx,(phi_theta_value,lnu_theta_value,tau_theta) \
+    # observation
+    y_obs=fnu_net_obs.to_ndarray(fnu_unit)
+    y_err=fnu_err.to_ndarray(fnu_unit)
+
+    for idx,(phi_theta_value,lnu_theta_value,tau_theta,doppler_delta) \
         in enumerate(tqdm(
-            df_param_table[[KeyNames.PHI_THETA,KeyNames.LNU_THETA,KeyNames.TAU_THETA]].itertuples(index=False,name=None),
+            df_param_table[[KeyNames.PHI_THETA,KeyNames.LNU_THETA,KeyNames.TAU_THETA,KeyNames.DOPPLER_DELTA]].itertuples(index=False,name=None),
             total=len(df_param_table),
             desc="Calculating chi2",
         )):
@@ -131,26 +136,42 @@ for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
             value = lnu_theta_value,
             unit = lnu_unit
         )
-        tau_theta = np.asarray(tau_theta,dtype=np.float64)
 
-        fnu_model = lc.fnu(
+        # fnu_model_no_doppler = lc.fnu(
+        #     phi_theta=phi_theta,
+        #     lnu_theta=lnu_theta,
+        #     tau_theta=tau_theta,
+        #     d_src=d_src
+        # )
+        fnu_model_with_doppler = lc.fnu_with_doppler(
             phi_theta=phi_theta,
             lnu_theta=lnu_theta,
             tau_theta=tau_theta,
-            d_src=d_src
+            d_src=d_src,
+            doppler_delta=doppler_delta
         )
 
-        chi2_arr[idx] = (calculate_chi2(
-            y_model=fnu_model.to_ndarray(fnu_unit),
-            y_obs=fnu_net_obs.to_ndarray(fnu_unit),
-            y_err=fnu_err.to_ndarray(fnu_unit)
+        # chi2_arr_no_doppler[idx] = (calculate_chi2(
+        #     y_model=fnu_model_no_doppler.to_ndarray(fnu_unit),
+        #     y_obs=y_obs,
+        #     y_err=y_err
+        # ))
+        chi2_arr_with_doppler[idx] = (calculate_chi2(
+            y_model=fnu_model_with_doppler.to_ndarray(fnu_unit),
+            y_obs=y_obs,
+            y_err=y_err
         ))
 
-    idx_best = np.argmin(chi2_arr)
-    chi2_min = chi2_arr[idx_best]
-    param_best = pd.Series(df_param_table.iloc[idx_best])
+    # idx_best_no_doppler = np.argmin(chi2_arr_no_doppler)
+    idx_best_with_doppler = np.argmin(chi2_arr_with_doppler)
+    # chi2_min_no_doppler = chi2_arr_no_doppler[idx_best_no_doppler]
+    chi2_min_with_doppler = chi2_arr_with_doppler[idx_best_with_doppler]
+
+    # param_best = pd.Series(df_param_table.iloc[idx_best_no_doppler])
+    param_best = pd.Series(df_param_table.iloc[idx_best_with_doppler])
     param_best[KeyNames.NU] = nu.value
-    param_best[KeyNames.CHI2] = chi2_min
+    # param_best[KeyNames.CHI2] = chi2_min_no_doppler
+    param_best[KeyNames.CHI2] = chi2_min_with_doppler
 
     bestfit_rows.append(param_best)
 

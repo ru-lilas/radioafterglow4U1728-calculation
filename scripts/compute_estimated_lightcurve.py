@@ -69,6 +69,7 @@ phi_theta_values = np.asarray(df_params_estimated[KeyNames.PHI_THETA],dtype=np.f
 phi_unit = metadata_params_estimated[KeyNames.PHI_UNIT]
 
 tau_theta = np.asarray(df_params_estimated[KeyNames.TAU_THETA],dtype=np.float64)
+doppler_delta = np.asarray(df_params_estimated[KeyNames.DOPPLER_DELTA],dtype=np.float64)
 
 fnu_unit = config_calc[KeyNames.FNU_UNIT]
 
@@ -97,11 +98,14 @@ for i,nu in enumerate(nu_values):
         table_integral=table_integral
     )
     tau_theta_q = tau_theta[i]
-    fnu_quantity = lc.fnu(
+    doppler_delta_q = doppler_delta[i]
+
+    fnu_quantity = lc.fnu_with_doppler(
         phi_theta=phi_theta_q,
         lnu_theta=lnu_theta_q,
         tau_theta=tau_theta_q,
-        d_src=d_src
+        d_src=d_src,
+        doppler_delta=doppler_delta_q
     )
 
     phi = u.Quantity(nu_q.quantity*t.quantity)
@@ -123,7 +127,7 @@ metadata:dict[str,Any] = {
     KeyNames.D_VALUE: d_value,
     KeyNames.D_UNIT: d_unit,
     "eps_B": metadata_params_estimated["eps_B"],
-    "eps_th": metadata_params_estimated["eps_th"],
+    KeyNames.EPS_TH: metadata_params_estimated[KeyNames.EPS_TH],
     "mu": metadata_params_estimated["mu"],
     "mu_e": metadata_params_estimated["mu_e"],
     "a_wind_unit": metadata_params_estimated["a_wind_unit"]
