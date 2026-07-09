@@ -154,16 +154,14 @@ for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
 
     df_list.append(
         pd.DataFrame({
+            "idx": df_param_table["idx"],
             KeyNames.NU: nu.value,
-            KeyNames.PHI_THETA: df_param_table[KeyNames.PHI_THETA].to_numpy(),
-            KeyNames.TAU_THETA: df_param_table[KeyNames.TAU_THETA].to_numpy(),
             KeyNames.CHI2: chi2_arr_with_doppler,
         })
     )
 
 df_output = pd.concat(df_list)
 metadata_output = {
-    **metadata_param_table,
     KeyNames.NU_UNIT: nu_unit
 }
 

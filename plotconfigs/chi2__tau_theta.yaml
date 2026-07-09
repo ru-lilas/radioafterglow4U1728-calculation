@@ -1,0 +1,23 @@
+figsize: [16,9]
+
+TicksConfigure: &TicksConfigure_tmp
+  xlim: [1.0e-02,1.0e+10]
+  ylim: [1.0e+00,1.0e+10]
+  xscale: "log"
+  yscale: "log"
+  fontsize: 16
+LabelConfigure: &LabelConfigure_tmp
+  xlabel: '$\tau_{\Theta}$'
+  ylabel: '$\chi^2$'
+  fontsize: 24
+x:
+  column: "tau_theta"
+  unit: ""
+y:
+  column: "chi2" 
+  unit: ""
+
+nu:
+  unit: "GHz"
+  values:
+    - 9.0

@@ -18,7 +18,7 @@ def main(args:argparse.Namespace):
         **config_data[KeyNames.DISTANCE],
         **config_data["units"],
     }
-    fw.write_csv_with_params(df,metadata,outpath)
+    fw.write_csv_with_params(df,metadata,outpath,use_index=True)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

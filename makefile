@@ -46,8 +46,17 @@ $(FIGDIR)/$(CHEVALIER_DIAGRAM)_background.pdf: \
 		-c $(word 2,$^) \
 		-o $@
 
-$(FIGDIR)/parameter_dependence/%.pdf: \
-	$(DATADIR)/$(PARAMETER_TABLE).csv \
+$(FIGDIR)/$(RESO)/chi2__tau_theta.pdf: \
+	$(DATADIR)/$(RESO)/chi2.csv \
+		plotconfigs/chi2__tau_theta.yaml \
+		plot/chi2__tau_theta.py
+	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		-c $(word 2,$^) \
+		-o $@
+
+$(FIGDIR)/$(RESO)/parameter_dependence/%.pdf: \
+	$(DATADIR)/$(RESO)/$(PARAMETER_TABLE).csv \
 		plotconfigs/parameter_dependence/%.yaml \
 		plot/parameter_dependence/%.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
@@ -74,7 +83,7 @@ $(DATADIR)/$(RESO)/$(CHEVALIER_SCATTERS).csv: \
 		--output $@
 
 $(DATADIR)/$(RESO)/$(ESTIMATED_LIGHTCURVE).csv: \
-	$(DATADIR)/$(RESO)/chi2fit_parameters.csv \
+	$(DATADIR)/$(RESO)/chi2_estimated_parameters.csv \
 		$(INPUTDIR)/lightcurve.yaml \
 		$(DATADIR)/$(INTEGRAL_TABLE).csv \
 		scripts/compute_$(ESTIMATED_LIGHTCURVE).py
@@ -133,6 +142,15 @@ $(DATADIR)/$(RESO)/chi2fit_parameters.csv: \
 		--integral_table $(word 2,$^) \
 		--observation_lc $(word 3,$^) \
 		--config $(word 4,$^) \
+		--output $@
+
+$(DATADIR)/$(RESO)/chi2_estimated_parameters.csv: \
+	$(DATADIR)/$(RESO)/chi2.csv \
+		$(DATADIR)/$(RESO)/$(PARAMETER_TABLE).csv \
+		scripts/chi2_estimated_parameters.py
+	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--parameter_table $(word 2,$^) \
 		--output $@
 
 $(DATADIR)/$(RESO)/chi2.csv: \

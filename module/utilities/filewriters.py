@@ -9,11 +9,15 @@ def write_dict_as_yaml(params:dict,filepath: Path):
 def write_csv_with_params(
     df: pd.DataFrame,
     fixed_params: dict,
-    filepath: Path
+    filepath: Path,
+    use_index:bool = False
 ) -> None:
 
     with open(filepath, "w") as f:
         for key, value in fixed_params.items():
             f.write(f"# {key}={value}\n")
 
-        df.to_csv(f, index=False)
+        if use_index:
+            df.to_csv(f, index=use_index,index_label="idx")
+        else:
+            df.to_csv(f, index=use_index)
