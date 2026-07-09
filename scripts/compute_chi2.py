@@ -91,7 +91,7 @@ fnu_unit = metadata_obs[KeyNames.FNU_UNIT]
 
 nu_unit = metadata_obs[KeyNames.NU_UNIT]
 bestfit_rows:list[pd.Series] = []
-chi2_data = []
+df_list = []
 for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
     df_obs_nu = df_obs_nu.reset_index(drop=True)
     nu_obs = np.asarray(cast(float,nu_obs),dtype=np.float64)
@@ -138,12 +138,6 @@ for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
             unit = lnu_unit
         )
 
-        # fnu_model_no_doppler = lc.fnu(
-        #     phi_theta=phi_theta,
-        #     lnu_theta=lnu_theta,
-        #     tau_theta=tau_theta,
-        #     d_src=d_src
-        # )
         fnu_model_with_doppler = lc.fnu_with_doppler(
             phi_theta=phi_theta,
             lnu_theta=lnu_theta,
@@ -152,37 +146,22 @@ for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
             doppler_delta=doppler_delta
         )
 
-        # chi2_arr_no_doppler[idx] = (calculate_chi2(
-        #     y_model=fnu_model_no_doppler.to_ndarray(fnu_unit),
-        #     y_obs=y_obs,
-        #     y_err=y_err
-        # ))
         chi2_arr_with_doppler[idx] = (calculate_chi2(
             y_model=fnu_model_with_doppler.to_ndarray(fnu_unit),
             y_obs=y_obs,
             y_err=y_err
         ))
 
-    # idx_best_no_doppler = np.argmin(chi2_arr_no_doppler)
-    idx_best_with_doppler = np.argmin(chi2_arr_with_doppler)
-    # chi2_min_no_doppler = chi2_arr_no_doppler[idx_best_no_doppler]
-    chi2_min_with_doppler = chi2_arr_with_doppler[idx_best_with_doppler]
+    df_list.append(
+        pd.DataFrame({
+            KeyNames.NU: nu.value,
+            KeyNames.PHI_THETA: df_param_table[KeyNames.PHI_THETA].to_numpy(),
+            KeyNames.TAU_THETA: df_param_table[KeyNames.TAU_THETA].to_numpy(),
+            KeyNames.CHI2: chi2_arr_with_doppler,
+        })
+    )
 
-    # param_best = pd.Series(df_param_table.iloc[idx_best_no_doppler])
-    param_best = pd.Series(df_param_table.iloc[idx_best_with_doppler])
-    param_best[KeyNames.NU] = nu.value
-    # param_best[KeyNames.CHI2] = chi2_min_no_doppler
-    param_best[KeyNames.CHI2] = chi2_min_with_doppler
-
-    bestfit_rows.append(param_best)
-
-    chi2_data.append({
-        KeyNames.NU: nu.value,
-        KeyNames.CHI2: chi2_arr_with_doppler
-    })
-
-df_output = pd.DataFrame(bestfit_rows)
-df_chi2 = pd.DataFrame(chi2_data)
+df_output = pd.concat(df_list)
 metadata_output = {
     **metadata_param_table,
     KeyNames.NU_UNIT: nu_unit

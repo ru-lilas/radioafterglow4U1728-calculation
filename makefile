@@ -135,6 +135,19 @@ $(DATADIR)/$(RESO)/chi2fit_parameters.csv: \
 		--config $(word 4,$^) \
 		--output $@
 
+$(DATADIR)/$(RESO)/chi2.csv: \
+	$(DATADIR)/$(RESO)/$(PARAMETER_TABLE).csv \
+		$(DATADIR)/$(INTEGRAL_TABLE).csv \
+		$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv \
+		$(INPUTDIR)/estimate_chi2fit_parameters.yaml \
+		scripts/compute_chi2.py
+	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--integral_table $(word 2,$^) \
+		--observation_lc $(word 3,$^) \
+		--config $(word 4,$^) \
+		--output $@
+
 #=== tabulating ===#
 $(DATADIR)/$(RESO)/$(PARAMETER_TABLE).csv: \
 	input/$(RESO)/$(PARAMETER_TABLE).yaml \
