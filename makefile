@@ -12,9 +12,9 @@ CHEVALIER_SCATTERS := chevalier_scatters
 OBSERVATION_LIGHTCURVE := observation_lightcurve
 OBSERVATION_PEAK_DATA := observation_peak_data
 
-CONFIG_CHI2_SAMPLING := input/chi2_sampling.yaml
+CONFIG_CHI2_SAMPLING ?=
 
-OBS_TIMEWINDOW_TAG := $(shell python3 run.py $(CONFIG_CHI2_SAMPLING))
+OBS_TIMEWINDOW_TAG := $(shell python3 generate_output_dir.py $(CONFIG_CHI2_SAMPLING))
 
 RESO := a0256b0256
 

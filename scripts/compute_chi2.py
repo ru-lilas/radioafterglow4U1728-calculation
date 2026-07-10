@@ -93,11 +93,16 @@ nu_unit = metadata_obs[KeyNames.NU_UNIT]
 bestfit_rows:list[pd.Series] = []
 df_list = []
 
-m_parameter = 2
+n_param = 2
 for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
     df_obs_nu = df_obs_nu.reset_index(drop=True)
     n_sample = len(df_obs_nu)
-    num_freedom = n_sample - m_parameter
+    ndof = n_sample - n_param
+    if ndof <= 0:
+        raise ValueError(
+            f"Degrees of freedom must be positive (ndof={ndof}, "
+            f"n_data={n_sample}, n_param={n_param})."
+        )
     nu_obs = np.asarray(cast(float,nu_obs),dtype=np.float64)
     nu = QuantityData(nu_obs,nu_unit)
     print(f"nu = {nu_obs:.2e} {nu_unit}")
@@ -160,7 +165,7 @@ for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
             y_obs=y_sample,
             y_err=y_sample_err
         ))
-        reduced_chi2 = chi2_arr_with_doppler[i]/float(num_freedom)
+        reduced_chi2 = chi2_arr_with_doppler[i]/float(ndof)
 
         rows.append({
             "idx": idx,
