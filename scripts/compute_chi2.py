@@ -71,7 +71,7 @@ df_obs_raw = fr.read_csv(obspath)
 metadata_obs = fr.read_keyvalue(obspath)
 
 confpath:Path = args.config
-conf = fr.read_yaml(confpath)
+conf_sampling = fr.read_yaml(confpath)
 
 outpath:Path = args.output
 outpath.parent.mkdir(parents=True,exist_ok=True)
@@ -82,7 +82,7 @@ d_src = QuantityData(
 )
 
 df_obs = filter_df_obs_time_window(
-    df_obs_raw,conf[EstimationConfigNames.OBS_T_WINDOW]
+    df_obs_raw,conf_sampling
 )
 
 phi_unit = metadata_param_table[KeyNames.PHI_UNIT]
@@ -92,12 +92,15 @@ fnu_unit = metadata_obs[KeyNames.FNU_UNIT]
 nu_unit = metadata_obs[KeyNames.NU_UNIT]
 bestfit_rows:list[pd.Series] = []
 df_list = []
+
+m_parameter = 2
 for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
     df_obs_nu = df_obs_nu.reset_index(drop=True)
+    n_sample = len(df_obs_nu)
+    num_freedom = n_sample - m_parameter
     nu_obs = np.asarray(cast(float,nu_obs),dtype=np.float64)
     nu = QuantityData(nu_obs,nu_unit)
     print(f"nu = {nu_obs:.2e} {nu_unit}")
-    print(df_obs_nu)
     t_value = np.asarray(df_obs_nu[KeyNames.T],dtype=np.float64)
     t_unit = metadata_obs[KeyNames.T_UNIT]
     fnu_net_obs = QuantityData(
@@ -119,8 +122,8 @@ for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
     chi2_arr_with_doppler = np.empty(len(df_param_table),dtype=np.float64)
 
     # observation
-    y_obs=fnu_net_obs.to_ndarray(fnu_unit)
-    y_err=fnu_err.to_ndarray(fnu_unit)
+    y_sample=fnu_net_obs.to_ndarray(fnu_unit)
+    y_sample_err=fnu_err.to_ndarray(fnu_unit)
 
     phi_theta_arr = dataframe_utils.extract_column_as_ndarray(df_param_table,KeyNames.PHI_THETA)
     lnu_theta_arr = dataframe_utils.extract_column_as_ndarray(df_param_table,KeyNames.LNU_THETA)
@@ -154,44 +157,17 @@ for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
 
         chi2_arr_with_doppler[i] = (calculate_chi2(
             y_model=fnu_model_with_doppler.to_ndarray(fnu_unit),
-            y_obs=y_obs,
-            y_err=y_err
+            y_obs=y_sample,
+            y_err=y_sample_err
         ))
+        reduced_chi2 = chi2_arr_with_doppler[i]/float(num_freedom)
 
         rows.append({
             "idx": idx,
             KeyNames.NU: nu.value,
             KeyNames.CHI2: chi2_arr_with_doppler[i],
+            KeyNames.REDUCED_CHI2: reduced_chi2
         })
-
-    # for idx,(phi_theta_value,lnu_theta_value,tau_theta,doppler_delta) \
-    #     in enumerate(tqdm(
-    #         df_param_table[[KeyNames.PHI_THETA,KeyNames.LNU_THETA,KeyNames.TAU_THETA,KeyNames.DOPPLER_DELTA]].itertuples(index=False,name=None),
-    #         total=len(df_param_table),
-    #         desc="Calculating chi2",
-    #     )):
-    #     phi_theta = QuantityData(
-    #         value = phi_theta_value,
-    #         unit = phi_unit
-    #     )
-    #     lnu_theta = QuantityData(
-    #         value = lnu_theta_value,
-    #         unit = lnu_unit
-    #     )
-    #
-    #     fnu_model_with_doppler = lc.fnu_with_doppler(
-    #         phi_theta=phi_theta,
-    #         lnu_theta=lnu_theta,
-    #         tau_theta=tau_theta,
-    #         d_src=d_src,
-    #         doppler_delta=doppler_delta
-    #     )
-    #
-    #     chi2_arr_with_doppler[idx] = (calculate_chi2(
-    #         y_model=fnu_model_with_doppler.to_ndarray(fnu_unit),
-    #         y_obs=y_obs,
-    #         y_err=y_err
-    #     ))
 
     df_list.append(
         pd.DataFrame(rows)
@@ -199,7 +175,7 @@ for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
 
 df_output = pd.concat(df_list,ignore_index=True)
 metadata_output = {
-    KeyNames.NU_UNIT: nu_unit
+    KeyNames.NU_UNIT: nu_unit,
 }
 
 fw.write_csv_with_params(df_output,metadata_output,outpath)

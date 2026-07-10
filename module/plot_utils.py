@@ -1,12 +1,14 @@
 from dataclasses import dataclass
 from functools import cached_property
-from typing import Any, TypeAlias, Literal
+from typing import Any, Literal
 from matplotlib.ticker import LogLocator
 from matplotlib.colorbar import Colorbar
-from matplotlib.figure import Figure
-from matplotlib.tri import TriContourSet
+from numpy.typing import NDArray
 from module import dataframe_utils
+from module.utilities import build_nparray
 from matplotlib.axes import Axes
+import matplotlib.pyplot as plt
+import numpy as np
 
 PlotScale = Literal["linear","log"]
 AxisDirection = Literal["x","y"]
@@ -25,7 +27,7 @@ class LabelConfigure:
             return f"{self.prefix} [{self.unit}]"
 
 @dataclass
-class AxisArrayData:
+class PlotData:
     value: str
     unit: str|None
 
@@ -36,7 +38,7 @@ class AxisConfigure:
     lim: tuple[float,float]
     scale: PlotScale
     ticksize: int
-    data: AxisArrayData
+    data: PlotData
     label: LabelConfigure
 
     def __post_init__(self):
@@ -57,6 +59,60 @@ class AxisConfigure:
         return dataframe_utils.extract_column_as_ndarray(
             df,self.data.value
         )
+
+def build_meshgrid(
+    df,
+    x_column:str,
+    y_column:str,
+    z_column:str
+):
+    pivot = df.pivot(
+        index=y_column,
+        columns=x_column,
+        values=z_column,
+    )
+    X, Y = np.meshgrid(
+        pivot.columns.to_numpy(),
+        pivot.index.to_numpy(),
+    )
+    Z = pivot.to_numpy()
+    return (X,Y,Z)
+
+@dataclass
+class ColormapConfigure:
+    name: str
+    over: str|None
+    under: str|None
+
+    def build_cmap(self):
+        cmap = plt.get_cmap(self.name).copy()
+        if (self.over is None) and (self.under is None):
+            return cmap
+        if self.over is not None:
+            cmap.set_over(self.over)
+        if self.under is not None:
+            cmap.set_under(self.under)
+        return cmap
+
+@dataclass
+class ContourLevelConfigure:
+    scale: PlotScale
+    arr: dict[str,float]
+
+    @cached_property
+    def levels(self):
+        if self.scale == "linear":
+            arr = build_nparray.linear(self.arr)
+        else:
+            arr = build_nparray.log(self.arr)
+        return np.concatenate([arr,])
+
+@dataclass
+class ContourfConfigure:
+    zdata: PlotData
+    zscale: PlotScale
+    extend: str|None
+    levels: NDArray[np.float64]
 
 @dataclass
 class ColorbarConfigure:

@@ -119,7 +119,8 @@ for i,nu in enumerate(nu_values):
         KeyNames.FNU_NET: fnu_quantity.unit_convert(fnu_unit),
         KeyNames.A_WIND: a_wind_arr[i],
         KeyNames.BETA_SH: beta_sh_arr[i],
-        "chi2": chi2_arr[i]
+        "chi2": chi2_arr[i],
+        KeyNames.REDUCED_CHI2: dataframe_utils.extract_column_as_ndarray(df_params_estimated,KeyNames.REDUCED_CHI2)[i]
     }))
 metadata:dict[str,Any] = {
     KeyNames.T_UNIT: t.unit,

@@ -8,7 +8,6 @@ from module.strenums import PlotConfigNames,KeyNames
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
-import numpy as np
 
 parser = argparse.ArgumentParser()
 
@@ -46,7 +45,6 @@ df_set = dataframe_utils.build_dfs_grouped(
 
 with PdfPages(outpath) as pdf:
     for nu,df in df_set:
-        print(df)
 
         fig,ax = plt.subplots(figsize=conf[PlotConfigNames.FIGSIZE])
         fig.set_layout_engine("constrained")
@@ -60,11 +58,9 @@ with PdfPages(outpath) as pdf:
             lim = xaxis_conf["lim"],
             scale = xaxis_conf["scale"],
             ticksize = xaxis_conf["ticksize"],
-            data = plot_utils.AxisArrayData(**xaxis_conf["data"]),
+            data = plot_utils.PlotData(**xaxis_conf["data"]),
             label = plot_utils.LabelConfigure(**xaxis_conf["label"])
         )
-
-        x = x_ax.array(df)
 
         yaxis_conf = conf["y"]
         y_ax = plot_utils.AxisConfigure(
@@ -73,40 +69,33 @@ with PdfPages(outpath) as pdf:
             lim = yaxis_conf["lim"],
             scale = yaxis_conf["scale"],
             ticksize = yaxis_conf["ticksize"],
-            data = plot_utils.AxisArrayData(**yaxis_conf["data"]),
+            data = plot_utils.PlotData(**yaxis_conf["data"]),
             label = plot_utils.LabelConfigure(**yaxis_conf["label"])
         )
-        y = y_ax.array(df)
 
+        # levels
+        contourconf = conf["contourf"]
+        levelconf = plot_utils.ContourLevelConfigure(
+            **contourconf["levels"]
+        )
+        levels = levelconf.levels
+
+        # colorscale
         cmconf = conf["colormap"]
-        zconf = cmconf["z"]
-        zname = str(zconf["name"])
-        z = dataframe_utils.extract_column_as_ndarray(df,zname)
-
-        levels = np.concatenate([
-            np.logspace(-1, 2, 61),
-        ])
-
-        cmap = plt.get_cmap("cividis_r").copy()
-        cmap.set_over("lightgray")    # 10より大きい値はグレー
-
+        cmapconf = plot_utils.ColormapConfigure(**cmconf)
+        cmap = cmapconf.build_cmap()
         
-        norm = LogNorm(vmin=1e-1, vmax=1e2)
-
-        pivot = df.pivot(
-            index="beta_sh",
-            columns="a_wind",
-            values="chi2",
+        contourconf = conf["contourf"]
+        z_data = plot_utils.PlotData(**contourconf["zdata"])
+        meshgrid_data = plot_utils.build_meshgrid(
+            df,
+            x_column=x_ax.data.value,
+            y_column=y_ax.data.value,
+            z_column=z_data.value
         )
 
-        X, Y = np.meshgrid(
-            pivot.columns.to_numpy(),
-            pivot.index.to_numpy(),
-        )
-
-        Z = pivot.to_numpy()
         cf = ax.contourf(
-            X, Y, Z,
+            *meshgrid_data,
             cmap=cmap,
             norm=LogNorm(vmin=levels[0], vmax=levels[-1]),
             extend="max",

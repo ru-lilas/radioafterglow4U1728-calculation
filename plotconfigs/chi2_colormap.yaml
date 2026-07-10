@@ -23,17 +23,25 @@ y:
     unit: null
     fontsize: 24
   
-colormap:
-  colorscale: "cividis_r"
-  z:
-    name: "chi2"
+colormap: 
+  name: "cividis_r"
+  over: "white"
+  under: null
+
+contourf:
+  zdata:
+    value: "reduced_chi2"
+    unit: null
+  extend: "max"
+  levels:
     scale: "log"
-    data:
-      value: "chi2"
-      unit: null
+    arr:
+      start: -1
+      stop: 1
+      num: 64
 cbar:
   label:
-    prefix: '$\chi^2$'
+    prefix: 'Reduced $\chi^2$'
     unit: null
     fontsize: 24
   ticksize: 16

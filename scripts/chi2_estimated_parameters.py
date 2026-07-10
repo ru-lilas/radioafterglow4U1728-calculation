@@ -30,13 +30,8 @@ def calculate_chi2(
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
-    "chi2_table",
+    "chi2_colormap",
     type=Path,
-)
-parser.add_argument(
-    "--parameter_table",
-    type=Path,
-    required=True
 )
 parser.add_argument(
     "--output",
@@ -45,32 +40,22 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-chi2_path:Path = args.chi2_table
-df_chi2 = fr.read_csv(chi2_path)
-metadata_chi2 = fr.read_keyvalue(chi2_path)
-
-param_table_path:Path = args.parameter_table
-metadata_param_table = fr.read_keyvalue(param_table_path)
-df_param_table_raw = fr.read_csv(param_table_path)
-df_param_table = df_param_table_raw.set_index("idx")
+inpath:Path = args.chi2_colormap
+df = fr.read_csv(inpath)
+metadata = fr.read_keyvalue(inpath)
 
 outpath:Path = args.output
 outpath.parent.mkdir(parents=True,exist_ok=True)
 
 df_set = dataframe_utils.build_dfs_grouped(
-    df_long = df_chi2,
+    df_long = df,
     group_by = KeyNames.NU
 )
 
 rows:list[pd.Series] = []
 for (nu, df_nu) in df_set:
-    df_nu_setidx = df_nu.set_index("idx")
-
-    idx_chi2min = df_nu_setidx["chi2"].idxmin()
-
-    row_chi2min = df_nu_setidx.loc[idx_chi2min]
-    row_param = pd.Series(df_param_table.loc[idx_chi2min])
-    row_estimated = pd.concat([row_chi2min,row_param])
+    idx_chi2min = df_nu["reduced_chi2"].idxmin()
+    row_estimated = df_nu.loc[idx_chi2min]
     
     rows.append(row_estimated)
 
@@ -79,8 +64,7 @@ df_output = pd.DataFrame(rows)
 fw.write_csv_with_params(
     df_output,
     {
-        **metadata_param_table,
-        **metadata_chi2
+        **metadata
     },
     outpath
 )

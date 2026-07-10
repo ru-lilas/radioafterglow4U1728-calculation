@@ -12,7 +12,20 @@ CHEVALIER_SCATTERS := chevalier_scatters
 OBSERVATION_LIGHTCURVE := observation_lightcurve
 OBSERVATION_PEAK_DATA := observation_peak_data
 
+CONFIG_CHI2_SAMPLING := input/chi2_sampling.yaml
+
+OBS_TIMEWINDOW_TAG := $(shell python3 run.py $(CONFIG_CHI2_SAMPLING))
+
 RESO := a0256b0256
+
+OUTDATADIR := $(DATADIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)
+OUTDIR := $(FIGDIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)
+
+.PHONY: print
+print:
+	python3 run.py $(CONFIG_CHI2_SAMPLING)
+
+all: $(OUTDIR)/chi2_colormap.pdf $(OUTDIR)/estimated_lightcurve.pdf
 
 #=== figures ===#
 $(FIGDIR)/$(RESO)/$(CHEVALIER_DIAGRAM).pdf: \
@@ -26,8 +39,8 @@ $(FIGDIR)/$(RESO)/$(CHEVALIER_DIAGRAM).pdf: \
 		-c $(word 3,$^) \
 		-o $@
 
-$(FIGDIR)/$(RESO)/$(ESTIMATED_LIGHTCURVE).pdf: \
-	$(DATADIR)/$(RESO)/$(ESTIMATED_LIGHTCURVE).csv \
+$(OUTDIR)/$(ESTIMATED_LIGHTCURVE).pdf: \
+	$(OUTDATADIR)/$(ESTIMATED_LIGHTCURVE).csv \
 		$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv \
 		plotconfigs/$(ESTIMATED_LIGHTCURVE).yaml \
 		plot/$(ESTIMATED_LIGHTCURVE).py
@@ -55,8 +68,8 @@ $(FIGDIR)/$(RESO)/tau_theta_colormap.pdf: \
 		-c $(word 2,$^) \
 		-o $@
 
-$(FIGDIR)/$(RESO)/chi2_colormap.pdf: \
-	$(DATADIR)/$(RESO)/chi2_colormap.csv \
+$(OUTDIR)/chi2_colormap.pdf: \
+	$(DATADIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)/chi2_colormap.csv \
 		plotconfigs/chi2_colormap.yaml \
 		plot/chi2_colormap.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
@@ -91,8 +104,8 @@ $(DATADIR)/$(RESO)/$(CHEVALIER_SCATTERS).csv: \
 		$< \
 		--output $@
 
-$(DATADIR)/$(RESO)/$(ESTIMATED_LIGHTCURVE).csv: \
-	$(DATADIR)/$(RESO)/chi2_estimated_parameters.csv \
+$(OUTDATADIR)/$(ESTIMATED_LIGHTCURVE).csv: \
+	$(OUTDATADIR)/chi2_estimated_parameters.csv \
 		$(INPUTDIR)/lightcurve.yaml \
 		$(DATADIR)/$(INTEGRAL_TABLE).csv \
 		scripts/compute_$(ESTIMATED_LIGHTCURVE).py
@@ -139,8 +152,7 @@ $(DATADIR)/$(CONTOUR_RAW).csv: \
 		--table $(word 2,$^) \
 		--output $@
 
-.PRECIOUS: $(DATADIR)/$(RESO)/chi2fit_parameters.csv
-$(DATADIR)/$(RESO)/chi2fit_parameters.csv: \
+$(OUTDATADIR)/chi2fit_parameters.csv: \
 	$(DATADIR)/$(RESO)/$(PARAMETER_TABLE).csv \
 		$(DATADIR)/$(INTEGRAL_TABLE).csv \
 		$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv \
@@ -153,29 +165,27 @@ $(DATADIR)/$(RESO)/chi2fit_parameters.csv: \
 		--config $(word 4,$^) \
 		--output $@
 
-$(DATADIR)/$(RESO)/chi2_estimated_parameters.csv: \
-	$(DATADIR)/$(RESO)/chi2.csv \
-		$(DATADIR)/$(RESO)/$(PARAMETER_TABLE).csv \
+$(OUTDATADIR)/chi2_estimated_parameters.csv: \
+	$(OUTDATADIR)/chi2_colormap.csv \
 		scripts/chi2_estimated_parameters.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
-		--parameter_table $(word 2,$^) \
 		--output $@
 
-$(DATADIR)/$(RESO)/chi2_colormap.csv: \
+$(DATADIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)/chi2_colormap.csv: \
 	$(DATADIR)/$(RESO)/parameter_table.csv \
-		$(DATADIR)/$(RESO)/chi2.csv \
+		$(DATADIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)/chi2.csv \
 		scripts/chi2_colormap.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
 		--chi2_table $(word 2,$^) \
 		-o $@
 
-$(DATADIR)/$(RESO)/chi2.csv: \
+$(DATADIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)/chi2.csv: \
 	$(DATADIR)/$(RESO)/$(PARAMETER_TABLE).csv \
 		$(DATADIR)/$(INTEGRAL_TABLE).csv \
 		$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv \
-		$(INPUTDIR)/estimate_chi2fit_parameters.yaml \
+		$(CONFIG_CHI2_SAMPLING) \
 		scripts/compute_chi2.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \

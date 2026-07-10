@@ -23,6 +23,7 @@ class KeyNames(StrEnum):
     LNU_THETA = auto()
     TAU_THETA = auto()
     CHI2 = auto()
+    REDUCED_CHI2 = auto()
     EPS_B = "eps_B"
     EPS_TH = auto()
     PHI = auto()

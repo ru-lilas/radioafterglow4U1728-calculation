@@ -22,11 +22,23 @@ y:
     prefix: '$\beta_{\mathrm{sh}}$'
     unit: null
     fontsize: 24
+
+colormap: 
+  name: "cividis_r"
+  over: null
+  under: "lightgray"
   
-colormap:
-  z:
-    name: "tau_theta"
+contourf:
+  zdata:
+    value: "tau_theta"
+    unit: null
+  extend: "min"
+  levels:
     scale: "log"
+    arr:
+      start: 0
+      stop: 20
+      num: 64
 cbar:
   label:
     prefix: '$\tau_{\Theta}$'

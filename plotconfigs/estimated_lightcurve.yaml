@@ -55,10 +55,10 @@ annotation:
       tendency: "unique"
       prefix: '$\beta_{\mathrm{sh}}$'
       fmt: '.2f'
-    chi2:
+    reduced_chi2:
       with_unit: False
       tendency: "unique"
-      prefix: '$\chi^2$'
+      prefix: '$\chi^2_\mathrm{red}$'
       fmt: '.1f'
 
 hlines:

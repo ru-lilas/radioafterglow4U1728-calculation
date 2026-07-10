@@ -1,14 +1,11 @@
 from module import plot_utils
-from module import dataframe_utils
-from module.strenums import KeyNames
 from module.utilities import filereaders as fr
 from pathlib import Path
 import argparse
-from module.strenums import PlotConfigNames,KeyNames
+from module.strenums import PlotConfigNames
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
-import numpy as np
 
 parser = argparse.ArgumentParser()
 
@@ -51,11 +48,9 @@ with PdfPages(outpath) as pdf:
         lim = xaxis_conf["lim"],
         scale = xaxis_conf["scale"],
         ticksize = xaxis_conf["ticksize"],
-        data = plot_utils.AxisArrayData(**xaxis_conf["data"]),
+        data = plot_utils.PlotData(**xaxis_conf["data"]),
         label = plot_utils.LabelConfigure(**xaxis_conf["label"])
     )
-
-    x = x_ax.array(df)
 
     yaxis_conf = conf["y"]
     y_ax = plot_utils.AxisConfigure(
@@ -64,24 +59,36 @@ with PdfPages(outpath) as pdf:
         lim = yaxis_conf["lim"],
         scale = yaxis_conf["scale"],
         ticksize = yaxis_conf["ticksize"],
-        data = plot_utils.AxisArrayData(**yaxis_conf["data"]),
+        data = plot_utils.PlotData(**yaxis_conf["data"]),
         label = plot_utils.LabelConfigure(**yaxis_conf["label"])
     )
-    y = y_ax.array(df)
+
+    contourconf = conf["contourf"]
+    z_data = plot_utils.PlotData(**contourconf["zdata"])
 
     cmconf = conf["colormap"]
-    zconf = cmconf["z"]
-    zname = str(zconf["name"])
 
-    levels = np.concatenate([
-        np.logspace(-2, 20, 64)
-    ])
+    levelconf = plot_utils.ContourLevelConfigure(
+        **contourconf["levels"]
+    )
+    levels = levelconf.levels
 
-    z = dataframe_utils.extract_column_as_ndarray(df,zname)
-    cf = ax.tricontourf(
-        x, y, z,
-        cmap = "cividis_r",
-        norm=LogNorm(),
+    cmapconf = plot_utils.ColormapConfigure(**cmconf)
+    cmap = cmapconf.build_cmap()
+
+    meshgrid_data = plot_utils.build_meshgrid(
+        df,
+        x_column=x_ax.data.value,
+        y_column=y_ax.data.value,
+        z_column=z_data.value
+    )
+
+    cf = ax.contourf(
+        *meshgrid_data,
+        cmap = cmap,
+        norm=LogNorm(vmin=levels[0], vmax=levels[-1]),
+        extend="min",
+        levels = levels
     )
 
     # colorbar
@@ -92,4 +99,3 @@ with PdfPages(outpath) as pdf:
     cbarconf.show()
     pdf.savefig(fig)
     plt.close(fig)
-
