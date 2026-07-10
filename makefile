@@ -46,13 +46,24 @@ $(FIGDIR)/$(CHEVALIER_DIAGRAM)_background.pdf: \
 		-c $(word 2,$^) \
 		-o $@
 
-$(FIGDIR)/$(RESO)/chi2__tau_theta.pdf: \
-	$(DATADIR)/$(RESO)/chi2.csv \
-		plotconfigs/chi2__tau_theta.yaml \
-		plot/chi2__tau_theta.py
+$(FIGDIR)/$(RESO)/tau_theta_colormap.pdf: \
+	$(DATADIR)/$(RESO)/parameter_table.csv \
+		plotconfigs/tau_theta_colormap.yaml \
+		plot/tau_theta_colormap.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
 		-c $(word 2,$^) \
+		-o $@
+
+$(FIGDIR)/$(RESO)/chi2_colormap.pdf: \
+	$(DATADIR)/$(RESO)/parameter_table.csv \
+		$(DATADIR)/$(RESO)/chi2.csv \
+		plotconfigs/chi2_colormap.yaml \
+		plot/chi2_colormap.py
+	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--chi2_table $(word 2,$^) \
+		-c $(word 3,$^) \
 		-o $@
 
 $(FIGDIR)/$(RESO)/parameter_dependence/%.pdf: \

@@ -1,0 +1,35 @@
+figsize: [12,12]
+
+x: &Axis_tmp
+  lim: [1.0e+04,1.0e+07]
+  scale: "log"
+  ticksize: 16
+  data: 
+    value: "a_wind"
+    unit: "a_wind_unit"
+  label:
+    prefix: '$A_{\mathrm{w}}$'
+    unit: "g cm-1"
+    fontsize: 24
+y:
+  <<: *Axis_tmp
+  lim: [1.0e-01,5.0e-01]
+  scale: "log"
+  data: 
+    value: "beta_sh"
+    unit: null
+  label:
+    prefix: '$\beta_{\mathrm{sh}}$'
+    unit: null
+    fontsize: 24
+  
+colormap:
+  z:
+    name: "tau_theta"
+    scale: "log"
+cbar:
+  label:
+    prefix: '$\tau_{\Theta}$'
+    unit: null
+    fontsize: 24
+  ticksize: 16

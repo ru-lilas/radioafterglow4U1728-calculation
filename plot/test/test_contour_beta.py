@@ -2,6 +2,7 @@ from module.utilities import filereaders as fr
 from pathlib import Path
 import argparse
 from module.plot import contour
+import matplotlib.pyplot as plt
 
 def main(args:argparse.Namespace):
     inpath:Path = args.input

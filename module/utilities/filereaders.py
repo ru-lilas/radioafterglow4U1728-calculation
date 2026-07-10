@@ -13,6 +13,15 @@ def read_csv(filepath:Path,sep:str=","):
     )
     return df
 
+def read_csv_within_idx(filepath:Path,idx_name:str="idx",sep:str=","):
+    df = pd.read_csv(
+        filepath,
+        index_col=None,
+        comment = "#",
+        sep=sep,
+    )
+    return df.set_index(idx_name)
+
 def read_yaml(filepath: Path):
     with open(filepath,"r") as f:
         config = yaml.safe_load(f)

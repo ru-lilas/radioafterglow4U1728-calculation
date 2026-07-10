@@ -116,7 +116,6 @@ for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
     )
 
     # create array of chi**2 in advance
-    chi2_arr_no_doppler = np.empty(len(df_param_table),dtype=np.float64)
     chi2_arr_with_doppler = np.empty(len(df_param_table),dtype=np.float64)
 
     # observation
