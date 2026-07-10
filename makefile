@@ -56,14 +56,12 @@ $(FIGDIR)/$(RESO)/tau_theta_colormap.pdf: \
 		-o $@
 
 $(FIGDIR)/$(RESO)/chi2_colormap.pdf: \
-	$(DATADIR)/$(RESO)/parameter_table.csv \
-		$(DATADIR)/$(RESO)/chi2.csv \
+	$(DATADIR)/$(RESO)/chi2_colormap.csv \
 		plotconfigs/chi2_colormap.yaml \
 		plot/chi2_colormap.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
-		--chi2_table $(word 2,$^) \
-		-c $(word 3,$^) \
+		-c $(word 2,$^) \
 		-o $@
 
 $(FIGDIR)/$(RESO)/parameter_dependence/%.pdf: \
@@ -163,6 +161,15 @@ $(DATADIR)/$(RESO)/chi2_estimated_parameters.csv: \
 		$< \
 		--parameter_table $(word 2,$^) \
 		--output $@
+
+$(DATADIR)/$(RESO)/chi2_colormap.csv: \
+	$(DATADIR)/$(RESO)/parameter_table.csv \
+		$(DATADIR)/$(RESO)/chi2.csv \
+		scripts/chi2_colormap.py
+	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+		$< \
+		--chi2_table $(word 2,$^) \
+		-o $@
 
 $(DATADIR)/$(RESO)/chi2.csv: \
 	$(DATADIR)/$(RESO)/$(PARAMETER_TABLE).csv \

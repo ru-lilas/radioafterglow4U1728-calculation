@@ -12,7 +12,7 @@ from module.fetch_numerical_table import fetch_numerical_table_path
 from module.utilities.quantity_data import QuantityData
 import numpy as np
 from numpy.typing import NDArray
-from module import compute_lightcurve
+from module import compute_lightcurve, dataframe_utils
 
 def filter_df_obs_time_window(df_obs:pd.DataFrame,conf_filter:dict[str,Any]):
     return filter_df_value_window(
@@ -61,7 +61,7 @@ args = parser.parse_args()
 
 param_table_path:Path = args.parameter_table
 metadata_param_table = fr.read_keyvalue(param_table_path)
-df_param_table = fr.read_csv(param_table_path)
+df_param_table = fr.read_csv_within_idx(param_table_path)
 
 integral_table_path:Path = args.integral_table
 data_integral = fetch_numerical_table_path(integral_table_path)
@@ -122,12 +122,19 @@ for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
     y_obs=fnu_net_obs.to_ndarray(fnu_unit)
     y_err=fnu_err.to_ndarray(fnu_unit)
 
-    for idx,(phi_theta_value,lnu_theta_value,tau_theta,doppler_delta) \
-        in enumerate(tqdm(
-            df_param_table[[KeyNames.PHI_THETA,KeyNames.LNU_THETA,KeyNames.TAU_THETA,KeyNames.DOPPLER_DELTA]].itertuples(index=False,name=None),
-            total=len(df_param_table),
-            desc="Calculating chi2",
-        )):
+    phi_theta_arr = dataframe_utils.extract_column_as_ndarray(df_param_table,KeyNames.PHI_THETA)
+    lnu_theta_arr = dataframe_utils.extract_column_as_ndarray(df_param_table,KeyNames.LNU_THETA)
+    tau_theta_arr = dataframe_utils.extract_column_as_ndarray(df_param_table,KeyNames.TAU_THETA)
+    doppler_delta_arr = dataframe_utils.extract_column_as_ndarray(df_param_table,KeyNames.DOPPLER_DELTA)
+    idx_arr = df_param_table.index.to_numpy()
+
+    rows = []
+    for i,idx in enumerate(tqdm(idx_arr,desc="Calculating chi2")):
+        phi_theta_value = phi_theta_arr[i]
+        lnu_theta_value = lnu_theta_arr[i]
+        tau_theta_value = tau_theta_arr[i]
+        doppler_delta = doppler_delta_arr[i]
+
         phi_theta = QuantityData(
             value = phi_theta_value,
             unit = phi_unit
@@ -140,26 +147,57 @@ for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
         fnu_model_with_doppler = lc.fnu_with_doppler(
             phi_theta=phi_theta,
             lnu_theta=lnu_theta,
-            tau_theta=tau_theta,
+            tau_theta=tau_theta_value,
             d_src=d_src,
             doppler_delta=doppler_delta
         )
 
-        chi2_arr_with_doppler[idx] = (calculate_chi2(
+        chi2_arr_with_doppler[i] = (calculate_chi2(
             y_model=fnu_model_with_doppler.to_ndarray(fnu_unit),
             y_obs=y_obs,
             y_err=y_err
         ))
 
-    df_list.append(
-        pd.DataFrame({
-            "idx": df_param_table["idx"],
+        rows.append({
+            "idx": idx,
             KeyNames.NU: nu.value,
-            KeyNames.CHI2: chi2_arr_with_doppler,
+            KeyNames.CHI2: chi2_arr_with_doppler[i],
         })
+
+    # for idx,(phi_theta_value,lnu_theta_value,tau_theta,doppler_delta) \
+    #     in enumerate(tqdm(
+    #         df_param_table[[KeyNames.PHI_THETA,KeyNames.LNU_THETA,KeyNames.TAU_THETA,KeyNames.DOPPLER_DELTA]].itertuples(index=False,name=None),
+    #         total=len(df_param_table),
+    #         desc="Calculating chi2",
+    #     )):
+    #     phi_theta = QuantityData(
+    #         value = phi_theta_value,
+    #         unit = phi_unit
+    #     )
+    #     lnu_theta = QuantityData(
+    #         value = lnu_theta_value,
+    #         unit = lnu_unit
+    #     )
+    #
+    #     fnu_model_with_doppler = lc.fnu_with_doppler(
+    #         phi_theta=phi_theta,
+    #         lnu_theta=lnu_theta,
+    #         tau_theta=tau_theta,
+    #         d_src=d_src,
+    #         doppler_delta=doppler_delta
+    #     )
+    #
+    #     chi2_arr_with_doppler[idx] = (calculate_chi2(
+    #         y_model=fnu_model_with_doppler.to_ndarray(fnu_unit),
+    #         y_obs=y_obs,
+    #         y_err=y_err
+    #     ))
+
+    df_list.append(
+        pd.DataFrame(rows)
     )
 
-df_output = pd.concat(df_list)
+df_output = pd.concat(df_list,ignore_index=True)
 metadata_output = {
     KeyNames.NU_UNIT: nu_unit
 }
