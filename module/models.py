@@ -13,16 +13,9 @@ from module.utilities import bisection, unit_aliases as unit
 from module import calculate_lnu_th
 
 @dataclass
-class MicroscopicParameters:
-    eps_th: float
-    eps_B: float
-    mu: float
-    mu_e: float
-
-@dataclass
 class InputParameters:
     eps_th: float
-    eps_B: float
+    eps_b: float
     mu: float
     mu_e: float
     beta_sh: float
@@ -46,14 +39,14 @@ class InputParameters:
     def phi_theta(self):
         return synchrotron_scaling_values.calculate_phi_theta(
             theta=self.theta,
-            eps_B=self.eps_B,
+            eps_B=self.eps_b,
             a_wind=self.a_wind_quantity
         )
     
     @cached_property
     def tau_theta(self):
         return synchrotron_scaling_values.calculate_tau_theta(
-            eps_B=self.eps_B,
+            eps_B=self.eps_b,
             mu_e=self.mu_e,
             mu=self.mu,
             theta=self.theta,
@@ -65,7 +58,7 @@ class InputParameters:
     def l_theta(self):
         return synchrotron_scaling_values.calculate_l_theta(
             beta_sh=self.beta_sh,
-            eps_B=self.eps_B,
+            eps_B=self.eps_b,
             theta=self.theta,
             a_wind=self.a_wind_quantity,
         )
@@ -108,7 +101,7 @@ class ThermalSynchrotronScalingValues:
     @cached_property
     def b_mag_theta(self):
         return synchrotron_scaling_values.calculate_b_mag_theta(
-            eps_B=self.input.eps_B,
+            eps_B=self.input.eps_b,
             a_wind=self.input.a_wind_quantity,
             t_theta=self.t_theta
         )

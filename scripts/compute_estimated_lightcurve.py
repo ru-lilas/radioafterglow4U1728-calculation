@@ -16,11 +16,11 @@ import astropy.units as u
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
-    "input",
+    "estimated_parameter_csv",
     type=Path,
 )
 parser.add_argument(
-    "--config",
+    "--lightcurve_config",
     type=Path,
     required=True
 )
@@ -41,16 +41,16 @@ outpath.parent.mkdir(parents=True,exist_ok=True)
 
 table_integral = fetch_numerical_table.fetch_numerical_table_path(args.table_integral)
 
-confpath:Path = args.config
-config_calc = fr.read_yaml(confpath)
+lcconfpath:Path = args.lightcurve_config
+lcconf = fr.read_yaml(lcconfpath)
 
-inpath:Path = args.input
+inpath:Path = args.estimated_parameter_csv
 df_params_estimated = fr.read_csv(inpath)
 metadata_params_estimated = fr.read_keyvalue(inpath)
 
 t = quantity_data.QuantityData(
-    build_nparray.log(config_calc["t_value_arr"]),
-    config_calc["t_unit"]
+    build_nparray.log(lcconf["t_value_arr"]),
+    lcconf["t_unit"]
 )
 
 d_value = np.asarray(metadata_params_estimated[KeyNames.D_VALUE],dtype=np.float64)
@@ -71,7 +71,7 @@ phi_unit = metadata_params_estimated[KeyNames.PHI_UNIT]
 tau_theta = np.asarray(df_params_estimated[KeyNames.TAU_THETA],dtype=np.float64)
 doppler_delta = np.asarray(df_params_estimated[KeyNames.DOPPLER_DELTA],dtype=np.float64)
 
-fnu_unit = config_calc[KeyNames.FNU_UNIT]
+fnu_unit = lcconf[KeyNames.FNU_UNIT]
 
 a_wind_arr = dataframe_utils.extract_column_as_ndarray(df_params_estimated,KeyNames.A_WIND)
 beta_sh_arr = dataframe_utils.extract_column_as_ndarray(df_params_estimated,KeyNames.BETA_SH)
@@ -129,7 +129,7 @@ metadata:dict[str,Any] = {
     KeyNames.FNU_UNIT: fnu_unit,
     KeyNames.D_VALUE: d_value,
     KeyNames.D_UNIT: d_unit,
-    "eps_B": metadata_params_estimated["eps_B"],
+    KeyNames.EPS_B: metadata_params_estimated[KeyNames.EPS_B],
     KeyNames.EPS_TH: metadata_params_estimated[KeyNames.EPS_TH],
     "mu": metadata_params_estimated["mu"],
     "mu_e": metadata_params_estimated["mu_e"],

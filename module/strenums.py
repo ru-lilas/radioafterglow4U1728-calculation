@@ -24,7 +24,7 @@ class KeyNames(StrEnum):
     TAU_THETA = auto()
     CHI2 = auto()
     REDUCED_CHI2 = auto()
-    EPS_B = "eps_B"
+    EPS_B = auto()
     EPS_TH = auto()
     PHI = auto()
     DOPPLER_DELTA = auto()

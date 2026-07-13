@@ -14,18 +14,24 @@ OBSERVATION_PEAK_DATA := observation_peak_data
 
 CONFIG_CHI2_SAMPLING ?=
 
-OBS_TIMEWINDOW_TAG := $(shell python3 generate_output_dir.py $(CONFIG_CHI2_SAMPLING))
+TAG_RESO ?=
+TAG_MICROPHYS ?=
+TAG_SAMPLING ?=
+
+PARAMETER_DIR := $(TAG_RESO)/$(TAG_MICROPHYS)
+SAMPLING_DIR := $(PARAMETER_DIR)/$(TAG_SAMPLING)
+
+PHYSICAL_PARAMETERS := physical_parameters
 
 RESO := a0256b0256
 
 OUTDATADIR := $(DATADIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)
 OUTDIR := $(FIGDIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)
+FIGOUTDIR := $(FIGDIR)/$(SCENARIO_TAG)/$(SAMPLING_TAG)
+PATH_PHYSICAL_PARAMETERS := $(DATADIR)/$(PARAMETER_DIR)/$(PHYSICAL_PARAMETERS)
 
-.PHONY: print
-print:
-	python3 run.py $(CONFIG_CHI2_SAMPLING)
-
-all: $(OUTDIR)/chi2_colormap.pdf $(OUTDIR)/estimated_lightcurve.pdf
+all: $(FIGDIR)/$(SAMPLING_DIR)/chi2_colormap.pdf \
+	$(FIGDIR)/$(SAMPLING_DIR)/estimated_lightcurve.pdf
 
 #=== figures ===#
 $(FIGDIR)/$(RESO)/$(CHEVALIER_DIAGRAM).pdf: \
@@ -39,8 +45,8 @@ $(FIGDIR)/$(RESO)/$(CHEVALIER_DIAGRAM).pdf: \
 		-c $(word 3,$^) \
 		-o $@
 
-$(OUTDIR)/$(ESTIMATED_LIGHTCURVE).pdf: \
-	$(OUTDATADIR)/$(ESTIMATED_LIGHTCURVE).csv \
+$(FIGDIR)/$(SAMPLING_DIR)/$(ESTIMATED_LIGHTCURVE).pdf: \
+	$(DATADIR)/$(SAMPLING_DIR)/$(ESTIMATED_LIGHTCURVE).csv \
 		$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv \
 		plotconfigs/$(ESTIMATED_LIGHTCURVE).yaml \
 		plot/$(ESTIMATED_LIGHTCURVE).py
@@ -68,8 +74,8 @@ $(FIGDIR)/$(RESO)/tau_theta_colormap.pdf: \
 		-c $(word 2,$^) \
 		-o $@
 
-$(OUTDIR)/chi2_colormap.pdf: \
-	$(DATADIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)/chi2_colormap.csv \
+$(FIGDIR)/$(SAMPLING_DIR)/chi2_colormap.pdf: \
+	$(DATADIR)/$(SAMPLING_DIR)/chi2.csv \
 		plotconfigs/chi2_colormap.yaml \
 		plot/chi2_colormap.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
@@ -104,24 +110,15 @@ $(DATADIR)/$(RESO)/$(CHEVALIER_SCATTERS).csv: \
 		$< \
 		--output $@
 
-$(OUTDATADIR)/$(ESTIMATED_LIGHTCURVE).csv: \
-	$(OUTDATADIR)/chi2_estimated_parameters.csv \
+$(DATADIR)/$(SAMPLING_DIR)/$(ESTIMATED_LIGHTCURVE).csv: \
+	$(DATADIR)/$(SAMPLING_DIR)/chi2_estimated_parameters.csv \
 		$(INPUTDIR)/lightcurve.yaml \
 		$(DATADIR)/$(INTEGRAL_TABLE).csv \
 		scripts/compute_$(ESTIMATED_LIGHTCURVE).py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
-		--config $(word 2,$^) \
+		--lightcurve_config $(word 2,$^) \
 		--table_integral $(word 3,$^) \
-		--output $@
-
-$(DATADIR)/estimated_parameters.csv: \
-	$(DATADIR)/$(CHEVALIER_DIAGRAM).csv \
-		$(DATADIR)/$(OBSERVATION_PEAK_DATA).csv \
-		scripts/extract_estimated_parameters.py
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		$< \
-		--scatters $(word 2,$^) \
 		--output $@
 
 $(DATADIR)/$(CHEVALIER_DIAGRAM).csv: \
@@ -152,51 +149,40 @@ $(DATADIR)/$(CONTOUR_RAW).csv: \
 		--table $(word 2,$^) \
 		--output $@
 
-$(OUTDATADIR)/chi2fit_parameters.csv: \
-	$(DATADIR)/$(RESO)/$(PARAMETER_TABLE).csv \
-		$(DATADIR)/$(INTEGRAL_TABLE).csv \
-		$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv \
-		$(INPUTDIR)/estimate_chi2fit_parameters.yaml \
-		scripts/estimate_chi2fit_parameters.py
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		$< \
-		--integral_table $(word 2,$^) \
-		--observation_lc $(word 3,$^) \
-		--config $(word 4,$^) \
-		--output $@
-
-$(OUTDATADIR)/chi2_estimated_parameters.csv: \
-	$(OUTDATADIR)/chi2_colormap.csv \
+$(DATADIR)/$(SAMPLING_DIR)/chi2_estimated_parameters.csv: \
+	$(DATADIR)/$(SAMPLING_DIR)/chi2.csv \
 		scripts/chi2_estimated_parameters.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
 		--output $@
 
-$(DATADIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)/chi2_colormap.csv: \
-	$(DATADIR)/$(RESO)/parameter_table.csv \
-		$(DATADIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)/chi2.csv \
+$(DATADIR)/$(SAMPLING_DIR)/chi2.csv: \
+	$(PATH_PHYSICAL_PARAMETERS).csv \
+		$(DATADIR)/$(SAMPLING_DIR)/chi2_tmp.csv \
 		scripts/chi2_colormap.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
 		--chi2_table $(word 2,$^) \
 		-o $@
 
-$(DATADIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)/chi2.csv: \
-	$(DATADIR)/$(RESO)/$(PARAMETER_TABLE).csv \
+$(DATADIR)/$(SAMPLING_DIR)/chi2_tmp.csv: \
+	$(DATADIR)/$(PARAMETER_DIR)/$(PHYSICAL_PARAMETERS).csv \
 		$(DATADIR)/$(INTEGRAL_TABLE).csv \
 		$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv \
-		$(CONFIG_CHI2_SAMPLING) \
+		$(PATH_PHYSICAL_PARAMETERS).yaml \
+		$(DATADIR)/$(SAMPLING_DIR)/sampling.yaml \
 		scripts/compute_chi2.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
+		$(word 4,$^) \
 		--integral_table $(word 2,$^) \
 		--observation_lc $(word 3,$^) \
-		--config $(word 4,$^) \
+		--config $(word 5,$^) \
 		--output $@
 
 #=== tabulating ===#
-$(DATADIR)/$(RESO)/$(PARAMETER_TABLE).csv: \
-	input/$(RESO)/$(PARAMETER_TABLE).yaml \
+$(PATH_PHYSICAL_PARAMETERS).csv: \
+	$(PATH_PHYSICAL_PARAMETERS).yaml \
 		$(PARAMETER_TABLE).py
 	python3 $(lastword $^) \
 		$< \
@@ -239,3 +225,9 @@ input/%.yaml:
 plotconfigs/%.yaml:
 	@echo "エラー: プロットコンフィグがありません $@"
 	@false
+
+$(DATADIR)/$(SAMPLING_DIR)/sampling.yaml: $(INPUTDIR)/sampling.yaml
+	cp $< $@
+
+$(PATH_PHYSICAL_PARAMETERS).yaml: $(INPUTDIR)/$(PHYSICAL_PARAMETERS).yaml
+	cp $< $@

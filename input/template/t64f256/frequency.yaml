@@ -1,6 +1,0 @@
-frequency:
-  log10_min: 6.0
-  log10_max: 12.0
-  num: 256
-  unit: "Hz"
-

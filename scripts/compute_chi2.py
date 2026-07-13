@@ -12,7 +12,7 @@ from module.fetch_numerical_table import fetch_numerical_table_path
 from module.utilities.quantity_data import QuantityData
 import numpy as np
 from numpy.typing import NDArray
-from module import compute_lightcurve, dataframe_utils
+from module import compute_lightcurve, dataframe_utils, input_reader
 
 def filter_df_obs_time_window(df_obs:pd.DataFrame,conf_filter:dict[str,Any]):
     return filter_df_value_window(
@@ -35,6 +35,10 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument(
     "parameter_table",
+    type=Path,
+)
+parser.add_argument(
+    "parameter_yaml",
     type=Path,
 )
 parser.add_argument(
@@ -63,6 +67,9 @@ param_table_path:Path = args.parameter_table
 metadata_param_table = fr.read_keyvalue(param_table_path)
 df_param_table = fr.read_csv_within_idx(param_table_path)
 
+param_yaml_path:Path = args.parameter_yaml
+param_yaml = input_reader.read_physical_parameters(param_yaml_path)
+
 integral_table_path:Path = args.integral_table
 data_integral = fetch_numerical_table_path(integral_table_path)
 
@@ -77,8 +84,8 @@ outpath:Path = args.output
 outpath.parent.mkdir(parents=True,exist_ok=True)
 
 d_src = QuantityData(
-    value = np.asarray(metadata_param_table[KeyNames.D_VALUE],dtype=np.float64),
-    unit = metadata_param_table[KeyNames.D_UNIT]
+    value = np.asarray(param_yaml.distance.value,dtype=np.float64),
+    unit = param_yaml.distance.unit
 )
 
 df_obs = filter_df_obs_time_window(

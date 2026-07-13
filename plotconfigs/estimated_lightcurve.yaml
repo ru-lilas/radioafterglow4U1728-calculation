@@ -32,12 +32,12 @@ annotation:
     ha: "right"
     va: "bottom"
   elements:
-    eps_B:
+    eps_b:
       prefix: '$\varepsilon_{\mathrm{B}}$'
       fmt: '.1e'
     eps_th:
       prefix: '$\varepsilon_{\mathrm{th}}$'
-      fmt: '.1e'
+      fmt: '.2f'
     mu:
       prefix: '$\mu$'
       fmt: '.2f'

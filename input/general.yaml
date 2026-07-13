@@ -1,0 +1,41 @@
+# Thermal Synchrotron function, I'(x)
+integral_table:
+  log10_min: -2.0
+  log10_max: 4.0
+  num: 16384
+
+# dimensionless luminosity, Lambda(x_m)
+lambda_table:
+  xm_num: 4096
+  tau_theta_arr:
+    start: -2.0
+    stop: 20.0
+    num: 2048
+
+physical_parameters:
+  beta_sh_arr:
+    start: -1.0
+    stop: -0.3
+    num: 256
+  a_wind_arr:
+    start: 4.0
+    stop: 8.0
+    num: 256
+  microphysics:
+    eps_th: 0.4
+    eps_b: 1.0e-02
+    mu: 0.5
+    mu_e: 1.00
+  distance:
+    value: 5.0
+    unit: "kpc"
+  units:
+    phi_unit: "GHz s"
+    lnu_unit: "erg s-1 Hz-1"
+    fnu_unit: "mJy"
+    a_wind_unit: "g/cm"
+
+sampling:
+  min: 0.0
+  max: 16.0
+  unit: "min"

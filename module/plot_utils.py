@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from functools import cached_property
 from typing import Any, Literal
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
 from matplotlib.ticker import LogLocator
 from matplotlib.colorbar import Colorbar
 from numpy.typing import NDArray
@@ -140,3 +142,34 @@ def fetch_colorbar(conf:dict[str,Any],cbar:Colorbar):
         ticksize=cbarconf["ticksize"],
         label = cbarlabel
     )
+
+@dataclass
+class CurveStyle:
+    color: Any
+    linestyle: str
+    linewidth: float
+    label: str|None = None
+
+def curve(
+    ax:Axes,
+    x,y,
+    style:CurveStyle
+):
+    return ax.plot(
+        x,y,
+        ls=style.linestyle,
+        lw=style.linewidth,
+        color=style.color,
+        label=style.label
+    )[0]
+
+class LightcurvePlotter:
+    def plot(self):
+        return
+    def plot_single(
+        self,
+        x_axis:AxisConfigure,
+        y_axis:AxisConfigure
+    ):
+        return
+

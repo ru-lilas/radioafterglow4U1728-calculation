@@ -1,5 +1,0 @@
-time:
-  log10_min: -3.0
-  log10_max: +3.0
-  num: 64
-  unit: "s"

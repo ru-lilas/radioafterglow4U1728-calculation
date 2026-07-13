@@ -1,7 +1,7 @@
 figsize: [12,12]
 
 x: &Axis_tmp
-  lim: [1.0e+04,1.0e+07]
+  lim: [1.0e+04,1.0e+08]
   scale: "log"
   ticksize: 16
   data: 
