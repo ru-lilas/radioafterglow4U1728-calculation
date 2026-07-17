@@ -1,7 +1,8 @@
 from pathlib import Path
 import argparse
+from module import input_reader
+from module.input_dataclasses import SAMPLING, PhysicalParameters
 from module.input_reader import read_sampling
-from module.utilities import filereaders as fr
 from subprocess import run
 
 parser = argparse.ArgumentParser()
@@ -23,43 +24,68 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-inpath: Path = args.input
-sampling_path:Path = args.sampling
-data_dir: Path = args.data_dir
-conf = fr.read_yaml(inpath)
-sampling_conf = read_sampling(sampling_path)
+def build_tag_reso(data_phys_param:PhysicalParameters):
+    reso_awind = data_phys_param.a_wind_arr.num
+    reso_beta = data_phys_param.beta_sh_arr.num
 
-# parameter space resolution
-reso_beta:int = conf["beta_sh_arr"]["num"]
-reso_awind:int = conf["beta_sh_arr"]["num"]
+    return f"a{reso_awind:04d}b{reso_beta:04d}"
 
-tag_reso = f"a{reso_awind:04d}b{reso_beta:04d}"
+def build_tag_microphys(data_phys_param:PhysicalParameters):
+    data_microphys_param = data_phys_param.microphysics
+    eps_th = data_microphys_param.eps_th
+    eps_b = data_microphys_param.eps_b
+    fmt_eps_th = int(eps_th*100)
+    fmt_eps_b = int(eps_b*100)
+    return f"epsth{fmt_eps_th:03d}epsb{fmt_eps_b:03d}"
 
-# microphysics parameters
-conf_microphys_params = conf["microphysics"]
-eps_th:float = conf_microphys_params["eps_th"]
-eps_b:float = conf_microphys_params["eps_b"]
-fmt_eps_th = int(eps_th*100)
-fmt_eps_b = int(eps_b*100)
-tag_microphys = f"epsth{fmt_eps_th:03d}epsb{fmt_eps_b:03d}"
+def build_tag_sampling(conf_sampling:SAMPLING):
+    t_min = int(conf_sampling.min)
+    t_max = int(conf_sampling.max)
+    return f"min{t_min:02d}max{t_max:02d}"
 
-scenario_dir = data_dir/tag_reso/tag_microphys
+def run_simulation(
+        inpath:Path,
+        sampling_path:Path,
+        data_dir:Path
+):
+    data_phys_param = input_reader.read_physical_parameters(inpath)
+    sampling_conf = read_sampling(sampling_path)
 
-scenario_dir.mkdir(parents=True,exist_ok=True)
+    # parameter space resolution
+    tag_reso = build_tag_reso(data_phys_param)
 
-t_min = int(sampling_conf.min)
-t_max = int(sampling_conf.max)
-tag_sampling = f"min{t_min:02d}max{t_max:02d}"
-sampling_dir = scenario_dir/tag_sampling
-sampling_dir.mkdir(parents=True,exist_ok=True)
+    # microphysics parameters
+    tag_microphys = build_tag_microphys(data_phys_param)
+
+    scenario_dir = data_dir/tag_reso/tag_microphys
+
+    scenario_dir.mkdir(parents=True,exist_ok=True)
+
+    t_min = int(sampling_conf.min)
+    t_max = int(sampling_conf.max)
+    tag_sampling = f"min{t_min:02d}max{t_max:02d}"
+    sampling_dir = scenario_dir/tag_sampling
+    sampling_dir.mkdir(parents=True,exist_ok=True)
 
 
-run(
-    [
-        "make",
-        f"TAG_RESO={tag_reso}",
-        f"TAG_MICROPHYS={tag_microphys}",
-        f"TAG_SAMPLING={tag_sampling}",
-        f"all"
-    ]
-)
+    run(
+        [
+            "make",
+            f"TAG_RESO={tag_reso}",
+            f"TAG_MICROPHYS={tag_microphys}",
+            f"TAG_SAMPLING={tag_sampling}",
+            f"all"
+        ],
+        check=True
+    )
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    ...
+    args = parser.parse_args()
+
+    run_simulation(
+        args.input,
+        args.sampling,
+        args.data_dir,
+    )

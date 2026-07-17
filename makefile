@@ -29,6 +29,8 @@ OUTDATADIR := $(DATADIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)
 OUTDIR := $(FIGDIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)
 FIGOUTDIR := $(FIGDIR)/$(SCENARIO_TAG)/$(SAMPLING_TAG)
 PATH_PHYSICAL_PARAMETERS := $(DATADIR)/$(PARAMETER_DIR)/$(PHYSICAL_PARAMETERS)
+FILEPATH_INTEGRAL_TABLE := $(DATADIR)/$(INTEGRAL_TABLE).csv
+FILEPATH_PHYSICAL_PARAMETERS := $(DATADIR)/$(PARAMETER_DIR)/$(PHYSICAL_PARAMETERS).yaml
 
 all: $(FIGDIR)/$(SAMPLING_DIR)/chi2_colormap.pdf \
 	$(FIGDIR)/$(SAMPLING_DIR)/estimated_lightcurve.pdf
@@ -79,9 +81,9 @@ $(FIGDIR)/$(SAMPLING_DIR)/chi2_colormap.pdf: \
 		plotconfigs/chi2_colormap.yaml \
 		plot/chi2_colormap.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		$< \
-		-c $(word 2,$^) \
-		-o $@
+		--chi2 $< \
+		--config $(word 2,$^) \
+		--output $@
 
 $(FIGDIR)/$(RESO)/parameter_dependence/%.pdf: \
 	$(DATADIR)/$(RESO)/$(PARAMETER_TABLE).csv \
@@ -93,8 +95,8 @@ $(FIGDIR)/$(RESO)/parameter_dependence/%.pdf: \
 		-o $@
 
 #=== csv files ===#
-$(DATADIR)/estimated_ejecta_property.csv: \
-	$(DATADIR)/estimated_parameters.csv \
+$(DATADIR)/$(SAMPLING_DIR)/estimated_ejecta_property.csv: \
+	$(DATADIR)/chi2_estimated_parameters.csv \
 		$(INPUTDIR)/property_4u1728.yaml \
 		scripts/estimate_ejecta_property.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
@@ -112,14 +114,16 @@ $(DATADIR)/$(RESO)/$(CHEVALIER_SCATTERS).csv: \
 
 $(DATADIR)/$(SAMPLING_DIR)/$(ESTIMATED_LIGHTCURVE).csv: \
 	$(DATADIR)/$(SAMPLING_DIR)/chi2_estimated_parameters.csv \
+		$(FILEPATH_PHYSICAL_PARAMETERS) \
 		$(INPUTDIR)/lightcurve.yaml \
-		$(DATADIR)/$(INTEGRAL_TABLE).csv \
+		$(FILEPATH_INTEGRAL_TABLE) \
 		scripts/compute_$(ESTIMATED_LIGHTCURVE).py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		$< \
-		--lightcurve_config $(word 2,$^) \
-		--table_integral $(word 3,$^) \
-		--output $@
+		--estimated_parameters $< \
+		--output $@ \
+		--physical_parameters $(FILEPATH_PHYSICAL_PARAMETERS) \
+		--lightcurve_config $(word 3,$^) \
+		--table_integral $(FILEPATH_INTEGRAL_TABLE)
 
 $(DATADIR)/$(CHEVALIER_DIAGRAM).csv: \
 	$(DATADIR)/$(CONTOUR_RAW).csv \
@@ -226,8 +230,8 @@ plotconfigs/%.yaml:
 	@echo "エラー: プロットコンフィグがありません $@"
 	@false
 
-$(DATADIR)/$(SAMPLING_DIR)/sampling.yaml: $(INPUTDIR)/sampling.yaml
-	cp $< $@
-
-$(PATH_PHYSICAL_PARAMETERS).yaml: $(INPUTDIR)/$(PHYSICAL_PARAMETERS).yaml
-	cp $< $@
+# $(DATADIR)/$(SAMPLING_DIR)/sampling.yaml: $(INPUTDIR)/sampling.yaml
+# 	cp $< $@
+#
+# $(PATH_PHYSICAL_PARAMETERS).yaml: $(INPUTDIR)/$(PHYSICAL_PARAMETERS).yaml
+# 	cp $< $@

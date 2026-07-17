@@ -1,4 +1,7 @@
 from dataclasses import dataclass
+from typing import Literal
+
+type ValueScale = Literal["linear","log"]
 
 @dataclass
 class MICROPHYSICS:
@@ -12,6 +15,17 @@ class VALUE_ARR:
     start: float
     stop: float
     num: int
+
+@dataclass
+class FreeParameter:
+    value_arr: VALUE_ARR
+    scale: ValueScale
+    unit: str|None
+
+@dataclass
+class FreeParameters:
+    beta_sh: FreeParameter
+    a_wind: FreeParameter
 
 @dataclass
 class UNITS:

@@ -41,3 +41,14 @@ class EstimationConfigNames(StrEnum):
 class ChevalierContourNames(StrEnum):
     PHI_PEAK = auto()
     FNU_NET_PEAK = auto()
+
+class Chi2Columns(StrEnum):
+    IDX = auto()
+    CHI2 = auto()
+    DELTA_CHI2 = auto()
+    NPARAM = auto()
+    NSAMPLE = auto()
+    NDOF = auto()
+    P_VALUE = auto()
+    REJECT = auto()
+    SIGMA = auto()

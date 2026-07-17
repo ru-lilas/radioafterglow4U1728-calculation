@@ -1,14 +1,13 @@
-from typing import Any
+from typing import Any, cast
 import argparse
 from pathlib import Path
 from module.dataframe_processors import filter_df_value_window
 from module.utilities import filereaders as fr
 from module.utilities import filewriters as fw
-from module.strenums import KeyNames, EstimationConfigNames
+from module.strenums import KeyNames, EstimationConfigNames, Chi2Columns
 import pandas as pd
-import numpy as np
-from numpy.typing import NDArray
 from module import dataframe_utils
+from module import mystatistics
 
 def filter_df_obs_time_window(df_obs:pd.DataFrame,conf_filter:dict[str,Any]):
     return filter_df_value_window(
@@ -17,15 +16,6 @@ def filter_df_obs_time_window(df_obs:pd.DataFrame,conf_filter:dict[str,Any]):
         min = conf_filter[EstimationConfigNames.MIN],
         max = conf_filter[EstimationConfigNames.MAX]
     )
-
-def calculate_chi2(
-    y_model:NDArray[np.float64],
-    y_obs:NDArray[np.float64],
-    y_err:NDArray[np.float64],
-):
-    chi_arr = (y_model - y_obs)/y_err
-    return np.sum(chi_arr**2).item()
-
 
 parser = argparse.ArgumentParser()
 
@@ -41,22 +31,28 @@ parser.add_argument(
 args = parser.parse_args()
 
 inpath:Path = args.chi2_colormap
-df = fr.read_csv(inpath)
-metadata = fr.read_keyvalue(inpath)
 
 outpath:Path = args.output
 outpath.parent.mkdir(parents=True,exist_ok=True)
 
-df_set = dataframe_utils.build_dfs_grouped(
-    df_long = df,
+df_raw = fr.read_csv(inpath)
+metadata = fr.read_keyvalue(inpath)
+df_nu = dataframe_utils.build_dfs_grouped(
+    df_long = df_raw,
     group_by = KeyNames.NU
 )
 
 rows:list[pd.Series] = []
-for (nu, df_nu) in df_set:
+for (nu, df_nu) in df_nu:
     idx_chi2min = df_nu["reduced_chi2"].idxmin()
-    row_estimated = df_nu.loc[idx_chi2min]
-    
+    row_estimated = pd.Series(df_nu.loc[idx_chi2min])
+    chi2_min = cast(float,row_estimated[Chi2Columns.CHI2])
+    ndof = cast(int,row_estimated[Chi2Columns.NDOF])
+    conf = mystatistics.load_chi2_test_conf()
+    result_chi2test = conf.test(chi2_min,ndof)
+    row_estimated[Chi2Columns.P_VALUE] = result_chi2test.p_value
+    row_estimated[Chi2Columns.SIGMA] = result_chi2test.significance
+    row_estimated[Chi2Columns.REJECT] = result_chi2test.reject
     rows.append(row_estimated)
 
 df_output = pd.DataFrame(rows)

@@ -1,6 +1,6 @@
 import argparse
 from typing import Any
-from module import dataframe_utils, fetch_numerical_table
+from module import dataframe_utils, fetch_numerical_table, input_reader
 from pathlib import Path
 import numpy as np
 from module.utilities import filereaders as fr
@@ -16,8 +16,18 @@ import astropy.units as u
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
-    "estimated_parameter_csv",
+    "--output",
     type=Path,
+    required=True
+)
+parser.add_argument(
+    "--estimated_parameters",
+    type=Path,
+)
+parser.add_argument(
+    "--physical_parameters",
+    type=Path,
+    required=True
 )
 parser.add_argument(
     "--lightcurve_config",
@@ -29,23 +39,22 @@ parser.add_argument(
     type=Path,
     required=True
 )
-parser.add_argument(
-    "--output",
-    type=Path,
-    required=True
-)
 args = parser.parse_args()
 
 outpath:Path = args.output
 outpath.parent.mkdir(parents=True,exist_ok=True)
+
+path_phys_params:Path = args.physical_parameters
+data_phys_params = input_reader.read_physical_parameters(path_phys_params)
 
 table_integral = fetch_numerical_table.fetch_numerical_table_path(args.table_integral)
 
 lcconfpath:Path = args.lightcurve_config
 lcconf = fr.read_yaml(lcconfpath)
 
-inpath:Path = args.estimated_parameter_csv
+inpath:Path = args.estimated_parameters
 df_params_estimated = fr.read_csv(inpath)
+print(df_params_estimated.head())
 metadata_params_estimated = fr.read_keyvalue(inpath)
 
 t = quantity_data.QuantityData(
@@ -53,8 +62,8 @@ t = quantity_data.QuantityData(
     lcconf["t_unit"]
 )
 
-d_value = np.asarray(metadata_params_estimated[KeyNames.D_VALUE],dtype=np.float64)
-d_unit = metadata_params_estimated[KeyNames.D_UNIT]
+d_value = np.asarray(data_phys_params.distance.value,dtype=np.float64)
+d_unit = data_phys_params.distance.unit
 d_src = quantity_data.QuantityData(
     value = d_value,
     unit = d_unit

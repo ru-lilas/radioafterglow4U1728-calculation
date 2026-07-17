@@ -12,24 +12,22 @@ from matplotlib.colors import LogNorm
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
-    "chi2_colormap",
+    "--chi2",
     type=Path,
 )
 parser.add_argument(
-    "-c",
     "--config",
     type=Path,
     required=True
 )
 parser.add_argument(
-    "-o",
     "--output",
     type=Path,
     required=True
 )
 args = parser.parse_args()
 
-cmap_path:Path = args.chi2_colormap
+cmap_path:Path = args.chi2
 
 confpath:Path = args.config
 outpath:Path = args.output
@@ -39,12 +37,10 @@ conf = fr.read_yaml(confpath)
 df_param = fr.read_csv(cmap_path)
 metadata_chi2 = fr.read_keyvalue(cmap_path)
 
-df_set = dataframe_utils.build_dfs_grouped(
-    df_param,group_by=KeyNames.NU
-)
+dfs_nu = dataframe_utils.build_dfs_nu(df_param)
 
 with PdfPages(outpath) as pdf:
-    for nu,df in df_set:
+    for nu,df in dfs_nu.items():
 
         fig,ax = plt.subplots(figsize=conf[PlotConfigNames.FIGSIZE])
         fig.set_layout_engine("constrained")

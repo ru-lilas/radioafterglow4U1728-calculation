@@ -50,6 +50,7 @@ def build_quantity_data(
 
 @dataclass
 class BursterProperty:
+    burster_name: str
     mdot_acc_value: float
     mdot_acc_unit: str
     t_acc_value: float
@@ -83,6 +84,12 @@ class BursterProperty:
         return calculate_accumulated_mass(
             mdot_acc = self.mdot_acc.quantity,
             t_acc = self.t_acc.quantity
+        )
+
+    def nuclear_energy(self,fraction:float=1.0):
+        return calculate_released_energy_nuc(
+            m_burnt=fraction*self.accumulated_mass,
+            eps_nuc=self.eps_nuc.quantity
         )
 
 @dataclass

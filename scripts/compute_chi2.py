@@ -7,12 +7,13 @@ from module.dataframe_processors import filter_df_value_window
 from module.utilities import filereaders as fr
 from module.utilities import filewriters as fw
 from module.strenums import KeyNames, EstimationConfigNames
+from module.strenums import Chi2Columns
 import pandas as pd
 from module.fetch_numerical_table import fetch_numerical_table_path
 from module.utilities.quantity_data import QuantityData
 import numpy as np
-from numpy.typing import NDArray
 from module import compute_lightcurve, dataframe_utils, input_reader
+from module import mystatistics
 
 def filter_df_obs_time_window(df_obs:pd.DataFrame,conf_filter:dict[str,Any]):
     return filter_df_value_window(
@@ -21,15 +22,6 @@ def filter_df_obs_time_window(df_obs:pd.DataFrame,conf_filter:dict[str,Any]):
         min = conf_filter[EstimationConfigNames.MIN],
         max = conf_filter[EstimationConfigNames.MAX]
     )
-
-def calculate_chi2(
-    y_model:NDArray[np.float64],
-    y_obs:NDArray[np.float64],
-    y_err:NDArray[np.float64],
-):
-    chi_arr = (y_model - y_obs)/y_err
-    return np.sum(chi_arr**2).item()
-
 
 parser = argparse.ArgumentParser()
 
@@ -100,7 +92,9 @@ nu_unit = metadata_obs[KeyNames.NU_UNIT]
 bestfit_rows:list[pd.Series] = []
 df_list = []
 
+# NOTE: マジックナンバー解消してくれ(2026/07/16)
 n_param = 2
+
 for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
     df_obs_nu = df_obs_nu.reset_index(drop=True)
     n_sample = len(df_obs_nu)
@@ -167,20 +161,30 @@ for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
             doppler_delta=doppler_delta
         )
 
-        chi2_arr_with_doppler[i] = (calculate_chi2(
+        chi2_arr_with_doppler[i] = mystatistics.calculate_chi2(
             y_model=fnu_model_with_doppler.to_ndarray(fnu_unit),
             y_obs=y_sample,
             y_err=y_sample_err
-        ))
-        reduced_chi2 = chi2_arr_with_doppler[i]/float(ndof)
+        )
+        reduced_chi2 = mystatistics.calculate_reduced_chi2(
+            chi2 = chi2_arr_with_doppler[i],
+            ndof = ndof
+        )
 
         rows.append({
             "idx": idx,
             KeyNames.NU: nu.value,
             KeyNames.CHI2: chi2_arr_with_doppler[i],
-            KeyNames.REDUCED_CHI2: reduced_chi2
+            KeyNames.REDUCED_CHI2: reduced_chi2,
+            Chi2Columns.NPARAM: n_param,
+            Chi2Columns.NSAMPLE: n_sample,
+            Chi2Columns.NDOF: ndof
         })
-
+    df = pd.DataFrame(rows).astype({
+        Chi2Columns.NPARAM: "int64",
+        Chi2Columns.NSAMPLE: "int64",
+        Chi2Columns.NDOF: "int64"
+    })
     df_list.append(
         pd.DataFrame(rows)
     )
