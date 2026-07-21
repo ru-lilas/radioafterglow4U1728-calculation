@@ -21,3 +21,15 @@ def write_csv_with_params(
             df.to_csv(f, index=use_index,index_label="idx")
         else:
             df.to_csv(f, index=use_index)
+
+def write_csv(
+    df: pd.DataFrame,
+    filepath: Path,
+    use_index:bool = False
+) -> None:
+
+    with open(filepath, "w") as f:
+        if use_index:
+            df.to_csv(f, index=use_index,index_label="idx")
+        else:
+            df.to_csv(f, index=use_index)

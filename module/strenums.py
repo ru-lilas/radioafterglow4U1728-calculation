@@ -32,6 +32,11 @@ class KeyNames(StrEnum):
 class PlotConfigNames(StrEnum):
     FIGSIZE = auto()
 
+class SamplingConfigNames(StrEnum):
+    T_MIN = auto()
+    T_MAX = auto()
+    T_UNIT = auto()
+
 class EstimationConfigNames(StrEnum):
     OBS_T_WINDOW = auto()
     MIN = auto()
@@ -52,3 +57,13 @@ class Chi2Columns(StrEnum):
     P_VALUE = auto()
     REJECT = auto()
     SIGMA = auto()
+
+class FileNames(StrEnum):
+    SAMPLING = auto()
+    CHI2_ESTIMATED_PARAMETERS = auto()
+    CHI2TEST_SUMMARY = auto()
+
+class FileExtension(StrEnum):
+    YAML = auto()
+    CSV = auto()
+    PDF = auto()

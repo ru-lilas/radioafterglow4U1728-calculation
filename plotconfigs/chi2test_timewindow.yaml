@@ -1,0 +1,58 @@
+figsize: [12,12]
+
+TicksConfigure: &TicksConfigure_tmp
+  xlim: [4.0,17.0]
+  ylim: [1.0e-07,1.0]
+  xscale: "linear"
+  yscale: "log"
+  fontsize: 24
+LabelConfigure: &LabelConfigure_tmp
+  xlabel: '$t_{\max}$ [min]'
+  ylabel: '$p$ value'
+  fontsize: 24
+
+x: &Axis_tmp
+  lim: [4.0,17.0]
+  scale: "linear"
+  ticksize: 16
+  data: 
+    value: "t_max"
+    unit: null
+  label:
+    prefix: '$t_{\max}$'
+    unit: "g cm-1"
+    fontsize: 24
+y:
+  <<: *Axis_tmp
+  lim: [1.0e-01,5.0e-01]
+  scale: "log"
+  data: 
+    value: "beta_sh"
+    unit: null
+  label:
+    prefix: '$\beta_{\mathrm{sh}}$'
+    unit: null
+    fontsize: 24
+  
+colormap: 
+  name: "cividis_r"
+  over: "white"
+  under: null
+
+contourf:
+  zdata:
+    value: "reduced_chi2"
+    unit: null
+  extend: "max"
+  levels:
+    scale: "log"
+    arr:
+      start: -1
+      stop: 1
+      num: 64
+cbar:
+  label:
+    prefix: 'Reduced $\chi^2$'
+    unit: null
+    fontsize: 24
+  ticksize: 16

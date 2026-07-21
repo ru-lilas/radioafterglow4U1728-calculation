@@ -1,6 +1,11 @@
 INPUTDIR := input
 DATADIR := data
 FIGDIR := fig
+PLOTCONFIGDIR := plotconfigs
+EXTENTION_CSV := csv
+EXTENTION_YAML := yaml
+EXTENTION_PDF := pdf
+EXTENTION_SVG := svg
 INTEGRAL_TABLE := integral_table
 PARAMETER_TABLE := parameter_table
 PEAK_TABLE := peak_table
@@ -11,6 +16,11 @@ CHI2FIT_PARAMETERS := chi2fit_parameters
 CHEVALIER_SCATTERS := chevalier_scatters
 OBSERVATION_LIGHTCURVE := observation_lightcurve
 OBSERVATION_PEAK_DATA := observation_peak_data
+CHI2_ESTIMATED_PARAMETERS := chi2_estimated_parameters
+CHI2_ESTIMATED_SUMMARY := chi2_estimated_summary
+CHI2TEST_SUMMARY ?=
+CHI2TEST_TIMEWINDOW := chi2test_timewindow
+SAMPLING := sampling
 
 CONFIG_CHI2_SAMPLING ?=
 
@@ -30,12 +40,28 @@ OUTDIR := $(FIGDIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)
 FIGOUTDIR := $(FIGDIR)/$(SCENARIO_TAG)/$(SAMPLING_TAG)
 PATH_PHYSICAL_PARAMETERS := $(DATADIR)/$(PARAMETER_DIR)/$(PHYSICAL_PARAMETERS)
 FILEPATH_INTEGRAL_TABLE := $(DATADIR)/$(INTEGRAL_TABLE).csv
-FILEPATH_PHYSICAL_PARAMETERS := $(DATADIR)/$(PARAMETER_DIR)/$(PHYSICAL_PARAMETERS).yaml
+FILEPATH_PHYSICAL_PARAMETERS := $(DATADIR)/$(PARAMETER_DIR)/$(PHYSICAL_PARAMETERS).$(EXTENTION_YAML)
+FILEPATH_CHI2TEST := $(PARAMETER_DIR)/$(CHI2TEST_SUMMARY).$(EXTENTION_CSV)
+FILEPATH_LIST_CHI2ESTIMATED_PARAMETERS ?=
 
 all: $(FIGDIR)/$(SAMPLING_DIR)/chi2_colormap.pdf \
 	$(FIGDIR)/$(SAMPLING_DIR)/estimated_lightcurve.pdf
 
+%.$(EXTENTION_SVG): %.$(EXTENTION_PDF)
+	pdftocairo -svg $< $@
+
 #=== figures ===#
+$(FIGDIR)/$(PARAMETER_DIR)/$(CHI2TEST_TIMEWINDOW).$(EXTENTION_PDF): \
+	$(DATADIR)/$(PARAMETER_DIR)/$(CHI2_ESTIMATED_SUMMARY).$(EXTENTION_CSV) \
+		$(FILEPATH_PHYSICAL_PARAMETERS) \
+		$(PLOTCONFIGDIR)/$(CHI2TEST_TIMEWINDOW).$(EXTENTION_YAML) \
+		plot/$(CHI2TEST_TIMEWINDOW).py
+	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+		--input $< \
+		-c $(PLOTCONFIGDIR)/$(CHI2TEST_TIMEWINDOW).$(EXTENTION_YAML) \
+		--parameters $(FILEPATH_PHYSICAL_PARAMETERS) \
+		-o $@
+
 $(FIGDIR)/$(RESO)/$(CHEVALIER_DIAGRAM).pdf: \
 	$(DATADIR)/$(RESO)/chevalier_contour.csv \
 		$(DATADIR)/$(RESO)/$(CHEVALIER_SCATTERS).csv \
@@ -153,7 +179,23 @@ $(DATADIR)/$(CONTOUR_RAW).csv: \
 		--table $(word 2,$^) \
 		--output $@
 
-$(DATADIR)/$(SAMPLING_DIR)/chi2_estimated_parameters.csv: \
+$(DATADIR)/$(PARAMETER_DIR)/$(CHI2_ESTIMATED_SUMMARY).$(EXTENTION_CSV): \
+	$(CHI2_ESTIMATED_LIST) \
+		scripts/build_chi2test_timewindow.py
+	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+		--data $(CHI2_ESTIMATED_LIST) \
+		--output $@
+
+$(DATADIR)/$(SAMPLING_DIR)/$(CHI2_ESTIMATED_PARAMETERS).$(EXTENTION_CSV): \
+	$(DATADIR)/$(SAMPLING_DIR)/$(CHI2_ESTIMATED_PARAMETERS)_tmp.$(EXTENTION_CSV)\
+		$(DATADIR)/$(SAMPLING_DIR)/$(SAMPLING).$(EXTENTION_YAML)\
+		scripts/combine_chi2est_timewindow.py
+	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+		--chi2_estimated $< \
+		--sampling_config $(DATADIR)/$(SAMPLING_DIR)/$(SAMPLING).$(EXTENTION_YAML) \
+		--output $@
+
+$(DATADIR)/$(SAMPLING_DIR)/$(CHI2_ESTIMATED_PARAMETERS)_tmp.$(EXTENTION_CSV): \
 	$(DATADIR)/$(SAMPLING_DIR)/chi2.csv \
 		scripts/chi2_estimated_parameters.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
