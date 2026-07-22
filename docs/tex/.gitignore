@@ -1,0 +1,12 @@
+*.tar.gz
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.run.xml
+*.synctex.gz
+*.log
+*:Zone.Identifier
+*.out

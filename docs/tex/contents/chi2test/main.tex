@@ -1,0 +1,21 @@
+\documentclass{notebook}
+\begin{document}
+
+\section{Chi-square testによるモデル適合度の評価}
+モデルから計算される光度曲線が観測データを説明できるか
+どうかを評価するため、chi-square testを行った。
+
+観測データを \(d=(y_i^{\mathrm{obs}},\sigma_i)_{i=1}^{N}\)、
+モデルから得られる値を \(y_i^{\mathrm{model}}(\theta)\)とする。
+$\theta$は自由パラメータであり、今回は\(\theta = (A_{\wind},\beta_{\mathrm{sh}})\)である。
+
+$\chi^2(\theta)$を以下で定義する：
+\begin{equation}
+  \chi^2(\theta)
+  \coloneq
+  \sum_{i=1}^{N}
+  \ab(
+      \frac{y_i^{\mathrm{obs}}-y_i^{\mathrm{model}}(\theta)}{\sigma_i}
+  )^2
+\end{equation}
+\end{document}
