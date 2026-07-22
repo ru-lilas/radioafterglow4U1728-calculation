@@ -1,0 +1,14 @@
+t_bin: 1.0
+units:
+  t_unit: "min"
+  fnu_unit: "mJy"
+  nu_unit: "GHz"
+columns:
+  - "t"
+  - "fnu_5.5"
+  - "fnu_5.5_err"
+  - "fnu_9.0"
+  - "fnu_9.0_err"
+nu_values:
+  - 5.5
+  - 9.0

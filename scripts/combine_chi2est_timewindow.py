@@ -37,9 +37,10 @@ outpath.parent.mkdir(parents=True,exist_ok=True)
 
 tw = InputReader.read(path_sampling,SAMPLING)
 df = fr.read_csv(path_chi2_est)
+metadata = fr.read_keyvalue(path_chi2_est)
 
 df[SamplingConfigNames.T_MIN] = tw.min
 df[SamplingConfigNames.T_MAX] = tw.max
 df[SamplingConfigNames.T_UNIT] = tw.unit
 
-fw.write_csv(df,outpath)
+fw.write_csv_with_params(df,metadata,outpath)

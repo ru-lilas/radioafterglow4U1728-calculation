@@ -1,16 +1,5 @@
-# Thermal Synchrotron function, I'(x)
-integral_table:
-  log10_min: -2.0
-  log10_max: 4.0
-  num: 16384
-
-# dimensionless luminosity, Lambda(x_m)
-lambda_table:
-  xm_num: 4096
-  tau_theta_arr:
-    start: -2.0
-    stop: 20.0
-    num: 2048
+physical_parameters:
+  a_wind:
 
 physical_parameters:
   beta_sh_arr:

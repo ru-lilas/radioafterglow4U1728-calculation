@@ -1,0 +1,31 @@
+\documentclass{notebook}
+\title{バックグラウンド放射の推定}
+\author{KUMADA Ryota}
+\date{\today}
+
+\NewDocumentCommand\muhat{}{\ensuremath{\hat{\mu}}}
+
+\begin{document}
+\maketitle
+
+\section{}
+Type-1 X-ray burst前\(t_{\mathrm{xrb}} < 0\)の電波定常放射のfluxは
+時間に依らず一定であると仮定する。
+この仮定の下で、観測された標本から
+定常放射fluxの母平均$\mu$および
+母平均の不確かさ(母平均の真の値からのずれ)を推定する。
+以降、
+推定母平均を$\muhat$
+母平均の不確かさを$\sigma(\muhat)$
+と記述する。
+
+\section{}
+観測データ点$x_i$が\(x_i = \mu + \epsilon_i\)
+と表せるとする。誤差$\epsilon_i$が
+正規分布$N(0,\sigma_i)$
+に従うならば、最尤推定量$\muhat$は
+\begin{equation}
+  \muhat = \frac{\sum_i x_i/\sigma_i^2}{\sum_i 1/\sigma_i^2}
+\end{equation}
+となる。
+\end{document}

@@ -58,6 +58,12 @@ class Chi2Columns(StrEnum):
     REJECT = auto()
     SIGMA = auto()
 
+class LightcurveColumns(StrEnum):
+    NU = auto()
+    T = auto()
+    FNU = auto()
+    FNU_ERR = auto()
+
 class FileNames(StrEnum):
     SAMPLING = auto()
     CHI2_ESTIMATED_PARAMETERS = auto()

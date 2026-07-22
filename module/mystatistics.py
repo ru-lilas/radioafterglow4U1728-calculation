@@ -2,17 +2,17 @@ from pathlib import Path
 from numpy.typing import NDArray
 import numpy as np
 from scipy import stats
-from dataclasses import dataclass
+from dataclasses import dataclass,asdict
 from module.input_reader import InputReader
 
 type NDArray64 = NDArray[np.float64]
 
 def calculate_chi2(
-    y_model:NDArray64,
-    y_obs:NDArray64,
-    y_err:NDArray64,
+    x_model:NDArray64|float,
+    x_data:NDArray64,
+    sigma:NDArray64,
 ):
-    chi_arr = (y_model - y_obs)/y_err
+    chi_arr = (x_model - x_data)/sigma
     return np.sum(chi_arr**2).item()
 
 def calculate_reduced_chi2(
@@ -26,6 +26,25 @@ def calculate_pvalue(
     ndof: int
 ):
     return float(stats.chi2.sf(chi2_value,df=ndof))
+
+def calculate_muhat(
+    x:NDArray64,
+    sigma:NDArray64
+):
+    """
+        誤差e_iがN(0,sigma_i)に従う場合の最尤推定母平均と
+        その不確かさ(真の値からのずれ)を計算する
+        x: データ
+        sigma: データの誤差
+
+        return:
+            muhat: 推定母平均
+            sigma_mu: 推定母平均の不確かさ
+    """
+    w = 1.0 / sigma**2
+    muhat = np.average(x,weights=w)
+    sigma_mu = np.float64(np.sqrt(1.0/np.sum(w)))
+    return muhat,sigma_mu
 
 def sigma_to_alpha(sigma:float, two_sided:bool = True):
     if two_sided:
@@ -84,3 +103,27 @@ class Chi2Test:
 
 def load_chi2_test_conf(path:Path = Path("input/chi2_test.yaml")):
     return InputReader.read(path,Chi2Test)
+
+@dataclass
+class EstimatedBackground:
+    mean: float
+    mean_err: float
+    chi2: float
+    reduced_chi2: float
+    ndof: int
+
+def estimate_background(
+    fnu:NDArray64,
+    fnu_err:NDArray64
+):
+    muhat,muhat_err = calculate_muhat(fnu,fnu_err)
+    chi2 = calculate_chi2(muhat,fnu,fnu_err)
+    ndof = len(fnu) - 1
+    reduced_chi2 = calculate_reduced_chi2(chi2,ndof)
+    return EstimatedBackground(
+        mean = muhat,
+        mean_err = muhat_err,
+        chi2 = chi2,
+        reduced_chi2 = reduced_chi2,
+        ndof = ndof
+    )

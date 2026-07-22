@@ -56,6 +56,9 @@
   eprint=false
 ]{biblatex}
 
+%--- codeblock ---%
+\RequirePackage{listings}
+
 \RequirePackage{sty/subscripts}
 \RequirePackage{sty/alias}
 

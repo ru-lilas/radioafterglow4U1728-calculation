@@ -6,6 +6,7 @@ EXTENTION_CSV := csv
 EXTENTION_YAML := yaml
 EXTENTION_PDF := pdf
 EXTENTION_SVG := svg
+EXTENTION_PY := py
 INTEGRAL_TABLE := integral_table
 PARAMETER_TABLE := parameter_table
 PEAK_TABLE := peak_table
@@ -14,7 +15,7 @@ CHEVALIER_DIAGRAM := chevalier_diagram
 ESTIMATED_LIGHTCURVE := estimated_lightcurve
 CHI2FIT_PARAMETERS := chi2fit_parameters
 CHEVALIER_SCATTERS := chevalier_scatters
-OBSERVATION_LIGHTCURVE := observation_lightcurve
+OBSERVATION_LIGHTCURVE := obslc
 OBSERVATION_PEAK_DATA := observation_peak_data
 CHI2_ESTIMATED_PARAMETERS := chi2_estimated_parameters
 CHI2_ESTIMATED_SUMMARY := chi2_estimated_summary
@@ -242,9 +243,9 @@ $(DATADIR)/$(PEAK_TABLE).csv: \
 		--table $(DATADIR)/$(INTEGRAL_TABLE).csv \
 		--output $@ \
 
-$(DATADIR)/$(INTEGRAL_TABLE).csv: \
-	input/$(INTEGRAL_TABLE).yaml \
-		scripts/$(INTEGRAL_TABLE).py
+$(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV): \
+	$(INPUTDIR)/$(INTEGRAL_TABLE).$(EXTENTION_YAML) \
+		scripts/$(INTEGRAL_TABLE).$(EXTENTION_PY)
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
 		--output $@
@@ -257,11 +258,13 @@ $(DATADIR)/$(OBSERVATION_PEAK_DATA).csv: \
 		$< \
 		--output $@
 
-$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv: \
+$(DATADIR)/$(OBSERVATION_LIGHTCURVE)_tmp.$(EXTENTION_CSV): \
 	$(DATADIR)/observation_raw/4U1728_stacked_1min.dat \
-		$(OBSERVATION_LIGHTCURVE).py
+		$(INPUTDIR)/$(OBSERVATION_LIGHTCURVE).$(EXTENTION_YAML) \
+		preprocess_$(OBSERVATION_LIGHTCURVE).$(EXTENTION_PY)
 	python3 $(lastword $^) \
-		$< \
+		--data $< \
+		--config $(INPUTDIR)/$(OBSERVATION_LIGHTCURVE).$(EXTENTION_YAML) \
 		--output $@
 
 #=== config files ===#

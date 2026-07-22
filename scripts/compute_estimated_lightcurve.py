@@ -50,6 +50,7 @@ data_phys_params = input_reader.read_physical_parameters(path_phys_params)
 table_integral = fetch_numerical_table.fetch_numerical_table_path(args.table_integral)
 
 lcconfpath:Path = args.lightcurve_config
+conf_lc = input_reader.InputReader.read(lcconfpath,input_reader.LightcurveConfigure)
 lcconf = fr.read_yaml(lcconfpath)
 
 inpath:Path = args.estimated_parameters
@@ -58,8 +59,8 @@ print(df_params_estimated.head())
 metadata_params_estimated = fr.read_keyvalue(inpath)
 
 t = quantity_data.QuantityData(
-    build_nparray.log(lcconf["t_value_arr"]),
-    lcconf["t_unit"]
+    conf_lc.t_value_arr.nparr,
+    conf_lc.t_unit
 )
 
 d_value = np.asarray(data_phys_params.distance.value,dtype=np.float64)
@@ -69,13 +70,16 @@ d_src = quantity_data.QuantityData(
     unit = d_unit
 )
 nu_values = np.asarray(df_params_estimated[KeyNames.NU],dtype=np.float64)
-nu_unit = metadata_params_estimated[KeyNames.NU_UNIT]
+# nu_unit = metadata_params_estimated[KeyNames.NU_UNIT]
+nu_unit = "GHz"
 
 lnu_theta_values = dfp.convert_ndarray(df_params_estimated,KeyNames.LNU_THETA)
-lnu_unit = metadata_params_estimated[KeyNames.LNU_UNIT]
+# lnu_unit = metadata_params_estimated[KeyNames.LNU_UNIT]
+lnu_unit = "erg Hz-1 s-1"
 
 phi_theta_values = np.asarray(df_params_estimated[KeyNames.PHI_THETA],dtype=np.float64)
-phi_unit = metadata_params_estimated[KeyNames.PHI_UNIT]
+# phi_unit = metadata_params_estimated[KeyNames.PHI_UNIT]
+phi_unit = "GHz s"
 
 tau_theta = np.asarray(df_params_estimated[KeyNames.TAU_THETA],dtype=np.float64)
 doppler_delta = np.asarray(df_params_estimated[KeyNames.DOPPLER_DELTA],dtype=np.float64)
