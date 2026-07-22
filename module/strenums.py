@@ -63,6 +63,10 @@ class LightcurveColumns(StrEnum):
     T = auto()
     FNU = auto()
     FNU_ERR = auto()
+    BG = auto()
+    BG_ERR = auto()
+    FNU_NET = auto()
+    FNU_NET_ERR = auto()
 
 class FileNames(StrEnum):
     SAMPLING = auto()

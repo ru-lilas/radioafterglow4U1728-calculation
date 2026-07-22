@@ -1,12 +1,14 @@
 INPUTDIR := input
 DATADIR := data
 FIGDIR := fig
+OBSDIR := obs
 PLOTCONFIGDIR := plotconfigs
 EXTENTION_CSV := csv
 EXTENTION_YAML := yaml
 EXTENTION_PDF := pdf
 EXTENTION_SVG := svg
 EXTENTION_PY := py
+SUFFIX_TMP := _tmp
 INTEGRAL_TABLE := integral_table
 PARAMETER_TABLE := parameter_table
 PEAK_TABLE := peak_table
@@ -44,6 +46,9 @@ FILEPATH_INTEGRAL_TABLE := $(DATADIR)/$(INTEGRAL_TABLE).csv
 FILEPATH_PHYSICAL_PARAMETERS := $(DATADIR)/$(PARAMETER_DIR)/$(PHYSICAL_PARAMETERS).$(EXTENTION_YAML)
 FILEPATH_CHI2TEST := $(PARAMETER_DIR)/$(CHI2TEST_SUMMARY).$(EXTENTION_CSV)
 FILEPATH_LIST_CHI2ESTIMATED_PARAMETERS ?=
+FILEPATH_OBSLC := $(DATADIR)/$(OBSDIR)/$(OBSERVATION_LIGHTCURVE).$(EXTENTION_CSV)
+FILEPATH_OBSLC_TMP := $(DATADIR)/$(OBSDIR)/$(OBSERVATION_LIGHTCURVE)$(SUFFIX_TMP).$(EXTENTION_CSV)
+FILEPATH_OBSBG := $(DATADIR)/$(OBSDIR)/bg.$(EXTENTION_CSV)
 
 all: $(FIGDIR)/$(SAMPLING_DIR)/chi2_colormap.pdf \
 	$(FIGDIR)/$(SAMPLING_DIR)/estimated_lightcurve.pdf
@@ -258,7 +263,23 @@ $(DATADIR)/$(OBSERVATION_PEAK_DATA).csv: \
 		$< \
 		--output $@
 
-$(DATADIR)/$(OBSERVATION_LIGHTCURVE)_tmp.$(EXTENTION_CSV): \
+$(FILEPATH_OBSLC): \
+	$(FILEPATH_OBSLC_TMP) \
+	$(FILEPATH_OBSBG) \
+	scripts/combine_obslc_background.$(EXTENTION_PY)
+	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+		--lc_tmp $< \
+		--bg $(FILEPATH_OBSBG) \
+		--output $@
+
+$(FILEPATH_OBSBG): \
+	$(FILEPATH_OBSLC_TMP) \
+		scripts/estimate_background.$(EXTENTION_PY)
+	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+		--data $< \
+		--output $@
+
+$(FILEPATH_OBSLC_TMP): \
 	$(DATADIR)/observation_raw/4U1728_stacked_1min.dat \
 		$(INPUTDIR)/$(OBSERVATION_LIGHTCURVE).$(EXTENTION_YAML) \
 		preprocess_$(OBSERVATION_LIGHTCURVE).$(EXTENTION_PY)

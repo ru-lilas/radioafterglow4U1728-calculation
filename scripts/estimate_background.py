@@ -26,7 +26,6 @@ outpath.parent.mkdir(parents=True,exist_ok=True)
 
 # loading
 df_raw = fr.read_csv(path_data)
-metadata = fr.read_keyvalue(path_data)
 
 dfset = dataframe_utils.build_dfs_nu(df_raw)
 rows:list[dict] = []
@@ -46,8 +45,7 @@ for nu,df_nu in dfset.items():
 
 # dump
 df_output = pd.DataFrame(rows)
-fw.write_csv_with_params(
+fw.write_csv(
     df_output,
-    metadata,
     outpath
 )
