@@ -32,9 +32,9 @@ data_dir: Path = args.data_dir
 phys_params = input_reader.read_physical_parameters(inpath)
 sampling_data = input_reader.read_sampling(sampling_path)
 
-t_max_list = [5.0,6.0,7.0,8.0,9.0,10.0,11.0,12.0,13.0,14.0,15.0,16.0]
-eps_th_list = [1.0,0.8,0.6,0.4]
-eps_b_list = [1.0e-01, 1.0e-02,1.0e-03]
+t_max_list = [6.0,8.0,10.0,12.0,14.0,16.0]
+eps_th_list = [0.4]
+eps_b_list = [1.0e-02]
 
 for eps_b in eps_b_list:
     phys_params.microphysics.eps_b = eps_b
@@ -59,9 +59,8 @@ for eps_b in eps_b_list:
                     f"TAG_RESO={tag_reso}",
                     f"TAG_MICROPHYS={tag_microphys}",
                     f"TAG_SAMPLING={tag_sampling}",
-                    f"{path_chi2est}"
-                    # f"{data_dir/tag_reso/tag_microphys/tag_sampling/'estimated_lightcurve.csv'}",
-                    # f"{figdir/'chi2_colormap.pdf'}"
+                    f"{path_chi2est}",
+                    f"all"
                 ],
                 check=True
             )

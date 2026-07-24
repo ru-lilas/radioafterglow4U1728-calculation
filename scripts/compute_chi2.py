@@ -6,7 +6,7 @@ from tqdm import tqdm
 from module.dataframe_processors import filter_df_value_window
 from module.utilities import filereaders as fr
 from module.utilities import filewriters as fw
-from module.strenums import KeyNames, EstimationConfigNames
+from module.strenums import KeyNames, EstimationConfigNames, LightcurveColumns
 from module.strenums import Chi2Columns
 import pandas as pd
 from module.fetch_numerical_table import fetch_numerical_table_path
@@ -26,12 +26,14 @@ def filter_df_obs_time_window(df_obs:pd.DataFrame,conf_filter:dict[str,Any]):
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
-    "parameter_table",
+    "--parameter_table",
     type=Path,
+    required=True
 )
 parser.add_argument(
-    "parameter_yaml",
+    "--parameter_yaml",
     type=Path,
+    required=True
 )
 parser.add_argument(
     "--integral_table",
@@ -83,6 +85,7 @@ d_src = QuantityData(
 df_obs = filter_df_obs_time_window(
     df_obs_raw,conf_sampling
 )
+dfset_obs = dataframe_utils.build_dfs_nu(df_obs)
 
 phi_unit = metadata_param_table[KeyNames.PHI_UNIT]
 lnu_unit = metadata_param_table[KeyNames.LNU_UNIT]
@@ -95,7 +98,7 @@ df_list = []
 # NOTE: マジックナンバー解消してくれ(2026/07/16)
 n_param = 2
 
-for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
+for nu_obs, df_obs_nu in dfset_obs.items():
     df_obs_nu = df_obs_nu.reset_index(drop=True)
     n_sample = len(df_obs_nu)
     ndof = n_sample - n_param
@@ -104,17 +107,18 @@ for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
             f"Degrees of freedom must be positive (ndof={ndof}, "
             f"n_data={n_sample}, n_param={n_param})."
         )
-    nu_obs = np.asarray(cast(float,nu_obs),dtype=np.float64)
+    nu_obs = np.asarray(nu_obs,dtype=np.float64)
     nu = QuantityData(nu_obs,nu_unit)
     print(f"nu = {nu_obs:.2e} {nu_unit}")
-    t_value = np.asarray(df_obs_nu[KeyNames.T],dtype=np.float64)
+
+    t_value = dataframe_utils.extract_column_as_ndarray(df_obs_nu,LightcurveColumns.T)
     t_unit = metadata_obs[KeyNames.T_UNIT]
     fnu_net_obs = QuantityData(
-        np.asarray(df_obs_nu[KeyNames.FNU_NET],dtype=np.float64),
+        dataframe_utils.extract_column_as_ndarray(df_obs_nu,LightcurveColumns.FNU_NET),
         fnu_unit
     )
     fnu_err = QuantityData(
-        np.asarray(df_obs_nu[KeyNames.FNU_ERR],dtype=np.float64),
+        dataframe_utils.extract_column_as_ndarray(df_obs_nu,LightcurveColumns.FNU_NET_ERR),
         fnu_unit
     )
 
@@ -162,9 +166,9 @@ for nu_obs, df_obs_nu in df_obs.groupby(KeyNames.NU,sort=False):
         )
 
         chi2_arr_with_doppler[i] = mystatistics.calculate_chi2(
-            y_model=fnu_model_with_doppler.to_ndarray(fnu_unit),
-            y_obs=y_sample,
-            y_err=y_sample_err
+            x_model=fnu_model_with_doppler.to_ndarray(fnu_unit),
+            x_data=y_sample,
+            sigma=y_sample_err
         )
         reduced_chi2 = mystatistics.calculate_reduced_chi2(
             chi2 = chi2_arr_with_doppler[i],

@@ -81,7 +81,7 @@ $(FIGDIR)/$(RESO)/$(CHEVALIER_DIAGRAM).pdf: \
 
 $(FIGDIR)/$(SAMPLING_DIR)/$(ESTIMATED_LIGHTCURVE).pdf: \
 	$(DATADIR)/$(SAMPLING_DIR)/$(ESTIMATED_LIGHTCURVE).csv \
-		$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv \
+		$(FILEPATH_OBSLC) \
 		plotconfigs/$(ESTIMATED_LIGHTCURVE).yaml \
 		plot/$(ESTIMATED_LIGHTCURVE).py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
@@ -220,13 +220,13 @@ $(DATADIR)/$(SAMPLING_DIR)/chi2.csv: \
 $(DATADIR)/$(SAMPLING_DIR)/chi2_tmp.csv: \
 	$(DATADIR)/$(PARAMETER_DIR)/$(PHYSICAL_PARAMETERS).csv \
 		$(DATADIR)/$(INTEGRAL_TABLE).csv \
-		$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv \
+		$(FILEPATH_OBSLC) \
 		$(PATH_PHYSICAL_PARAMETERS).yaml \
 		$(DATADIR)/$(SAMPLING_DIR)/sampling.yaml \
 		scripts/compute_chi2.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		$< \
-		$(word 4,$^) \
+		--parameter_table $< \
+		--parameter_yaml $(word 4,$^) \
 		--integral_table $(word 2,$^) \
 		--observation_lc $(word 3,$^) \
 		--config $(word 5,$^) \

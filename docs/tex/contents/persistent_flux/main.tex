@@ -3,29 +3,121 @@
 \author{KUMADA Ryota}
 \date{\today}
 
+\DeclareMathOperator{\variance}{Var}
+\DeclareMathOperator{\bg}{bg}
 \NewDocumentCommand\muhat{}{\ensuremath{\hat{\mu}}}
+\NewDocumentCommand\fnu{}{\ensuremath{f_{\nu}}}
+\NewDocumentCommand\fnui{}{\ensuremath{f_{\nu,i}}}
+\NewDocumentCommand\fnuhat{}{\ensuremath{\hat{f}_{\nu}}}
+\NewDocumentCommand\fbghat{}{\ensuremath{\hat{f}_{\bg}}}
+\NewDocumentCommand\fnuneti{}{\ensuremath{f_{\nu,i,\mathrm{net}}}}
+\NewDocumentCommand\fnunet{}{\ensuremath{f_{\nu,\mathrm{net}}}}
+\graphicspath{{contents/persistent_flux}}
 
 \begin{document}
 \maketitle
 
-\section{}
-Type-1 X-ray burst前\(t_{\mathrm{xrb}} < 0\)の電波定常放射のfluxは
-時間に依らず一定であると仮定する。
-この仮定の下で、観測された標本から
-定常放射fluxの母平均$\mu$および
-母平均の不確かさ(母平均の真の値からのずれ)を推定する。
-以降、
-推定母平均を$\muhat$
-母平均の不確かさを$\sigma(\muhat)$
-と記述する。
+\section{やりたいこととやること}
+Type-1 X-ray burstの電波フレアについて、そのバックグラウンド放射のfluxを推定したい。
 
-\section{}
-観測データ点$x_i$が\(x_i = \mu + \epsilon_i\)
-と表せるとする。誤差$\epsilon_i$が
-正規分布$N(0,\sigma_i)$
-に従うならば、最尤推定量$\muhat$は
+ここでは、観測データ(標本)のうち\(t_{\mathrm{xrb}} < 0\)
+を満たす領域をバックグラウンド放射として扱う。また、
+バックグラウンド放射のfluxは時間に依らず一定であると仮定する。
+この仮定の下で、標本から
+バックグラウンド放射fluxの推定母平均$\fbghat$および
+推定母平均の不確かさ$\sigma(\fbghat)$を求める。
+
+\section{推定母平均とその不確かさ}
+われわれの仮定の下では、
+\(t<\qty{0}{\min}\)を満たす各標本点$f_i$は、
+時間に依存しないバックグラウンド放射$f_{\bg}$
+と測定誤差$\epsilon_i$を用いて
 \begin{equation}
-  \muhat = \frac{\sum_i x_i/\sigma_i^2}{\sum_i 1/\sigma_i^2}
+  \label{eq:flux_prexrb}
+  f_i = f_{\bg} + \epsilon_i  \: (i:t<\qty{0}{\min})
+\end{equation}
+と表せる。$f_{\bg}$は母平均に対応している。
+異なる時刻、すなわち
+異なる$i$における$f_i$および$\epsilon_i$は
+互いに独立だと考えてよいだろう。
+測定誤差$\epsilon_i$が正規分布\(N(0,\sigma_i)\)に従う場合、
+推定母平均$\hat{f}_{\bg}$は以下で与えられる:
+\begin{equation}
+  \hat{f}_{\bg} = \frac{1}{W}\sum_{i} w_i f_i
+\end{equation}
+ただし\(w_i \coloneq 1/\sigma_i^2, W=\sum_{i}w_i\)である。
+
+推定母平均$\hat{f}_{\bg}$は真の値(あるいは母平均$f_{\bg}$)からズレているはずである。
+ズレの度合いを表す量として不確かさ$\sigma(\hat{f}_{\bg})$を求める必要がある。
+\(\sigma(\hat{f}_{\bg})\)は母分散\(\variance(\hat{f}_{\bg})\)から推定できる。
+いま、異なる$i$に対して$w_i\fnui$は互いに独立なので
+母分散\(\variance(\fbghat)\)は
+\begin{empheq}{align}
+  \variance(\fbghat) 
+  &= \frac{1}{W^2}\variance\ab(\sum_i w_i\fnui)
+  = \frac{1}{W^2}\sum_i\ab(w_i^2\variance(\fnui)) \\
+  &= \frac{1}{W^2}\sum_i\ab(w_i^2\sigma_i^2)
+  = \frac{1}{W^2}W \\
+  &= \frac{1}{W}
+\end{empheq}
+で与えられる。よって
+\begin{equation}
+  \sigma(\fbghat) = \sqrt{\variance(\fbghat)} = \sqrt{\frac{1}{W}}
 \end{equation}
 となる。
+
+以上から、バックグラウンド放射fluxは$\fbghat$に対して$\sigma(\fbghat)$の不確かさで
+分布していると推定される。
+
+\section{フレア領域への影響}
+理論モデルと観測との比較は、
+バックグラウンド放射の寄与を差し引いた``net flux''を介して行う。
+ここで、\(t > \qty{0}{\min}\)を満たす各$i$におけるnet flux \(f_{\mathrm{net},i}\)を以下で与える:
+\begin{equation}
+  \label{eq:flux_afterxrb}
+  f_{\mathrm{net},i} = f_i - f_{\bg} \: (i:t<\qty{0}{\min})
+\end{equation}
+\eqref{eq:flux_afterxrb}の$f_i$は\(t>\qty{0}{\min}\)のfluxであるから、
+\eqref{eq:flux_prexrb}が\textbf{成立しない}ことに注意せよ。
+
+$\fnuneti$の期待値$\mu_{\fnunet,i}$は
+\begin{equation}
+  E({\fnunet,i}) = E(\fnui + f_{\bg}) = E(\fnui) + \fbghat 
+\end{equation}
+
+$f_{\nu,i}$と$f_{\mathrm{bg}}$の間の共分散が十分小さいと見なせるのであれば、
+\begin{equation}
+  \variance(f_{\nu,\mathrm{net},i}) = \variance(f_{\nu,i}) + \variance(f_{\mathrm{bg}})
+\end{equation}
+が成り立つ。
+\(t>\qty{0}{\min}\)では$f_{\nu,i}$と$f_{\mathrm{bg}}$は異なる時刻での値なので、共分散は小さいと思ってよいだろう。
+
+\section{結果}
+\qty{9}{\GHz}では\(f_{\nu,\mathrm{bg}} = \qty{0.79+-0.02}{mJy}\)
+を得た。なお、単純平均で計算した場合のバックグラウンドfluxの値は\(\qty{0.786}{mJy}\)であった。
+Fig.\ref{fig:comparison}左は、バックグラウンドとして単純に平均を
+用いた場合におけるフィッティングの$p$値を、
+右は、本文の通り推定母平均とその不確かさを考慮した場合におけるフィッティングの$p$値を、
+それぞれ示している。
+
+\begin{figure}[tb]
+    \centering
+
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth,page=2]{figs/no_bgerr.pdf}
+        \caption{単純平均のみ考慮した場合}
+        \label{fig:left}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth,page=2]{figs/with_bgerr.pdf}
+        \caption{誤差も考慮した場合}
+        \label{fig:right}
+    \end{subfigure}
+
+    \caption{\(\epsth=0.4,\epsB=\num{1.0e-2}\)でのフィッティング結果に関する$p$値}
+    \label{fig:comparison}
+\end{figure}
 \end{document}

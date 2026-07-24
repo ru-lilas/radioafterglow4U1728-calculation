@@ -1,5 +1,5 @@
 from typing import Any, cast
-from module import dataframe_processors
+from module import dataframe_processors, dataframe_utils
 from module.utilities import filereaders as fr
 from pathlib import Path
 import argparse
@@ -12,7 +12,7 @@ from module.plot import plot_scatter
 import pandas as pd
 
 from module.utilities import quantity_data
-from module.strenums import KeyNames
+from module.strenums import KeyNames, LightcurveColumns
 
 def build_chevalier_xy(
     df_nu:pd.DataFrame,
@@ -53,12 +53,13 @@ def main(args:argparse.Namespace):
             nu_obs = cast(float,nu_obs)
             df_nu = pd.DataFrame(df_calc_raw[np.isclose(df_calc_raw[KeyNames.NU], nu_obs)].reset_index(drop=True))
 
-            fnu_bg_value = np.asarray(df_obs["fnu_bg"],dtype=np.float64)[0]
+            fnu_bg_value = np.asarray(df_obs["bg"],dtype=np.float64)[0]
 
             fnu_bg = quantity_data.QuantityData(
                 value=fnu_bg_value,
                 unit=metadata_obs[KeyNames.FNU_UNIT]
             )
+            fnu_bg_err = dataframe_utils.extract_column_as_ndarray(df_obs,LightcurveColumns.BG_ERR)[0]
             df_nu[KeyNames.FNU_WITH_BG] = df_nu[KeyNames.FNU_NET] + fnu_bg.value
 
             t_min,fnu_mjy = build_chevalier_xy(
@@ -118,7 +119,6 @@ def main(args:argparse.Namespace):
             )
             legend_handles = []
             ax.axhline(fnu_bg_value,ls="--",color="#000000")
-            # plot_utils.hlines(ax,conf,metadata_obs,legend_handles)
             plot_utils.annotation(ax,annot)
             ax.legend()
 

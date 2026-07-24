@@ -28,11 +28,12 @@
 \RequirePackage{graphicx}
 \RequirePackage{booktabs}
 \RequirePackage{xcolor}
+\RequirePackage{subcaption}
 
 %--- physics ---%
 \RequirePackage{physics2}
 \usephysicsmodule{ab}
-\RequirePackage{siunitx}
+\RequirePackage[separate-uncertainty=true]{siunitx}
 
 \RequirePackage{bxpapersize} %用紙サイズを一致させるパッケージ
 \RequirePackage{enumitem}
