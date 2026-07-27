@@ -39,7 +39,7 @@ path_params:Path = args.parameters
 outpath:Path = args.output
 outpath.parent.mkdir(parents=True,exist_ok=True)
 
-conf = fr.read_yaml(confpath)
+conf = fr.read_yaml_pyyaml(confpath)
 params = InputReader.read(path_params,PhysicalParameters)
 df = fr.read_csv(inpath)
 dfs = dataframe_utils.build_dfs_grouped(

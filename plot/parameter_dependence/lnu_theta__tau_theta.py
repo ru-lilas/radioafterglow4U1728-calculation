@@ -31,7 +31,7 @@ confpath:Path = args.config
 outpath:Path = args.output
 outpath.parent.mkdir(parents=True,exist_ok=True)
 
-conf = fr.read_yaml(confpath)
+conf = fr.read_yaml_pyyaml(confpath)
 df = fr.read_csv(inpath)
 metadata = fr.read_keyvalue(inpath)
 conftick = plot_utils.TicksConfigure(**conf["TicksConfigure"])

@@ -12,7 +12,7 @@ def main(args:argparse.Namespace):
 
     inpath:Path = args.input
     physical_params = read_physical_parameters(inpath)
-    config_data:dict = fr.read_yaml(inpath)
+    config_data:dict = fr.read_yaml_pyyaml(inpath)
 
     df = compute_scaling_parameters.table(config_data)
     metadata = {

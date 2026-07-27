@@ -1,14 +1,21 @@
 # pyright: reportAttributeAccessIssue=false
 # pyright: reportUnknownMemberType=false
 
+from functools import cached_property
+from pathlib import Path
+from typing import Self
 import astropy.units as u
+from module import quantity_converter
+from module.utilities import filereaders as fr
 import numpy as np
+import pandas as pd
+from dataclasses import dataclass
+from module.types import FloatArray
+
 from numpy.typing import NDArray
 from module import synchrotron_scaling_values
 from module import electron_temperature
-from dataclasses import dataclass
-from functools import cached_property
-from module.tabular import ThermalSynchrotronTable
+from module import tabular
 from module.utilities import bisection, unit_aliases as unit
 from module import calculate_lnu_th
 
@@ -68,7 +75,7 @@ class ThermalSynchrotronScalingValues:
     input:InputParameters
     nu_value: NDArray[np.float64]
     nu_unit: str
-    table: ThermalSynchrotronTable
+    table: tabular.ThermalSynchrotronTable
 
     @cached_property
     def nu(self)->u.Quantity:
@@ -161,7 +168,7 @@ class SynchrotronSpectrum:
     t_unit: str
     nu_value: NDArray[np.float64]
     nu_unit: str
-    tabular: ThermalSynchrotronTable
+    tabular: tabular.ThermalSynchrotronTable
 
     @cached_property
     def scalings(self):
@@ -205,3 +212,104 @@ class SynchrotronSpectrum:
     def lnu_th(self):
         q = u.Quantity((self.inputs.l_theta * self.lnu_th_dimless).to(self.scalings.l_theta.unit))
         return q
+
+
+##=== 2026/07/28 追加 ===##
+
+@dataclass(frozen=True,slots=True)
+class ThermalSynchrotronTable:
+    xm: FloatArray
+    ln_ip: FloatArray
+
+    @classmethod
+    def from_csv(
+            cls,
+            path:Path
+    )-> Self:
+        df = fr.read_csv(path)
+        return cls(
+            xm = df["xm"].to_numpy(dtype=np.float64),
+            ln_ip = df["ln_ip"].to_numpy(dtype=np.float64)
+        )
+
+    def interpolate_log_ip(self,x:FloatArray)->FloatArray:
+        return np.interp(x, self.xm, self.ln_ip)
+
+    def interpolate_ip(self,x:FloatArray)->FloatArray:
+        return np.exp(self.interpolate_log_ip(x))
+
+class ThermalSynchrotron:
+    def __init__(
+        self,
+        table: ThermalSynchrotronTable,
+    ) -> None:
+        self._table = table
+
+    def lambda_theta(
+        self,
+        xm:FloatArray,
+        tau_theta:float|FloatArray,
+    )->FloatArray:
+        ip = self._table.interpolate_ip(xm)
+        optical_depth = ip*tau_theta/xm
+        f_esc = -np.expm1(-optical_depth)
+        xm2 = xm**2
+        return xm2 * f_esc
+
+    def lnu(
+        self,
+        xm:FloatArray,
+        tau_theta:float|FloatArray,
+        lnu_theta: u.Quantity,
+    )->u.Quantity:
+        lambda_syn = self.lambda_theta(xm,tau_theta)
+        return lnu_theta*lambda_syn
+    
+    def fnu_src(
+        self,
+        xm: FloatArray,
+        tau_theta: float|FloatArray,
+        lnu_theta: u.Quantity,
+        distance: u.Quantity
+    )->u.Quantity:
+        lnu = self.lnu(xm,tau_theta,lnu_theta)
+        return quantity_converter.lnu_into_fnu(lnu,distance)
+
+    def fnu_obs(
+        self,
+        xm: FloatArray,
+        tau_theta: float|FloatArray,
+        lnu_theta: u.Quantity,
+        distance: u.Quantity,
+        doppler_delta: float|FloatArray
+    )->u.Quantity:
+        fnu_obs = self.fnu_src(xm,tau_theta,lnu_theta,distance)
+        return doppler_delta**3 * fnu_obs
+
+def calculate_phi(
+    t_obs: u.Quantity,
+    nu_obs: u.Quantity
+)->u.Quantity:
+    """
+    Args:
+        t_obs: 観測者系での時間
+        nu_obs: 観測者系での周波数
+    """
+    return t_obs*nu_obs
+
+def calculate_xm(
+    t_obs: u.Quantity,
+    nu_obs: u.Quantity,
+    phi_theta:u.Quantity
+)->FloatArray:
+    """
+    Args:
+        t_obs: 観測者系での時間
+        nu_obs: 観測者系での周波数
+    """
+    phi = calculate_phi(t_obs,nu_obs)
+    return np.asarray(
+        (phi/phi_theta).to(u.dimensionless_unscaled),
+        dtype=np.float64
+    )
+

@@ -1,3 +1,4 @@
-log10_min: -2.0
-log10_max: 4.0
+start: -2.0
+stop: 4.0
 num: 16384
+scale: "log"

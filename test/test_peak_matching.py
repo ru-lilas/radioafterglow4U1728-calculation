@@ -24,7 +24,7 @@ def main(args:argparse.Namespace):
     tabular_path:Path = args.tabular
     inpath:Path = args.input
 
-    refdata:dict = fr.read_yaml(inpath)
+    refdata:dict = fr.read_yaml_pyyaml(inpath)
 
     table = fetch_numerical_table(tabular_path)
     nu_arr = fetch_nu_arr(refdata)

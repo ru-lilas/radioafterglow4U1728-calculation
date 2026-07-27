@@ -10,7 +10,7 @@ def main(args:argparse.Namespace):
     confpath:Path = args.config
     outpath:Path = args.output
 
-    conf = fr.read_yaml(confpath)
+    conf = fr.read_yaml_pyyaml(confpath)
     conftick = plot_utils.TicksConfigure(**conf["TicksConfigure"])
     conflabel = plot_utils.LabelConfigure(**conf["LabelConfigure"])
     xname = conf["x_name"]

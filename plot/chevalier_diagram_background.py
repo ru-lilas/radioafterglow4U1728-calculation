@@ -26,7 +26,7 @@ def main(args:argparse.Namespace):
     outpath:Path = args.output
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
-    conf = fr.read_yaml(confpath)
+    conf = fr.read_yaml_pyyaml(confpath)
     df_contour = fr.read_csv(inpath)
     metadata_contour = fr.read_keyvalue(inpath)
 

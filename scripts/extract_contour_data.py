@@ -15,7 +15,7 @@ def main(args:argparse.Namespace):
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
     confpath:Path = args.config
-    conf = fr.read_yaml(confpath)
+    conf = fr.read_yaml_pyyaml(confpath)
     d_value = float(conf["d_value"])
     d_unit = conf["d_unit"]
     dst_xrb = QuantityData(

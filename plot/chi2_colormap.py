@@ -33,7 +33,7 @@ confpath:Path = args.config
 outpath:Path = args.output
 outpath.parent.mkdir(parents=True,exist_ok=True)
 
-conf = fr.read_yaml(confpath)
+conf = fr.read_yaml_pyyaml(confpath)
 df_param = fr.read_csv(cmap_path)
 metadata_chi2 = fr.read_keyvalue(cmap_path)
 

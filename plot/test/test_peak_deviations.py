@@ -32,7 +32,7 @@ def main(args:argparse.Namespace):
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
     df = fr.read_csv(inpath)
-    conf = fr.read_yaml(confpath)
+    conf = fr.read_yaml_pyyaml(confpath)
 
 
 

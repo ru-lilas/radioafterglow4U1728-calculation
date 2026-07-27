@@ -38,7 +38,7 @@ outpath:Path = args.output
 outpath.parent.mkdir(parents=True,exist_ok=True)
 
 # loading
-conf = fr.read_yaml(path_conf)
+conf = fr.read_yaml_pyyaml(path_conf)
 df_input = read_rawdata(
     filepath=path_data,
     column_names=conf["columns"]

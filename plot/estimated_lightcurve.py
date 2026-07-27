@@ -43,7 +43,7 @@ def main(args:argparse.Namespace):
     metadata_obs = fr.read_keyvalue(path_obslc)
     df_obs_raw = fr.read_csv(path_obslc)
 
-    conf = fr.read_yaml(confpath)
+    conf = fr.read_yaml_pyyaml(confpath)
     df_calc_raw = fr.read_csv(path_calclc)
     metadata_calc = fr.read_keyvalue(path_calclc)
 

@@ -51,7 +51,7 @@ table_integral = fetch_numerical_table.fetch_numerical_table_path(args.table_int
 
 lcconfpath:Path = args.lightcurve_config
 conf_lc = input_reader.InputReader.read(lcconfpath,input_reader.LightcurveConfigure)
-lcconf = fr.read_yaml(lcconfpath)
+lcconf = fr.read_yaml_pyyaml(lcconfpath)
 
 inpath:Path = args.estimated_parameters
 df_params_estimated = fr.read_csv(inpath)
@@ -106,7 +106,7 @@ for i,nu in enumerate(nu_values):
     )
 
 
-    lc = compute_lightcurve.Lightcurve(
+    lc = compute_lightcurve.LightcurveCalculation(
         t=t,
         nu = nu_q,
         table_integral=table_integral

@@ -17,7 +17,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 confpath: Path = args.input
-conf = fr.read_yaml(confpath)
+conf = fr.read_yaml_pyyaml(confpath)
 
 # parameter space resolution
 conf_physical_params = conf["physical_parameters"]

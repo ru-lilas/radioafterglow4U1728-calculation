@@ -11,7 +11,7 @@ def main(args:argparse.Namespace):
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
     inpath:Path = args.input
-    inputs:dict = fr.read_yaml(inpath)
+    inputs:dict = fr.read_yaml_pyyaml(inpath)
 
     tabular = fetch_numerical_table(args)
     inputparams = build_input_parameters.both(inputs)

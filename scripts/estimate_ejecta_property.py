@@ -14,7 +14,7 @@ def main(args:argparse.Namespace):
     # inpath:Path = args.input
     # df_input = fr.read_csv(inpath)
     # metadata_input = fr.read_keyvalue(inpath)
-    burster_data_dict = fr.read_yaml(burster_property_path)
+    burster_data_dict = fr.read_yaml_pyyaml(burster_property_path)
 
     burster_data = estimate_ejecta_property.BursterProperty(
         **burster_data_dict

@@ -19,7 +19,7 @@ def main(args:argparse.Namespace):
 
     inpath:Path = args.input
 
-    refdata:dict = fr.read_yaml(inpath)
+    refdata:dict = fr.read_yaml_pyyaml(inpath)
 
     tabular = fetch_numerical_table(args)
     tau_theta_arr = fetch_tau_theta_arr(refdata)
