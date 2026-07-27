@@ -20,57 +20,6 @@ from module.utilities import bisection, unit_aliases as unit
 from module import calculate_lnu_th
 
 @dataclass
-class InputParameters:
-    eps_th: float
-    eps_b: float
-    mu: float
-    mu_e: float
-    beta_sh: float
-    a_wind_value: float
-    a_wind_unit: str
-
-    @cached_property
-    def a_wind_quantity(self)->u.Quantity:
-        return u.Quantity(self.a_wind_value,u.Unit(self.a_wind_unit))
-
-    @cached_property
-    def theta(self)->float:
-        return electron_temperature.calculate_theta_e(
-            eps_th=self.eps_th,
-            mu=self.mu,
-            mu_e=self.mu_e,
-            beta_sh=self.beta_sh
-        )
-
-    @cached_property
-    def phi_theta(self):
-        return synchrotron_scaling_values.calculate_phi_theta(
-            theta=self.theta,
-            eps_B=self.eps_b,
-            a_wind=self.a_wind_quantity
-        )
-    
-    @cached_property
-    def tau_theta(self):
-        return synchrotron_scaling_values.calculate_tau_theta(
-            eps_B=self.eps_b,
-            mu_e=self.mu_e,
-            mu=self.mu,
-            theta=self.theta,
-            a_wind=self.a_wind_quantity,
-            beta_sh=self.beta_sh
-        )
-
-    @cached_property
-    def l_theta(self):
-        return synchrotron_scaling_values.calculate_l_theta(
-            beta_sh=self.beta_sh,
-            eps_B=self.eps_b,
-            theta=self.theta,
-            a_wind=self.a_wind_quantity,
-        )
-
-@dataclass
 class ThermalSynchrotronScalingValues:
     input:InputParameters
     nu_value: NDArray[np.float64]

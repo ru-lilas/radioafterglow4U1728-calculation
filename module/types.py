@@ -4,3 +4,4 @@ import numpy as np
 
 type ValueScale = Literal["linear","log"]
 type FloatArray = NDArray[np.float64]
+type FloatArrayLike = float|FloatArray

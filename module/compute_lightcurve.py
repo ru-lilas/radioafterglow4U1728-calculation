@@ -94,7 +94,7 @@ class Configure:
 
     @cached_property
     def t_obs(self)->u.Quantity:
-        return u.Quantity(self.time.value_arr.arr,self.time.unit)
+        return u.Quantity(self.time.values.arr,self.time.unit)
     
     @cached_property
     def nu_obs(self)->u.Quantity:

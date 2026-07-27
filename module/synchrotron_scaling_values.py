@@ -4,6 +4,7 @@ import astropy.units as u
 import numpy as np
 from numpy.typing import NDArray
 from module.tabular import ThermalSynchrotronTable
+from module.types import FloatArray, FloatArrayLike
 from module.utilities import unit_aliases as unit
 from astropy.constants import e,c,m_e,m_p
 from module import f_factor
@@ -61,16 +62,18 @@ def calculate_nu_b(
     return convert_omega_into_nu(omega_b(b_mag))
 
 def calculate_phi_theta(
-    theta:float,
-    eps_B:float,
+    theta:FloatArrayLike,
+    eps_b:FloatArrayLike,
     a_wind:u.Quantity
 )->u.Quantity:
+    theta_arr = np.asarray(theta,dtype=np.float64)
+    eps_b_arr = np.asarray(eps_b,dtype=np.float64)
     nu_t = (
-        9.0 * theta**2 * e * np.sqrt(eps_B * a_wind)
+        9.0 * theta**2 * e * np.sqrt(eps_b * a_wind)
     )/(
             8.0 * np.pi * m_e * c
         )
-    return nu_t.to(u.s*u.GHz)
+    return nu_t
 
 def calculate_j_theta(
         theta:float,
@@ -99,15 +102,20 @@ def calculate_alpha_theta(
     return alpha_theta.to(unit.absorption_coefficient)
 
 def calculate_tau_theta(
-    eps_B: float,
-    mu_e: float,
-    mu: float,
-    theta: float,
+    eps_b: FloatArrayLike,
+    mu_e: FloatArrayLike,
+    mu: FloatArrayLike,
+    theta: FloatArrayLike,
     a_wind: u.Quantity,
-    beta_sh: float
-)->NDArray[np.float64]:
-    quantities = u.Quantity(e*np.sqrt(a_wind)/(m_p*c))
-    dimless_term = 2.0*mu_e/ (3**(2.5)*theta**5*mu*beta_sh*np.sqrt(eps_B))
+    beta_sh: FloatArrayLike
+)->FloatArray:
+    eps_b_arr = np.asarray(eps_b,dtype=np.float64)
+    mu_e_arr = np.asarray(mu_e,dtype=np.float64)
+    mu_arr = np.asarray(mu,dtype=np.float64)
+    theta_arr = np.asarray(theta,dtype=np.float64)
+    beta_sh_arr = np.asarray(beta_sh,dtype=np.float64)
+    quantities = (e*np.sqrt(a_wind)/(m_p*c)).decompose()
+    dimless_term = 2.0*mu_e_arr/ (3**(2.5)*theta_arr**5*mu_arr*beta_sh_arr*np.sqrt(eps_b_arr))
     return np.asarray(dimless_term*quantities.to_value(unit.dimensionless),dtype=np.float64)
 
 def calculate_tau_theta_ar(
@@ -146,13 +154,15 @@ def calculate_b_mag_theta(
     return (1.5*np.sqrt(eps_B*a_wind)/t_theta).to(unit.magnetic_field)
 
 def calculate_l_theta(
-    beta_sh: float,
-    eps_B: float,
-    theta: float,
+    beta_sh: FloatArrayLike,
+    eps_b: FloatArrayLike,
+    theta: FloatArrayLike,
     a_wind: u.Quantity
 )->u.Quantity:
-    q = (81.0*beta_sh**2*theta**5*eps_B*a_wind*e**2/(8.0*m_e)).to(unit.specific_luminosity)
-    return u.Quantity(q)
+    beta_sh_arr = np.asarray(beta_sh,dtype=np.float64)
+    eps_b_arr = np.asarray(eps_b,dtype=np.float64)
+    theta_arr = np.asarray(theta,dtype=np.float64)
+    return (81.0*beta_sh_arr**2*theta_arr**5*eps_b_arr*a_wind*e**2/(8.0*m_e))
 
 def calculate_ln_tau(
     xi:NDArray[np.float64],

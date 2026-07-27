@@ -4,6 +4,7 @@ import astropy.units as u
 import numpy as np
 from astropy.constants import c
 from numpy.typing import NDArray
+from module.types import FloatArray, FloatArrayLike
 
 def flux_into_luminosity(
     flux:u.Quantity,
@@ -18,8 +19,9 @@ def lnu_into_fnu(
     return u.Quantity(lnu/(4.0*np.pi*distance**2))
 
 def beta_into_velocity(
-    beta: NDArray[np.float64]
+    beta: FloatArrayLike
 ):
+    beta_arr = np.asarray(beta,dtype=np.float64)
     return u.Quantity(beta*c)
 
 def beta_into_lorentz_gamma(
@@ -28,18 +30,10 @@ def beta_into_lorentz_gamma(
     return 1.0/(np.sqrt(1.0 - beta**2))
 
 def beta_into_doppler_delta(
-    beta: float
-)->float:
+    beta: FloatArrayLike
+)->FloatArray:
     """
         真正面からの寄与以外を無視した場合の近似式
     """
+    beta_arr = np.asarray(beta,dtype=np.float64)
     return np.sqrt((1.0+beta)/(1.0-beta))
-
-def fnu_src__into__fnu_obs(
-    fnu_src: u.Quantity,
-    doppler_delta: float
-):
-    """
-        静止系でのfnuを観測者系のfnuへ変換する
-    """
-    return

@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 import numpy as np
-from dacite import from_dict
 from pathlib import Path
 import pandas as pd
 from .types import ValueScale,FloatArray
@@ -23,12 +22,12 @@ class ValueArray(YAMLReadable):
 
 @dataclass(frozen=True,slots=True)
 class QuantityArray:
-    value_arr: ValueArray
+    values: ValueArray
     unit: str
 
     @property
     def quantity(self):
-        return u.Quantity(self.value_arr.arr,self.unit)
+        return u.Quantity(self.values.arr,self.unit)
 
 @dataclass(frozen=True,slots=True)
 class QuantityData:
