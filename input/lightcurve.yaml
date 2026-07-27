@@ -1,9 +1,0 @@
-t_value_arr:
-  start: 0.0
-  stop: 4.0
-  num: 256
-  scale: "log"
-t_unit: "s"
-fnu_unit: "mJy"
-nu_value: 9.0
-nu_unit: "GHz"
