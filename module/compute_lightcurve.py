@@ -51,27 +51,27 @@ class Input:
     values: InputValues
     units: InputUnits
 
-    @cached_property
+    @property
     def a_wind(self)->u.Quantity:
         return u.Quantity(self.values.a_wind,self.units.a_wind)
 
-    @cached_property
+    @property
     def phi_theta(self)->u.Quantity:
         return u.Quantity(self.values.phi_theta,self.units.phi_theta)
 
-    @cached_property
+    @property
     def lnu_theta(self)->u.Quantity:
         return u.Quantity(self.values.lnu_theta,self.units.lnu_theta)
 
-    @cached_property
+    @property
     def distance(self)->u.Quantity:
         return u.Quantity(self.values.distance,self.units.distance)
 
-    @cached_property
+    @property
     def tau_theta(self)->float:
         return self.values.tau_theta
 
-    @cached_property
+    @property
     def doppler_delta(self)->float:
         return self.values.doppler_delta
 
@@ -92,18 +92,17 @@ class Configure:
             data = dict_data
         )
 
-    @cached_property
+    @property
     def t_obs(self)->u.Quantity:
         return u.Quantity(self.time.values.arr,self.time.unit)
     
-    @cached_property
+    @property
     def nu_obs(self)->u.Quantity:
         return u.Quantity(self.nu.value,self.nu.unit)
 
 class QuantityConverter:
     @staticmethod
-    def to_scalar(quantity:u.Quantity):
-        unit = quantity.unit
+    def to_scalar(quantity:u.Quantity,unit:str|u.UnitBase):
         quantity_arr:FloatArray = np.asarray(
             quantity.to_value(unit),
             dtype=np.float64
@@ -115,7 +114,7 @@ class QuantityConverter:
         return quantity_arr.item()
 
     @staticmethod
-    def to_FloatArray(quantity:u.Quantity):
+    def to_FloatArray(quantity:u.Quantity,unit:str|u.UnitBase):
         return np.asarray(
             quantity.to_value(quantity.unit),
             dtype=np.float64
@@ -140,13 +139,37 @@ class Lightcurve:
             "fnu_obs": fnu_obs_value
         })
 
+    @staticmethod
+    def _make_bin_edges(
+        t_obs_value: FloatArray,
+        width: float,
+        drop_incomplete_bin: bool,
+    )-> FloatArray:
+        start = t_obs_value[0]
+        stop = t_obs_value[-1]
+        duration = t_obs_value[-1] - t_obs_value[0]
+
+        n_bin = int(np.floor(duration/(width)))
+
+        t_edge:FloatArray = (
+            t_obs_value[0]
+            + width * np.arange(n_bin + 1, dtype=np.float64)
+        )
+
+        if (
+                not drop_incomplete_bin
+                and not np.isclose(t_edge[-1],t_obs_value[-1])
+        ):
+            t_edge = np.append(t_edge, t_obs_value[-1])
+        else:
+            pass
+        return t_edge
+
     def bin_average(
         self,
         bin_width: u.Quantity,
-        *,
-        t_min: u.Quantity | None = None,
-        t_max: u.Quantity | None = None
-    )->Self:
+        drop_incomplete_bin: bool = True
+    ):
         if len(self.t_obs) != len(self.fnu_obs):
             raise ValueError(
                 "t_obsとfnu_obsの配列長が一致しません."
@@ -159,95 +182,30 @@ class Lightcurve:
         time_unit = cast(u.UnitBase,self.t_obs.unit)
         fnu_unit = cast(u.UnitBase,self.fnu_obs.unit)
 
-        width = QuantityConverter.to_scalar(bin_width)
+        width = QuantityConverter.to_scalar(bin_width,time_unit)
 
         if width <= 0.0:
             raise ValueError("bin_width は正の値にしてください.")
 
-        time: FloatArray = QuantityConverter.to_FloatArray(self.t_obs)
-        fnu: FloatArray = QuantityConverter.to_FloatArray(self.fnu_obs)
+        t_obs_value: FloatArray = QuantityConverter.to_FloatArray(self.t_obs,time_unit)
+        fnu: FloatArray = QuantityConverter.to_FloatArray(self.fnu_obs,fnu_unit)
 
-        if np.any(np.diff(time) <= 0.0):
+        if np.any(np.diff(t_obs_value) <= 0.0):
             raise ValueError(
                 "t_obsは単調増加でなければなりません."
             )
 
-        start = (
-            time[0]
-            if t_min is None
-            else QuantityConverter.to_scalar(t_min)
-        )
-        stop = (
-            time[-1]
-            if t_max is None
-            else QuantityConverter.to_scalar(t_max)
-        )
+        start = t_obs_value[0]
+        stop = t_obs_value[-1]
+        duration = t_obs_value[-1] - t_obs_value[0]
 
-        if start < time[0] or stop > time[-1]:
-            raise ValueError(
-                "The requested bin range must lie within t_obs."
-            )
+        n_bin = int(np.floor(duration/(width)))
 
-        if stop <= start:
-            raise ValueError("t_maxはt_minよりも大きい値にしてください.")
-
-        bin_edges = np.arange(
-            start,
-            stop + width,
+        t_edge = self._make_bin_edges(
+            t_obs_value,
             width,
-            dtype=np.float64,
+            drop_incomplete_bin
         )
-
-        # 最後のbinが計算範囲を超える場合は除外する
-        bin_edges = bin_edges[bin_edges <= stop]
-
-        if bin_edges.size == 0 or bin_edges[-1] < stop:
-            bin_edges = np.append(bin_edges, stop)
-
-        binned_time: list[float] = []
-        binned_flux: list[float] = []
-
-        for left, right in zip(
-            bin_edges[:-1],
-            bin_edges[1:],
-            strict=True,
-        ):
-            inside = (time > left) & (time < right)
-
-            time_bin = np.concatenate(
-                (
-                    np.array([left]),
-                    time[inside],
-                    np.array([right]),
-                )
-            )
-
-            flux_bin = np.interp(
-                time_bin,
-                time,
-                fnu,
-            )
-
-            mean_flux = np.trapezoid(
-                flux_bin,
-                time_bin,
-            ) / (right - left)
-
-            binned_time.append(0.5 * (left + right))
-            binned_flux.append(float(mean_flux))
-
-        return type(self)(
-            t_obs=np.asarray(
-                binned_time,
-                dtype=np.float64,
-            ) * time_unit,
-            fnu_obs=np.asarray(
-                binned_flux,
-                dtype=np.float64,
-            ) * fnu_unit,
-        )
-
-        return
 
 def compute(
     config: Configure,
@@ -272,7 +230,7 @@ def compute(
     )
 
 def build_inputs(path:Path):
-    df = fr.read_csv_within_idx(path)
+    df = fr.read_csv(path)
     lc_inputunits = InputUnits.from_keyvalue(path)
     return [
         Input(

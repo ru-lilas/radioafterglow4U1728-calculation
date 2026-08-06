@@ -24,7 +24,7 @@ CHI2_ESTIMATED_SUMMARY := chi2_estimated_summary
 CHI2TEST_SUMMARY ?=
 CHI2TEST_TIMEWINDOW := chi2test_timewindow
 SAMPLING := sampling
-FILEPATH_INPUT := $(DATADIR)/$(RUN_ID)/input.$(EXTENTION_YAML)
+FILEPATH_INPUT := $(DATADIR)/$(RUN_DIR)/input.$(EXTENTION_YAML)
 
 RUN_DIR ?=
 
@@ -209,18 +209,16 @@ $(DATADIR)/$(SAMPLING_DIR)/chi2.csv: \
 		-o $@
 
 $(DATADIR)/$(RUN_DIR)/chi2_tmp.csv: \
-	$(DATADIR)/$(PARAMETER_DIR)/$(PHYSICAL_PARAMETERS).csv \
-		$(DATADIR)/$(INTEGRAL_TABLE).csv \
-		$(FILEPATH_OBSLC) \
-		$(PATH_PHYSICAL_PARAMETERS).yaml \
-		$(DATADIR)/$(SAMPLING_DIR)/sampling.yaml \
-		scripts/compute_chi2.py
+	$(DATADIR)/$(RUN_DIR)/$(PARAMETER_TABLE).$(EXTENTION_CSV) \
+	$(DATADIR)/$(INTEGRAL_TABLE).csv \
+	$(FILEPATH_OBSLC) \
+	$(FILEPATH_INPUT) \
+	scripts/compute_chi2.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		--parameter_table $< \
-		--parameter_yaml $(word 4,$^) \
-		--integral_table $(word 2,$^) \
-		--observation_lc $(word 3,$^) \
-		--config $(word 5,$^) \
+		--integral_table $(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV) \
+		--obs_lc $(FILEPATH_OBSLC) \
+		--input $(FILEPATH_INPUT) \
 		--output $@
 
 #=== tabulating ===#
