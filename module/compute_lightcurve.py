@@ -184,28 +184,34 @@ class Lightcurve:
         fnu_unit = cast(u.UnitBase,self.fnu_obs.unit)
 
         width = QuantityConverter.to_scalar(bin_width,time_unit)
+        t_value: FloatArray = QuantityConverter.to_FloatArray(self.t_obs,time_unit)
+        fnu_value: FloatArray = QuantityConverter.to_FloatArray(self.fnu_obs,fnu_unit)
 
         if width <= 0.0:
             raise ValueError("bin_width は正の値にしてください.")
 
-        t_obs_value: FloatArray = QuantityConverter.to_FloatArray(self.t_obs,time_unit)
-        fnu: FloatArray = QuantityConverter.to_FloatArray(self.fnu_obs,fnu_unit)
+        duration = t_value[-1] - t_value[0]
 
-        if np.any(np.diff(t_obs_value) <= 0.0):
+        if width > duration:
+            raise ValueError(
+                "bin_widthは光度曲線の全時間範囲以下にしてください."
+            )
+
+        if np.any(np.diff(t_value) <= 0.0):
             raise ValueError(
                 "t_obsは単調増加でなければなりません."
             )
 
         t_edge = self._make_bin_edges(
-            t_obs_value,
+            t_value,
             width,
             drop_incomplete_bin
         )
 
         fnu_edge: FloatArray = np.interp(
             t_edge,
-            t_obs_value,
-            fnu,
+            t_value,
+            fnu_value,
         )
 
         flux_integral_list: list[float] = []
@@ -214,14 +220,14 @@ class Lightcurve:
             zip(t_edge[:-1], t_edge[1:], strict=True)
         ):
             inside = (
-                (t_obs_value > left)
-                & (t_obs_value < right)
+                (t_value > left)
+                & (t_value < right)
             )
 
             t_bin: FloatArray = np.concatenate(
                 (
                     np.array([left], dtype=np.float64),
-                    t_obs_value[inside],
+                    t_value[inside],
                     np.array([right], dtype=np.float64),
                 )
             )
@@ -229,7 +235,7 @@ class Lightcurve:
             fnu_bin: FloatArray = np.concatenate(
                 (
                     np.array([fnu_edge[i]], dtype=np.float64),
-                    fnu[inside],
+                    fnu_value[inside],
                     np.array([fnu_edge[i + 1]], dtype=np.float64),
                 )
             )
