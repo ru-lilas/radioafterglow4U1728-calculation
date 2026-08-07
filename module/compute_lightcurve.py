@@ -99,17 +99,17 @@ class QuantityConverter:
         )
 
 @dataclass(frozen=True, slots=True)
-class Lightcurve:
-    t_obs: u.Quantity
-    fnu_obs: u.Quantity
+class CalculationLightcurve:
+    t_observer_frame: u.Quantity
+    fnu_observer_frame: u.Quantity
 
     def to_df(self,t_unit:str,fnu_unit:str):
         t_obs_value:FloatArray = np.asarray(
-            self.t_obs.to_value(t_unit),
+            self.t_observer_frame.to_value(t_unit),
             dtype=np.float64
         )
         fnu_obs_value:FloatArray = np.asarray(
-            self.fnu_obs.to_value(fnu_unit),
+            self.fnu_observer_frame.to_value(fnu_unit),
             dtype=np.float64
         )
         return pd.DataFrame({
@@ -143,28 +143,65 @@ class Lightcurve:
             pass
         return t_edge
 
+    @staticmethod
+    def validate_time_coverage(
+        t_model: u.Quantity,
+        binning: observation.Binning,
+    ) -> None:
+        t_model_value: FloatArray = np.asarray(
+            t_model.to_value(binning.t_unit),
+            dtype=np.float64,
+        )
+
+        if t_model_value.size < 2:
+            raise ValueError(
+                "理論光度曲線には2点以上の時刻が必要です."
+            )
+
+        model_min = float(t_model_value[0])
+        model_max = float(t_model_value[-1])
+
+        required_min = float(np.min(binning.t_left))
+        required_max = float(np.max(binning.t_right))
+
+        left_outside = (
+            required_min < model_min
+            and not np.isclose(required_min, model_min)
+        )
+        right_outside = (
+            required_max > model_max
+            and not np.isclose(required_max, model_max)
+        )
+
+        if left_outside or right_outside:
+            raise ValueError(
+                "理論光度曲線が観測binの時間範囲を内包していません. "
+                f"model=[{model_min}, {model_max}] "
+                f"{binning.t_unit}, "
+                f"required=[{required_min}, {required_max}] "
+                f"{binning.t_unit}"
+            )
+
     def bin_average(
         self,
         binning: observation.Binning,
         drop_incomplete_bin: bool = True
     )->Self:
-        if len(self.t_obs) != len(self.fnu_obs):
+        if len(self.t_observer_frame) != len(self.fnu_observer_frame):
             raise ValueError(
                 "t_obsとfnu_obsの配列長が一致しません."
             )
-        if len(self.t_obs) < 2:
-            raise ValueError(
-                "t_obsの配列長が2より小さいためbin平均をとれません."
-            )
+        self.validate_time_coverage(self.t_observer_frame,binning)
 
-        fnu_unit = cast(u.UnitBase,self.fnu_obs.unit)
+        t_unit = binning.t_unit
+        fnu_unit = cast(u.UnitBase,self.fnu_observer_frame.unit)
 
         width = binning.bin_width
         t_arr: FloatArray = QuantityConverter.to_FloatArray(
-            self.t_obs,
+            self.t_observer_frame,
             binning.t_unit
         )
-        fnu_value: FloatArray = QuantityConverter.to_FloatArray(self.fnu_obs,fnu_unit)
+        fnu_value: FloatArray = QuantityConverter.to_FloatArray(self.fnu_observer_frame,fnu_unit)
 
         duration = t_arr[-1] - t_arr[0]
 
@@ -234,15 +271,15 @@ class Lightcurve:
         ) / 2.0
 
         return type(self)(
-            t_obs=t_bin_center * time_unit,
-            fnu_obs=fnu_average * fnu_unit,
+            t_observer_frame=t_bin_center * u.Unit(t_unit),
+            fnu_observer_frame=fnu_average * fnu_unit,
         )
 
 def compute(
     config: Configure,
     model: ThermalSynchrotron,
     input: Input,
-)->Lightcurve:
+)->CalculationLightcurve:
     xm = calculate_xm(
         t_obs=config.t_obs,
         nu_obs=config.nu_obs,
@@ -255,9 +292,33 @@ def compute(
         distance=input.distance,
         doppler_delta=input.doppler_delta
     )
-    return Lightcurve(
-        t_obs=config.t_obs,
-        fnu_obs=fnu_obs
+    time_unit = config.t_obs.unit
+    fnu_unit = fnu_obs.unit
+
+    t_value: FloatArray = np.asarray(
+        config.t_obs.to_value(time_unit),
+        dtype=np.float64,
+    )
+    fnu_value: FloatArray = np.asarray(
+        fnu_obs.to_value(fnu_unit),
+        dtype=np.float64,
+    )
+    if t_value[0] > 0.0:
+        t_value = np.concatenate(
+            (
+                np.array([0.0], dtype=np.float64),
+                t_value,
+            )
+        )
+        fnu_value = np.concatenate(
+            (
+                np.array([0.0], dtype=np.float64),
+                fnu_value,
+            )
+        )
+    return CalculationLightcurve(
+        t_observer_frame=u.Quantity(t_value,time_unit),
+        fnu_observer_frame=u.Quantity(fnu_value,fnu_unit)
     )
 
 def build_inputs(path:Path):
@@ -270,90 +331,3 @@ def build_inputs(path:Path):
         )
         for record in df.to_dict("records")
     ]
-
-# @dataclass
-# class LightcurveCalculation:
-#     t: QuantityData
-#     nu: QuantityData
-#     table_integral:ThermalSynchrotronTable
-#
-#     @cached_property
-#     def t_quantity(self):
-#         return self.t.quantity
-#
-#     @cached_property
-#     def nu_quantity(self):
-#         return self.nu.quantity
-#
-#     def phi_arr(self,phi_theta:QuantityData):
-#         phi = u.Quantity(self.t_quantity*self.nu_quantity)
-#         return u.Quantity(phi.to(phi_theta.unit))
-#
-#     def xm_arr(
-#         self,
-#         phi_theta:QuantityData,
-#     ):
-#         xm = (self.phi_arr(phi_theta)/phi_theta.quantity).to_value(u.dimensionless_unscaled)
-#         return np.asarray(xm,dtype=np.float64)
-#
-#     def lambda_arr(
-#         self,
-#         phi_theta:QuantityData,
-#         tau_theta: NDArray[np.float64]
-#     ):
-#         return calculate_lambda_using_table(
-#             xm=self.xm_arr(phi_theta),
-#             tau_theta=tau_theta,
-#             table=self.table_integral
-#         )
-#
-#     def lnu_arr(
-#         self,
-#         phi_theta:QuantityData,
-#         lnu_theta: QuantityData,
-#         tau_theta: NDArray[np.float64]
-#     ):
-#         lnu =  u.Quantity(
-#             self.lambda_arr(phi_theta,tau_theta)
-#                 *lnu_theta.quantity
-#         )
-#         lnu_value = np.asarray(
-#             lnu.to_value(lnu_theta.unit),dtype=np.float64
-#         )
-#         return QuantityData(lnu_value,lnu_theta.unit)
-#
-#     def fnu(
-#         self,
-#         phi_theta:QuantityData,
-#         lnu_theta: QuantityData,
-#         tau_theta: float,
-#         d_src: QuantityData
-#     ):
-#         tau_theta_arr = np.asarray(tau_theta,dtype=np.float64)
-#         lnu = self.lnu_arr(phi_theta,lnu_theta,tau_theta_arr)
-#         fnu = quantity_converter.lnu_into_fnu(
-#             lnu=lnu.quantity,
-#             distance=d_src.quantity
-#         )
-#         fnu_value = np.asarray(
-#             fnu.value,dtype=np.float64
-#         )
-#         fnu_unit = cast(u.Unit,fnu.unit).to_string()
-#         return QuantityData(fnu_value,fnu_unit)
-#
-#     def fnu_with_doppler(
-#         self,
-#         phi_theta:QuantityData,
-#         lnu_theta: QuantityData,
-#         tau_theta: float,
-#         d_src: QuantityData,
-#         doppler_delta: float
-#     ):
-#         fnu_no_doppler = self.fnu(
-#             phi_theta,lnu_theta,tau_theta,d_src
-#         )
-#         fnu_with_doppler = doppler_delta**3 *fnu_no_doppler.value
-#         return QuantityData(
-#             value = fnu_with_doppler,
-#             unit = fnu_no_doppler.unit
-#         )

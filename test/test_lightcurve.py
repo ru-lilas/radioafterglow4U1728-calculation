@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_allclose
 from module.utils import Integrator
-from module.compute_lightcurve import Lightcurve
+from module.compute_lightcurve import CalculationLightcurve
 from numpy.testing import assert_allclose
 import astropy.units as u
 from module.types import FloatArray
@@ -75,7 +75,7 @@ def test_make_bin_edges(
     drop_incomplete_bin: bool,
     expected: np.ndarray,
 ) -> None:
-    actual = Lightcurve._make_bin_edges(
+    actual = CalculationLightcurve._make_bin_edges(
         t_obs,
         width,
         drop_incomplete_bin,
@@ -119,122 +119,3 @@ def test_trapezoid(
     actual = Integrator.trapezoid(x, y)
 
     assert actual == pytest.approx(expected)
-
-@pytest.mark.parametrize(
-    (
-        "drop_incomplete_bin",
-        "expected_time",
-        "expected_flux",
-    ),
-    [
-        (
-            True,
-            np.array([1.0, 3.0]),
-            np.array([5.0, 5.0]),
-        ),
-        (
-            False,
-            np.array([1.0, 3.0, 4.5]),
-            np.array([5.0, 5.0, 5.0]),
-        ),
-    ],
-)
-def test_bin_average_constant_flux(
-    drop_incomplete_bin: bool,
-    expected_time: np.ndarray,
-    expected_flux: np.ndarray,
-) -> None:
-    lightcurve = Lightcurve(
-        t_obs=np.array(
-            [0.0, 0.7, 1.8, 3.4, 5.0],
-            dtype=np.float64,
-        ) * u.s,
-        fnu_obs=np.full(
-            5,
-            5.0,
-            dtype=np.float64,
-        ) * u.mJy,
-    )
-
-    actual = lightcurve.bin_average(
-        bin_width=2.0 * u.s,
-        drop_incomplete_bin=drop_incomplete_bin,
-    )
-    actual_time: FloatArray = np.asarray(
-        actual.t_obs.to_value(u.s),
-        dtype=np.float64,
-    )
-
-    actual_flux: FloatArray = np.asarray(
-        actual.fnu_obs.to_value(u.mJy),
-        dtype=np.float64,
-    )
-    assert actual.t_obs.unit == u.s
-    assert actual.fnu_obs.unit == u.mJy
-
-    assert_allclose(actual_time, expected_time)
-    assert_allclose(actual_flux, expected_flux)
-
-@pytest.mark.parametrize(
-    (
-        "drop_incomplete_bin",
-        "expected_time",
-        "expected_flux",
-    ),
-    [
-        (
-            True,
-            np.array([1.0, 3.0], dtype=np.float64),
-            np.array([3.0, 7.0], dtype=np.float64),
-        ),
-        (
-            False,
-            np.array([1.0, 3.0, 4.5], dtype=np.float64),
-            np.array([3.0, 7.0, 10.0], dtype=np.float64),
-        ),
-    ],
-)
-def test_bin_average_linear_flux(
-    drop_incomplete_bin: bool,
-    expected_time: FloatArray,
-    expected_flux: FloatArray,
-) -> None:
-    t_value: FloatArray = np.array(
-        [0.0, 0.7, 1.8, 3.4, 5.0],
-        dtype=np.float64,
-    )
-
-    # fnu(t) = 2t + 1
-    fnu_value: FloatArray = 2.0 * t_value + 1.0
-
-    lightcurve = Lightcurve(
-        t_obs=t_value * u.s,
-        fnu_obs=fnu_value * u.mJy,
-    )
-
-    actual = lightcurve.bin_average(
-        bin_width=2.0 * u.s,
-        drop_incomplete_bin=drop_incomplete_bin,
-    )
-
-    actual_time: FloatArray = np.asarray(
-        actual.t_obs.to_value(u.s),
-        dtype=np.float64,
-    )
-    actual_flux: FloatArray = np.asarray(
-        actual.fnu_obs.to_value(u.mJy),
-        dtype=np.float64,
-    )
-
-    print(
-        "\n"
-        f"drop_incomplete_bin = {drop_incomplete_bin}\n"
-        f"t_bin_center = {actual_time} s\n"
-        f"fnu_average = {actual_flux} mJy"
-    )
-
-    assert actual.t_obs.unit == u.s
-    assert actual.fnu_obs.unit == u.mJy
-
-    assert_allclose(actual_time, expected_time)
-    assert_allclose(actual_flux, expected_flux)

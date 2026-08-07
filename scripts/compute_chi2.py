@@ -75,6 +75,8 @@ conf_sampling = conf_fitting.sampling
 
 obslc_general = observation.LongformatLightcurve.from_csv(path_obslc)
 obslc = obslc_general.extract_lightcurve(conf_sampling.nu.value)
+obs_binning = obslc.time_bin_bounds(conf_sampling.timewindow)
+print(obs_binning)
 
 # calculate model lightcurves
 lc_conf = conf_fitting.model
@@ -88,9 +90,10 @@ for lc_input in lc_inputs:
         model=lc_model,
         input=lc_input
     )
-    # lc_binned = lc.bin_average(
-    #     bin_width=metadata_obs.bin_width,
-    # )
+    lc_binned = lc.bin_average(
+        binning=obs_binning,
+        drop_incomplete_bin=True
+    )
 
 # for nu_obs, df_obs_nu in dfset_obs.items():
 #     df_obs_nu = df_obs_nu.reset_index(drop=True)

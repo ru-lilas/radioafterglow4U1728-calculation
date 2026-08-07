@@ -112,11 +112,17 @@ class SamplingTimewindow:
 
     @cached_property
     def t_min(self):
-        return u.Quantity(self.min,self.unit)
+        return mydataclasses.QuantityData(
+            value=self.min,
+            unit=self.unit
+        )
 
     @cached_property
     def t_max(self):
-        return u.Quantity(self.max,self.unit)
+        return mydataclasses.QuantityData(
+            value=self.max,
+            unit=self.unit
+        )
 
 @dataclass
 class SamplingConfigure:

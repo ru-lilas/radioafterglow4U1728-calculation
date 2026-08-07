@@ -37,3 +37,7 @@ class QuantityData:
     @property
     def quantity(self):
         return u.Quantity(self.value,self.unit)
+
+    def value_in(self,unit:str)->float:
+        value: float = float(np.asarray(self.quantity.to_value(unit)).item())
+        return value

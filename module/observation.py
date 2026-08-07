@@ -82,10 +82,10 @@ class Lightcurve:
 
         bin_width = float(dt[0])
         t_min = float(
-            timewindow.t_min.to_value(t_unit)
+            timewindow.t_min.value_in(t_unit)
         )
         t_max = float(
-            timewindow.t_max.to_value(t_unit)
+            timewindow.t_max.value_in(t_unit)
         )
 
         inside = (t >= t_min) & (t <= t_max)
