@@ -12,6 +12,8 @@ import astropy.units as u
 import numpy as np
 import pandas as pd
 from module.utils import Integrator
+from module import observation
+from module.parameter_table import Configure
 
 @dataclass(frozen=True,slots=True)
 class InputValues:
@@ -75,31 +77,6 @@ class Input:
     @property
     def doppler_delta(self)->float:
         return self.values.doppler_delta
-
-@dataclass(frozen=True,slots=True)
-class Configure:
-    time: QuantityArray
-    fnu_unit: str
-    nu: QuantityData
-
-    @classmethod
-    def from_yaml(
-            cls,
-            path:Path
-    )->Self:
-        dict_data = fr.read_yaml_pyyaml(path)
-        return from_dict(
-            data_class = cls,
-            data = dict_data
-        )
-
-    @property
-    def t_obs(self)->u.Quantity:
-        return u.Quantity(self.time.values.arr,self.time.unit)
-    
-    @property
-    def nu_obs(self)->u.Quantity:
-        return u.Quantity(self.nu.value,self.nu.unit)
 
 class QuantityConverter:
     @staticmethod
@@ -168,7 +145,7 @@ class Lightcurve:
 
     def bin_average(
         self,
-        bin_width: u.Quantity,
+        binning: observation.Binning,
         drop_incomplete_bin: bool = True
     )->Self:
         if len(self.t_obs) != len(self.fnu_obs):
@@ -180,37 +157,36 @@ class Lightcurve:
                 "t_obsの配列長が2より小さいためbin平均をとれません."
             )
 
-        time_unit = cast(u.UnitBase,self.t_obs.unit)
         fnu_unit = cast(u.UnitBase,self.fnu_obs.unit)
 
-        width = QuantityConverter.to_scalar(bin_width,time_unit)
-        t_value: FloatArray = QuantityConverter.to_FloatArray(self.t_obs,time_unit)
+        width = binning.bin_width
+        t_arr: FloatArray = QuantityConverter.to_FloatArray(
+            self.t_obs,
+            binning.t_unit
+        )
         fnu_value: FloatArray = QuantityConverter.to_FloatArray(self.fnu_obs,fnu_unit)
 
-        if width <= 0.0:
-            raise ValueError("bin_width は正の値にしてください.")
-
-        duration = t_value[-1] - t_value[0]
+        duration = t_arr[-1] - t_arr[0]
 
         if width > duration:
             raise ValueError(
                 "bin_widthは光度曲線の全時間範囲以下にしてください."
             )
 
-        if np.any(np.diff(t_value) <= 0.0):
+        if np.any(np.diff(t_arr) <= 0.0):
             raise ValueError(
                 "t_obsは単調増加でなければなりません."
             )
 
         t_edge = self._make_bin_edges(
-            t_value,
+            t_arr,
             width,
             drop_incomplete_bin
         )
 
         fnu_edge: FloatArray = np.interp(
             t_edge,
-            t_value,
+            t_arr,
             fnu_value,
         )
 
@@ -220,14 +196,14 @@ class Lightcurve:
             zip(t_edge[:-1], t_edge[1:], strict=True)
         ):
             inside = (
-                (t_value > left)
-                & (t_value < right)
+                (t_arr > left)
+                & (t_arr < right)
             )
 
             t_bin: FloatArray = np.concatenate(
                 (
                     np.array([left], dtype=np.float64),
-                    t_value[inside],
+                    t_arr[inside],
                     np.array([right], dtype=np.float64),
                 )
             )

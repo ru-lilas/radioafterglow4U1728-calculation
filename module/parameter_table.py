@@ -1,4 +1,6 @@
 from pathlib import Path
+from typing import Self, cast
+from dacite import from_dict
 from dataclasses import dataclass
 from functools import cached_property
 from typing import cast
@@ -114,17 +116,42 @@ class SamplingTimewindow:
 
     @cached_property
     def t_max(self):
-        return u.Quantity(self.min,self.unit)
+        return u.Quantity(self.max,self.unit)
 
 @dataclass
 class SamplingConfigure:
     nu: mydataclasses.QuantityData
     timewindow: SamplingTimewindow
 
+@dataclass(frozen=True,slots=True)
+class Configure:
+    time: QuantityArray
+    fnu_unit: str
+    nu: QuantityData
+
+    @classmethod
+    def from_yaml(
+            cls,
+            path:Path
+    )->Self:
+        dict_data = fr.read_yaml_pyyaml(path)
+        return from_dict(
+            data_class = cls,
+            data = dict_data
+        )
+
+    @property
+    def t_obs(self)->u.Quantity:
+        return u.Quantity(self.time.values.arr,self.time.unit)
+    
+    @property
+    def nu_obs(self)->u.Quantity:
+        return u.Quantity(self.nu.value,self.nu.unit)
+
 @dataclass(frozen=True)
 class Chi2FittingConfigure(input_reader.YAMLReadable):
     free_parameters: list
-    model: compute_lightcurve.Configure
+    model: Configure
     sampling: SamplingConfigure
 
     @property

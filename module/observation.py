@@ -4,6 +4,7 @@ from typing import Self, cast
 from dacite import from_dict
 from numpy.typing import NDArray
 from functools import cached_property
+from module import parameter_table
 from module.models import ThermalSynchrotron, ThermalSynchrotronTable, calculate_phi, calculate_xm
 from module.mydataclasses import QuantityData,QuantityArray
 from module.types import FloatArray
@@ -39,19 +40,28 @@ class LightcurveMetadata:
     def bin_width(self):
         return u.Quantity(self.t_bin,self.t_unit)
 
+@dataclass(frozen=True, slots=True)
+class Binning:
+    bin_width: float
+    t_center: FloatArray
+    t_left: FloatArray
+    t_right: FloatArray
+    t_unit: str
+
 @dataclass
 class Lightcurve:
     metadata: LightcurveMetadata
     df: pd.DataFrame
 
-    @property
     def time_bin_bounds(
         self,
-    ) -> tuple[float, FloatArray, FloatArray]:
+        timewindow: parameter_table.SamplingTimewindow,
+    ) -> Binning:
         t: FloatArray = np.asarray(
             self.df[Columns.T],
             dtype=np.float64,
         )
+        t_unit = self.metadata.t_unit
 
         if t.size < 2:
             raise ValueError(
@@ -71,10 +81,28 @@ class Lightcurve:
             )
 
         bin_width = float(dt[0])
-        t_left = t - 0.5 * bin_width
-        t_right = t + 0.5 * bin_width
+        t_min = float(
+            timewindow.t_min.to_value(t_unit)
+        )
+        t_max = float(
+            timewindow.t_max.to_value(t_unit)
+        )
 
-        return (bin_width, t_left, t_right)
+        inside = (t >= t_min) & (t <= t_max)
+        t_center = t[inside]
+
+        if t_center.size == 0:
+            raise ValueError(
+                "指定された時間範囲に観測点がありません."
+            )
+
+        return Binning(
+            bin_width=bin_width,
+            t_center=t_center,
+            t_left=t_center - 0.5 * bin_width,
+            t_right=t_center + 0.5 * bin_width,
+            t_unit=t_unit,
+        )
 
 @dataclass(frozen=True, slots=True)
 class LongformatLightcurve:
