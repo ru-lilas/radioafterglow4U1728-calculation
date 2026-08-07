@@ -12,6 +12,7 @@ from module import mydataclasses, synchrotron_scaling_values
 from module import electron_temperature
 from enum import StrEnum, auto
 from module import quantity_converter
+from module import compute_lightcurve, input_reader
 
 class Columns(StrEnum):
     A_WIND = auto()
@@ -100,3 +101,37 @@ class PhysicalParameters:
             Columns.PHI_THETA: cast(u.UnitBase,self.phi_theta.unit).to_string(),
             Columns.LNU_THETA: cast(u.UnitBase,self.lnu_theta.unit).to_string()
         }
+
+@dataclass
+class SamplingTimewindow:
+    min: float
+    max: float
+    unit: str
+
+    @cached_property
+    def t_min(self):
+        return u.Quantity(self.min,self.unit)
+
+    @cached_property
+    def t_max(self):
+        return u.Quantity(self.min,self.unit)
+
+@dataclass
+class SamplingConfigure:
+    nu: mydataclasses.QuantityData
+    timewindow: SamplingTimewindow
+
+@dataclass(frozen=True)
+class Chi2FittingConfigure(input_reader.YAMLReadable):
+    free_parameters: list
+    model: compute_lightcurve.Configure
+    sampling: SamplingConfigure
+
+    @property
+    def n_model(self):
+        return len(self.free_parameters)
+
+@dataclass(frozen=True)
+class GeneralInputs(input_reader.YAMLReadable):
+    physical_parameters: PhysicalParameters
+    chi2fitting: Chi2FittingConfigure

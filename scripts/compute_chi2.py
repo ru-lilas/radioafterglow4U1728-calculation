@@ -23,31 +23,7 @@ from module import mystatistics
 from module import observation
 from functools import cached_property
 import astropy.units as u
-
-@dataclass
-class SamplingTimewindow:
-    min: float
-    max: float
-    unit: str
-
-    @cached_property
-    def t_min(self):
-        return u.Quantity(self.min,self.unit)
-
-    @cached_property
-    def t_max(self):
-        return u.Quantity(self.min,self.unit)
-
-@dataclass
-class SamplingConfigure:
-    nu: mydataclasses.QuantityData
-    timewindow: SamplingTimewindow
-
-@dataclass
-class Chi2FittingConfigure(input_reader.YAMLReadable):
-    n_model: int
-    model: compute_lightcurve.Configure
-    sampling: SamplingConfigure
+from module.parameter_table import GeneralInputs
 
 def filter_df_obs_time_window(df_obs:pd.DataFrame,conf_filter:dict[str,Any]):
     return filter_df_value_window(
@@ -89,49 +65,18 @@ args = parser.parse_args()
 path_conf:Path = args.config
 path_param_table:Path = args.parameter_table
 path_integral_table:Path = args.integral_table
-
-# metadata_param_table = fr.read_keyvalue(param_table_path)
-# df_param_table = fr.read_csv_within_idx(param_table_path)
-conf_fitting = Chi2FittingConfigure.from_yaml(path_conf)
-
-# param_yaml_path:Path = args.parameter_yaml
-# param_yaml = input_reader.read_physical_parameters(param_yaml_path)
-
-
-# data_integral = fetch_numerical_table_path(path_integral_table)
-
 path_obslc:Path = args.obs_lc
-# df_obs_raw = fr.read_csv(path_obslc)
-metadata_obs = observation.LightcurveMetadata.from_keyvalue(path_obslc)
-
-# confpath:Path = args.config
-# conf_sampling = fr.read_yaml_pyyaml(confpath)
-
 outpath:Path = args.output
 outpath.parent.mkdir(parents=True,exist_ok=True)
 
-# d_src = QuantityData(
-#     value = np.asarray(param_yaml.distance.value,dtype=np.float64),
-#     unit = param_yaml.distance.unit
-# )
-#
-# df_obs = filter_df_obs_time_window(
-#     df_obs_raw,conf_sampling
-# )
-# dfset_obs = dataframe_utils.build_dfs_nu(df_obs)
-#
-# phi_unit = metadata_param_table[KeyNames.PHI_UNIT]
-# lnu_unit = metadata_param_table[KeyNames.LNU_UNIT]
-# fnu_unit = metadata_obs[KeyNames.FNU_UNIT]
-#
-# nu_unit = metadata_obs[KeyNames.NU_UNIT]
-# bestfit_rows:list[pd.Series] = []
-# df_list = []
+conf = GeneralInputs.from_yaml(path_conf)
+conf_fitting = conf.chi2fitting
+conf_sampling = conf_fitting.sampling
 
-# n_param = conf_fitting.n_model  # the number of parameters you want to fit
+obslc_general = observation.LongformatLightcurve.from_csv(path_obslc)
+obslc = obslc_general.extract_lightcurve(conf_sampling.nu.value)
 
 # calculate model lightcurves
-
 lc_conf = conf_fitting.model
 table_integral = compute_lightcurve.ThermalSynchrotronTable.from_csv(path_integral_table)
 lc_model = compute_lightcurve.ThermalSynchrotron(table_integral)
@@ -143,11 +88,9 @@ for lc_input in lc_inputs:
         model=lc_model,
         input=lc_input
     )
-    lc_binned = lc.bin_average(
-        bin_width=metadata_obs.bin_width,
-        t_max=conf_fitting.sampling.timewindow.t_max,
-        t_min=conf_fitting.sampling.timewindow.t_min,
-    )
+    # lc_binned = lc.bin_average(
+    #     bin_width=metadata_obs.bin_width,
+    # )
 
 # for nu_obs, df_obs_nu in dfset_obs.items():
 #     df_obs_nu = df_obs_nu.reset_index(drop=True)
