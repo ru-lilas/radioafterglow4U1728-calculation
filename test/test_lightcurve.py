@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
+from module.utils import Integrator
 from module.compute_lightcurve import Lightcurve
 
 @pytest.mark.parametrize(
@@ -76,6 +77,42 @@ def test_make_bin_edges(
         width,
         drop_incomplete_bin,
     )
+    print(f"\nt_edge = {actual}")
 
     assert actual.dtype == np.float64
     assert_allclose(actual, expected)
+
+@pytest.mark.parametrize(
+    ("x", "y", "expected"),
+    [
+        # 定数関数 y = 2：積分値 = 2 × (3 - 0) = 6
+        (
+            np.array([0.0, 1.0, 2.0, 3.0], dtype=np.float64),
+            np.array([2.0, 2.0, 2.0, 2.0], dtype=np.float64),
+            6.0,
+        ),
+
+        # 一次関数 y = 2x + 1
+        # 0から3までの積分値 = [x² + x]₀³ = 12
+        (
+            np.array([0.0, 1.0, 2.0, 3.0], dtype=np.float64),
+            np.array([1.0, 3.0, 5.0, 7.0], dtype=np.float64),
+            12.0,
+        ),
+
+        # 不等間隔の一次関数 y = 2x + 1
+        (
+            np.array([0.0, 0.5, 1.7, 3.0], dtype=np.float64),
+            np.array([1.0, 2.0, 4.4, 7.0], dtype=np.float64),
+            12.0,
+        ),
+    ],
+)
+def test_trapezoid(
+    x: np.ndarray,
+    y: np.ndarray,
+    expected: float,
+) -> None:
+    actual = Integrator.trapezoid(x, y)
+
+    assert actual == pytest.approx(expected)

@@ -11,6 +11,7 @@ from module.utilities import filereaders as fr
 import astropy.units as u
 import numpy as np
 import pandas as pd
+from module.utils import Integrator
 
 @dataclass(frozen=True,slots=True)
 class InputValues:
@@ -169,7 +170,7 @@ class Lightcurve:
         self,
         bin_width: u.Quantity,
         drop_incomplete_bin: bool = True
-    ):
+    )->Self:
         if len(self.t_obs) != len(self.fnu_obs):
             raise ValueError(
                 "t_obsとfnu_obsの配列長が一致しません."
@@ -195,16 +196,64 @@ class Lightcurve:
                 "t_obsは単調増加でなければなりません."
             )
 
-        start = t_obs_value[0]
-        stop = t_obs_value[-1]
-        duration = t_obs_value[-1] - t_obs_value[0]
-
-        n_bin = int(np.floor(duration/(width)))
-
         t_edge = self._make_bin_edges(
             t_obs_value,
             width,
             drop_incomplete_bin
+        )
+
+        fnu_edge: FloatArray = np.interp(
+            t_edge,
+            t_obs_value,
+            fnu,
+        )
+
+        flux_integral_list: list[float] = []
+
+        for i, (left, right) in enumerate(
+            zip(t_edge[:-1], t_edge[1:], strict=True)
+        ):
+            inside = (
+                (t_obs_value > left)
+                & (t_obs_value < right)
+            )
+
+            t_bin: FloatArray = np.concatenate(
+                (
+                    np.array([left], dtype=np.float64),
+                    t_obs_value[inside],
+                    np.array([right], dtype=np.float64),
+                )
+            )
+
+            fnu_bin: FloatArray = np.concatenate(
+                (
+                    np.array([fnu_edge[i]], dtype=np.float64),
+                    fnu[inside],
+                    np.array([fnu_edge[i + 1]], dtype=np.float64),
+                )
+            )
+
+            flux_integral_list.append(
+                Integrator.trapezoid(t_bin, fnu_bin)
+            )
+
+        flux_integral: FloatArray = np.asarray(
+            flux_integral_list,
+            dtype=np.float64,
+        )
+
+        bin_widths: FloatArray = np.diff(t_edge)
+
+        fnu_average: FloatArray = flux_integral / bin_widths
+
+        t_bin_center: FloatArray = (
+            t_edge[:-1] + t_edge[1:]
+        ) / 2.0
+
+        return type(self)(
+            t_obs=t_bin_center * time_unit,
+            fnu_obs=fnu_average * fnu_unit,
         )
 
 def compute(
