@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 import numpy as np
-from scipy.special import roots_laguerre,roots_legendre
 from typing import Callable
 from module.types import FloatArray
 

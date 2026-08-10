@@ -25,14 +25,6 @@ from functools import cached_property
 import astropy.units as u
 from module.parameter_table import GeneralInputs
 
-def filter_df_obs_time_window(df_obs:pd.DataFrame,conf_filter:dict[str,Any]):
-    return filter_df_value_window(
-        df_obs,
-        column_name = KeyNames.T,
-        min = conf_filter[EstimationConfigNames.MIN],
-        max = conf_filter[EstimationConfigNames.MAX]
-    )
-
 parser = argparse.ArgumentParser()
 
 parser.add_argument(
@@ -75,8 +67,10 @@ conf_sampling = conf_fitting.sampling
 
 obslc_general = observation.LongformatLightcurve.from_csv(path_obslc)
 obslc = obslc_general.extract_lightcurve(conf_sampling.nu.value)
+print(f"Frequency: {conf_sampling.nu.value} {conf_sampling.nu.unit}")
 obs_binning = obslc.time_bin_bounds(conf_sampling.timewindow)
-print(obs_binning)
+
+print(obslc.df)
 
 # calculate model lightcurves
 lc_conf = conf_fitting.model
@@ -84,7 +78,7 @@ table_integral = compute_lightcurve.ThermalSynchrotronTable.from_csv(path_integr
 lc_model = compute_lightcurve.ThermalSynchrotron(table_integral)
 lc_inputs = compute_lightcurve.build_inputs(path_param_table)
 
-for lc_input in lc_inputs:
+for i,lc_input in enumerate(lc_inputs):
     lc = compute_lightcurve.compute(
         config=lc_conf,
         model=lc_model,
@@ -94,6 +88,17 @@ for lc_input in lc_inputs:
         binning=obs_binning,
         drop_incomplete_bin=True
     )
+    df = lc_binned.to_df(
+        t_unit = "min",
+        fnu_unit= "mJy"
+    )
+
+    # chi2 = mystatistics.calculate_chi2(
+    #     x_model = lc_binned.fnu_observer_frame,
+    #     x_data = obslc.df,
+    #     sigma = 
+    # )
+    fw.write_csv(df,outpath)
 
 # for nu_obs, df_obs_nu in dfset_obs.items():
 #     df_obs_nu = df_obs_nu.reset_index(drop=True)

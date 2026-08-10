@@ -158,28 +158,26 @@ class CalculationLightcurve:
                 "理論光度曲線には2点以上の時刻が必要です."
             )
 
-        model_min = float(t_model_value[0])
-        model_max = float(t_model_value[-1])
-
-        required_min = float(np.min(binning.t_left))
-        required_max = float(np.max(binning.t_right))
-
-        left_outside = (
-            required_min < model_min
-            and not np.isclose(required_min, model_min)
-        )
-        right_outside = (
-            required_max > model_max
-            and not np.isclose(required_max, model_max)
-        )
-
-        if left_outside or right_outside:
+        if (
+            binning.t_left[0] < t_model_value[0]
+            and not np.isclose(
+                binning.t_left[0],
+                t_model[0],
+            )
+        ):
             raise ValueError(
-                "理論光度曲線が観測binの時間範囲を内包していません. "
-                f"model=[{model_min}, {model_max}] "
-                f"{binning.t_unit}, "
-                f"required=[{required_min}, {required_max}] "
-                f"{binning.t_unit}"
+                "理論光度曲線が最初の観測binを覆っていません."
+            )
+
+        if (
+            binning.t_right[-1] > t_model_value[-1]
+            and not np.isclose(
+                binning.t_right[-1],
+                t_model[-1],
+            )
+        ):
+            raise ValueError(
+                "理論光度曲線が最後の観測binを覆っていません."
             )
 
     def bin_average(
@@ -187,92 +185,114 @@ class CalculationLightcurve:
         binning: observation.Binning,
         drop_incomplete_bin: bool = True
     )->Self:
-        if len(self.t_observer_frame) != len(self.fnu_observer_frame):
-            raise ValueError(
-                "t_obsとfnu_obsの配列長が一致しません."
-            )
         self.validate_time_coverage(self.t_observer_frame,binning)
 
         t_unit = binning.t_unit
         fnu_unit = cast(u.UnitBase,self.fnu_observer_frame.unit)
 
         width = binning.bin_width
-        t_arr: FloatArray = QuantityConverter.to_FloatArray(
+        t_model: FloatArray = QuantityConverter.to_FloatArray(
             self.t_observer_frame,
             binning.t_unit
         )
-        fnu_value: FloatArray = QuantityConverter.to_FloatArray(self.fnu_observer_frame,fnu_unit)
+        fnu_model: FloatArray = QuantityConverter.to_FloatArray(
+            self.fnu_observer_frame,
+            fnu_unit
+        )
 
-        duration = t_arr[-1] - t_arr[0]
-
-        if width > duration:
-            raise ValueError(
-                "bin_widthは光度曲線の全時間範囲以下にしてください."
-            )
-
-        if np.any(np.diff(t_arr) <= 0.0):
+        if np.any(np.diff(t_model) <= 0.0):
             raise ValueError(
                 "t_obsは単調増加でなければなりません."
             )
 
-        t_edge = self._make_bin_edges(
-            t_arr,
-            width,
-            drop_incomplete_bin
+        num_bin = binning.t_center.size
+        if not (
+            binning.t_left.size
+            == binning.t_right.size
+            == num_bin
+        ):
+            raise ValueError(
+                "観測binの配列長が一致しません."
+            )
+
+        # interpolate value of fnu at bin-boundary
+        fnu_left: FloatArray = np.interp(
+            binning.t_left,
+            t_model,
+            fnu_model,
+        )
+        fnu_right: FloatArray = np.interp(
+            binning.t_right,
+            t_model,
+            fnu_model,
         )
 
-        fnu_edge: FloatArray = np.interp(
-            t_edge,
-            t_arr,
-            fnu_value,
-        )
-
-        flux_integral_list: list[float] = []
+        fnu_average_list: list[float] = []
 
         for i, (left, right) in enumerate(
-            zip(t_edge[:-1], t_edge[1:], strict=True)
+            zip(
+                binning.t_left,
+                binning.t_right,
+                strict=True,
+            )
         ):
             inside = (
-                (t_arr > left)
-                & (t_arr < right)
+                (t_model > left)
+                & (t_model < right)
             )
 
+            # create array for each bin
             t_bin: FloatArray = np.concatenate(
                 (
-                    np.array([left], dtype=np.float64),
-                    t_arr[inside],
-                    np.array([right], dtype=np.float64),
+                    np.array(
+                        [left],
+                        dtype=np.float64
+                    ),
+                    t_model[inside],
+                    np.array(
+                        [right],
+                        dtype=np.float64
+                    ),
                 )
             )
-
             fnu_bin: FloatArray = np.concatenate(
                 (
-                    np.array([fnu_edge[i]], dtype=np.float64),
-                    fnu_value[inside],
-                    np.array([fnu_edge[i + 1]], dtype=np.float64),
+                    np.array(
+                        [fnu_left[i]],
+                        dtype=np.float64
+                    ),
+                    fnu_model[inside],
+                    np.array(
+                        [fnu_right[i]],
+                        dtype=np.float64
+                    ),
                 )
             )
 
-            flux_integral_list.append(
-                Integrator.trapezoid(t_bin, fnu_bin)
+            # integral within bin[i]
+            flux_integral = Integrator.trapezoid(
+                t_bin,
+                fnu_bin
             )
 
-        flux_integral: FloatArray = np.asarray(
-            flux_integral_list,
+            fnu_average_list.append(
+                flux_integral/ (right - left)
+            )
+
+        fnu_average: FloatArray = np.asarray(
+            fnu_average_list,
             dtype=np.float64,
         )
 
-        bin_widths: FloatArray = np.diff(t_edge)
-
-        fnu_average: FloatArray = flux_integral / bin_widths
-
-        t_bin_center: FloatArray = (
-            t_edge[:-1] + t_edge[1:]
-        ) / 2.0
-
         return type(self)(
-            t_observer_frame=t_bin_center * u.Unit(t_unit),
-            fnu_observer_frame=fnu_average * fnu_unit,
+            t_observer_frame=u.Quantity(
+                binning.t_center,
+                unit=t_unit,
+            ),
+            fnu_observer_frame=u.Quantity(
+                fnu_average,
+                unit=fnu_unit,
+            ),
         )
 
 def compute(
