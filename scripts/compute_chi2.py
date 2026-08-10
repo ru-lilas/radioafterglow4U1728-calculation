@@ -70,7 +70,9 @@ obslc = obslc_general.extract_lightcurve(conf_sampling.nu.value)
 print(f"Frequency: {conf_sampling.nu.value} {conf_sampling.nu.unit}")
 obs_binning = obslc.time_bin_bounds(conf_sampling.timewindow)
 
-print(obslc.df)
+obslc_selected = obslc.select_timewindow(conf_sampling.timewindow)
+print(conf_sampling.timewindow)
+print(obslc_selected.df)
 
 # calculate model lightcurves
 lc_conf = conf_fitting.model

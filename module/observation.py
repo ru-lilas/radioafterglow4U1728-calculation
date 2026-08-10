@@ -1,10 +1,10 @@
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass,replace
 from typing import Self, cast
 from dacite import from_dict
 from numpy.typing import NDArray
 from functools import cached_property
-from module import parameter_table
+from module import dataframe_processors, parameter_table
 from module.models import ThermalSynchrotron, ThermalSynchrotronTable, calculate_phi, calculate_xm
 from module.mydataclasses import QuantityData,QuantityArray
 from module.types import FloatArray
@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 from module.types import FloatArray
 from enum import StrEnum, auto
+from module.parameter_table import SamplingTimewindow
 
 class Columns(StrEnum):
     T = auto()
@@ -102,6 +103,47 @@ class Lightcurve:
             t_left=t_center - 0.5 * bin_width,
             t_right=t_center + 0.5 * bin_width,
             t_unit=t_unit,
+        )
+
+    def select_timewindow(
+        self,
+        timewindow:SamplingTimewindow
+    ) -> Self:
+
+        t_unit = self.metadata.t_unit
+
+        #=== ここから下はSamplingTimewindowクラスに記述するべきでは ===#
+        t_min = timewindow.t_min.value_in(t_unit)
+        t_max = timewindow.t_max.value_in(t_unit)
+
+        if t_max <= t_min:
+            raise ValueError(
+                "timewindow.maxはminより大きくしてください."
+            )
+        #=== ここまで ===#
+
+        #=== これもLightcurveのメソッドとして切り出すべき ===#
+        t:FloatArray = dataframe_processors.convert_ndarray(
+            self.df,
+            Columns.T
+        )
+        #=== ここまで ===#
+
+        inside = (t >= t_min ) & ( t <= t_max )
+
+        if not np.any(inside):
+            raise ValueError(
+            "指定された時間範囲に観測データがありません."
+        )
+
+        df_selected = cast(
+            pd.DataFrame,
+            self.df.loc[inside].reset_index(drop=True).copy()
+        )
+
+        return replace(
+            self,
+            df=df_selected
         )
 
 @dataclass(frozen=True, slots=True)
