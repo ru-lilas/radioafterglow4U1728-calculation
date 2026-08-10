@@ -21,6 +21,8 @@ class Columns(StrEnum):
     NU = auto()
     FNU = auto()
     FNU_ERR = auto()
+    FNU_NET = auto()
+    FNU_NET_ERR = auto()
 
 @dataclass
 class LightcurveMetadata:
@@ -105,6 +107,12 @@ class Lightcurve:
             t_unit=t_unit,
         )
 
+    def to_FloatArray(self, column:str):
+        return dataframe_processors.convert_ndarray(
+            self.df,
+            column
+        )
+
     def select_timewindow(
         self,
         timewindow:SamplingTimewindow
@@ -122,12 +130,7 @@ class Lightcurve:
             )
         #=== ここまで ===#
 
-        #=== これもLightcurveのメソッドとして切り出すべき ===#
-        t:FloatArray = dataframe_processors.convert_ndarray(
-            self.df,
-            Columns.T
-        )
-        #=== ここまで ===#
+        t = self.to_FloatArray(Columns.T)
 
         inside = (t >= t_min ) & ( t <= t_max )
 
@@ -145,6 +148,7 @@ class Lightcurve:
             self,
             df=df_selected
         )
+
 
 @dataclass(frozen=True, slots=True)
 class LongformatLightcurve:
