@@ -95,3 +95,4 @@ for i,lc_input in enumerate(lc_inputs):
     df = lc_binned.to_df(t_unit="min",fnu_unit="mJy")
     print(df.attrs)
     print(df)
+    fw.write_csv_with_params(df,df.attrs,outpath)

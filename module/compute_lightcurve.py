@@ -95,8 +95,8 @@ class Input:
 
 @dataclass(frozen=True, slots=True)
 class UnitMetadata:
-    t: str|u.UnitBase
-    fnu: str|u.UnitBase
+    t_unit: str|u.UnitBase
+    fnu_unit: str|u.UnitBase
 
 @dataclass(frozen=True,slots=True)
 class BinnedCalculationLightcurve:
@@ -125,26 +125,35 @@ class BinnedCalculationLightcurve:
                 df,Columns.T_LEFT
             ),
             fnu_averaged = dataframe_processors.convert_ndarray(
-                df,Columns.FNU_OBSERVER_FRAME
+                df,Columns.FNU_AVERAGED
+            )
+        )
+
+    @property
+    def bin_edges(self):
+        return np.concatenate(
+            (
+                self.t_left,
+                np.array([self.t_right[-1]]),
             )
         )
 
     def to_df(self,t_unit:str,fnu_unit:str):
         t_left = QuantityArray(
             values = self.t_left,
-            unit = self.units.t
+            unit = self.units.t_unit
         )
         t_center = QuantityArray(
             values = self.t_center,
-            unit = self.units.t
+            unit = self.units.t_unit
         )
         t_right = QuantityArray(
             values = self.t_right,
-            unit = self.units.t
+            unit = self.units.t_unit
         )
         fnu_averaged = QuantityArray(
             values = self.fnu_averaged,
-            unit = self.units.fnu
+            unit = self.units.fnu_unit
         )
         df = pd.DataFrame({
             Columns.T_LEFT: t_left.FloatArray_in(t_unit),
@@ -365,8 +374,8 @@ class CalculationLightcurve:
         # )
         return BinnedCalculationLightcurve(
             units = UnitMetadata(
-                t = t_unit,
-                fnu = fnu_unit
+                t_unit = t_unit,
+                fnu_unit = fnu_unit
             ),
             t_center= binning.t_center,
             t_left = binning.t_left,
