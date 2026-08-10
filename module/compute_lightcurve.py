@@ -25,6 +25,10 @@ class Columns(StrEnum):
     FNU_NET_ERR = auto()
     T_UNIT = auto()
     FNU_UNIT = auto()
+    T_CENTER = auto()
+    T_LEFT = auto()
+    T_RIGHT = auto()
+    FNU_AVERAGED = auto()
 
 @dataclass(frozen=True,slots=True)
 class InputValues:
@@ -90,6 +94,71 @@ class Input:
         return self.values.doppler_delta
 
 @dataclass(frozen=True, slots=True)
+class UnitMetadata:
+    t: str|u.UnitBase
+    fnu: str|u.UnitBase
+
+@dataclass(frozen=True,slots=True)
+class BinnedCalculationLightcurve:
+    units: UnitMetadata
+    t_center: FloatArray
+    t_left: FloatArray
+    t_right: FloatArray
+    fnu_averaged: FloatArray
+
+    @classmethod
+    def from_csv(
+            cls,
+            path:Path
+    )->Self:
+        dict_data = fr.read_keyvalue(path)
+        df = fr.read_csv(path)
+        return cls(
+            units = from_dict(data_class=UnitMetadata,data=dict_data),
+            t_center =dataframe_processors.convert_ndarray(
+                    df,Columns.T_CENTER
+                ),
+            t_right = dataframe_processors.convert_ndarray(
+                df,Columns.T_RIGHT
+            ),
+            t_left = dataframe_processors.convert_ndarray(
+                df,Columns.T_LEFT
+            ),
+            fnu_averaged = dataframe_processors.convert_ndarray(
+                df,Columns.FNU_OBSERVER_FRAME
+            )
+        )
+
+    def to_df(self,t_unit:str,fnu_unit:str):
+        t_left = QuantityArray(
+            values = self.t_left,
+            unit = self.units.t
+        )
+        t_center = QuantityArray(
+            values = self.t_center,
+            unit = self.units.t
+        )
+        t_right = QuantityArray(
+            values = self.t_right,
+            unit = self.units.t
+        )
+        fnu_averaged = QuantityArray(
+            values = self.fnu_averaged,
+            unit = self.units.fnu
+        )
+        df = pd.DataFrame({
+            Columns.T_LEFT: t_left.FloatArray_in(t_unit),
+            Columns.T_CENTER: t_center.FloatArray_in(t_unit),
+            Columns.T_RIGHT: t_right.FloatArray_in(t_unit),
+            Columns.FNU_AVERAGED: fnu_averaged.FloatArray_in(fnu_unit)
+        })
+        df.attrs[Columns.T_UNIT] = t_unit
+        df.attrs[Columns.FNU_UNIT] = fnu_unit
+
+        return df
+
+
+@dataclass(frozen=True, slots=True)
 class CalculationLightcurve:
     t_observer_frame: QuantityArray
     fnu_observer_frame: QuantityArray
@@ -103,12 +172,16 @@ class CalculationLightcurve:
         df = fr.read_csv(path)
         return cls(
             t_observer_frame = QuantityArray(
-                values=dataframe_processors.convert_ndarray(df,Columns.T_OBSERVER_FRAME),
+                values=dataframe_processors.convert_ndarray(
+                    df,Columns.T_OBSERVER_FRAME
+                ),
                 unit=dict_data[Columns.T_UNIT]
             ),
             fnu_observer_frame = QuantityArray(
-                values = dataframe_processors.convert_ndarray(df,Columns.FNU_UNIT),
-                unit=dict_data[Columns.T_UNIT]
+                values = dataframe_processors.convert_ndarray(
+                    df,Columns.FNU_OBSERVER_FRAME
+                ),
+                unit=dict_data[Columns.FNU_UNIT]
             )
         )
 
@@ -186,7 +259,7 @@ class CalculationLightcurve:
         self,
         binning: observation.Binning,
         drop_incomplete_bin: bool = True
-    )->Self:
+    )->BinnedCalculationLightcurve:
         self.validate_time_coverage(self.t_observer_frame,binning)
 
         t_unit = binning.t_unit
@@ -280,15 +353,25 @@ class CalculationLightcurve:
             dtype=np.float64,
         )
 
-        return type(self)(
-            t_observer_frame=QuantityArray(
-                binning.t_center,
-                unit=t_unit,
+        # return type(self)(
+        #     t_observer_frame=QuantityArray(
+        #         binning.t_center,
+        #         unit=t_unit,
+        #     ),
+        #     fnu_observer_frame=QuantityArray(
+        #         fnu_average,
+        #         unit=fnu_unit,
+        #     ),
+        # )
+        return BinnedCalculationLightcurve(
+            units = UnitMetadata(
+                t = t_unit,
+                fnu = fnu_unit
             ),
-            fnu_observer_frame=QuantityArray(
-                fnu_average,
-                unit=fnu_unit,
-            ),
+            t_center= binning.t_center,
+            t_left = binning.t_left,
+            t_right = binning.t_right,
+            fnu_averaged = fnu_average
         )
 
 def compute(
@@ -342,6 +425,7 @@ def compute(
             fnu_unit
         )
     )
+
 
 def build_inputs(path:Path):
     df = fr.read_csv(path)

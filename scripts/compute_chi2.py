@@ -92,7 +92,6 @@ for i,lc_input in enumerate(lc_inputs):
         binning=timewindow,
         drop_incomplete_bin=True
     )
-    fnu_model = lc_binned.fnu_observer_frame.FloatArray_in(
-        obslc_selected.metadata.fnu_unit
-    )
-    print(lc_binned.to_df("min","mJy"))
+    df = lc_binned.to_df(t_unit="min",fnu_unit="mJy")
+    print(df.attrs)
+    print(df)
