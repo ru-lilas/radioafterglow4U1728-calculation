@@ -4,7 +4,7 @@ from dacite import from_dict
 from dataclasses import dataclass
 from functools import cached_property
 from typing import cast
-from module.mydataclasses import QuantityData,QuantityArray
+from module.mydataclasses import QuantityArrayBase, QuantityData,QuantityArray
 from module.types import FloatArray
 from module.utilities import filereaders as fr
 import astropy.units as u
@@ -32,7 +32,7 @@ class Columns(StrEnum):
 
 @dataclass(frozen=True,slots=True)
 class PhysicalParameters:
-    a_wind: mydataclasses.QuantityArray
+    a_wind: mydataclasses.QuantityArrayBase
     beta_sh: mydataclasses.ValueArray
     eps_b: float
     eps_th: float
@@ -131,7 +131,7 @@ class SamplingConfigure:
 
 @dataclass(frozen=True,slots=True)
 class Configure:
-    time: QuantityArray
+    time: QuantityArrayBase
     fnu_unit: str
     nu: QuantityData
 

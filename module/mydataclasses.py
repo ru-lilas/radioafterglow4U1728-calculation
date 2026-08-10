@@ -21,13 +21,30 @@ class ValueArray(YAMLReadable):
             return np.logspace(start=self.start,stop=self.stop,num=self.num,dtype=np.float64)
 
 @dataclass(frozen=True,slots=True)
-class QuantityArray:
+class QuantityArrayBase:
     values: ValueArray
-    unit: str
+    unit: str|u.UnitBase
 
     @property
     def quantity(self):
         return u.Quantity(self.values.arr,self.unit)
+
+    def FloatArray_in(self,unit:str|u.UnitBase)->FloatArray:
+        value:FloatArray = np.asarray(self.quantity.to_value(unit),dtype=np.float64)
+        return value
+
+@dataclass(frozen=True,slots=True)
+class QuantityArray:
+    values: FloatArray
+    unit: str|u.UnitBase
+
+    @property
+    def quantity(self):
+        return u.Quantity(self.values,self.unit)
+
+    def FloatArray_in(self,unit:str|u.UnitBase)->FloatArray:
+        value:FloatArray = np.asarray(self.quantity.to_value(unit),dtype=np.float64)
+        return value
 
 @dataclass(frozen=True,slots=True)
 class QuantityData:

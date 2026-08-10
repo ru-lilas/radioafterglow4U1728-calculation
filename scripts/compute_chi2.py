@@ -92,14 +92,7 @@ for i,lc_input in enumerate(lc_inputs):
         binning=timewindow,
         drop_incomplete_bin=True
     )
-    fnu_model = np.asarray(
-        lc_binned.fnu_observer_frame.to_value(obslc_selected.metadata.fnu_unit),
-            dtype = np.float64
+    fnu_model = lc_binned.fnu_observer_frame.FloatArray_in(
+        obslc_selected.metadata.fnu_unit
     )
-
-    chi2 = mystatistics.calculate_chi2(
-        x_model = fnu_model,
-        x_data = fnu_observed,
-        sigma = fnu_err_observed
-    )
-    print(chi2)
+    print(lc_binned.to_df("min","mJy"))

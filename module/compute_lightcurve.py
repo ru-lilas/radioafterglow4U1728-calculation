@@ -12,8 +12,19 @@ import astropy.units as u
 import numpy as np
 import pandas as pd
 from module.utils import Integrator
-from module import observation
+from module import dataframe_processors, observation
 from module.parameter_table import Configure
+from enum import StrEnum, auto
+
+class Columns(StrEnum):
+    T_OBSERVER_FRAME = auto()
+    NU = auto()
+    FNU_OBSERVER_FRAME = auto()
+    FNU_ERR = auto()
+    FNU_NET = auto()
+    FNU_NET_ERR = auto()
+    T_UNIT = auto()
+    FNU_UNIT = auto()
 
 @dataclass(frozen=True,slots=True)
 class InputValues:
@@ -78,44 +89,38 @@ class Input:
     def doppler_delta(self)->float:
         return self.values.doppler_delta
 
-class QuantityConverter:
-    @staticmethod
-    def to_scalar(quantity:u.Quantity,unit:str|u.UnitBase):
-        quantity_arr:FloatArray = np.asarray(
-            quantity.to_value(unit),
-            dtype=np.float64
-        )
-
-        if quantity_arr.ndim != 0:
-            raise ValueError("quantity はスカラーを指定してください.")
-
-        return quantity_arr.item()
-
-    @staticmethod
-    def to_FloatArray(quantity:u.Quantity,unit:str|u.UnitBase):
-        return np.asarray(
-            quantity.to_value(quantity.unit),
-            dtype=np.float64
-        )
-
 @dataclass(frozen=True, slots=True)
 class CalculationLightcurve:
-    t_observer_frame: u.Quantity
-    fnu_observer_frame: u.Quantity
+    t_observer_frame: QuantityArray
+    fnu_observer_frame: QuantityArray
+
+    @classmethod
+    def from_csv(
+            cls,
+            path:Path
+    )->Self:
+        dict_data = fr.read_keyvalue(path)
+        df = fr.read_csv(path)
+        return cls(
+            t_observer_frame = QuantityArray(
+                values=dataframe_processors.convert_ndarray(df,Columns.T_OBSERVER_FRAME),
+                unit=dict_data[Columns.T_UNIT]
+            ),
+            fnu_observer_frame = QuantityArray(
+                values = dataframe_processors.convert_ndarray(df,Columns.FNU_UNIT),
+                unit=dict_data[Columns.T_UNIT]
+            )
+        )
 
     def to_df(self,t_unit:str,fnu_unit:str):
-        t_obs_value:FloatArray = np.asarray(
-            self.t_observer_frame.to_value(t_unit),
-            dtype=np.float64
-        )
-        fnu_obs_value:FloatArray = np.asarray(
-            self.fnu_observer_frame.to_value(fnu_unit),
-            dtype=np.float64
-        )
-        return pd.DataFrame({
-            "t_obs": t_obs_value,
-            "fnu_obs": fnu_obs_value
+        df = pd.DataFrame({
+            Columns.T_OBSERVER_FRAME: self.t_observer_frame.FloatArray_in(t_unit),
+            Columns.FNU_OBSERVER_FRAME: self.fnu_observer_frame.FloatArray_in(fnu_unit)
         })
+        df.attrs[Columns.T_UNIT] = t_unit
+        df.attrs[Columns.FNU_UNIT] = fnu_unit
+        return df
+
 
     @staticmethod
     def _make_bin_edges(
@@ -145,24 +150,21 @@ class CalculationLightcurve:
 
     @staticmethod
     def validate_time_coverage(
-        t_model: u.Quantity,
+        t_model: QuantityArray,
         binning: observation.Binning,
     ) -> None:
-        t_model_value: FloatArray = np.asarray(
-            t_model.to_value(binning.t_unit),
-            dtype=np.float64,
-        )
+        t_model_arr = t_model.values
 
-        if t_model_value.size < 2:
+        if t_model_arr.size < 2:
             raise ValueError(
                 "理論光度曲線には2点以上の時刻が必要です."
             )
 
         if (
-            binning.t_left[0] < t_model_value[0]
+            binning.t_left[0] < t_model_arr[0]
             and not np.isclose(
                 binning.t_left[0],
-                t_model[0],
+                t_model_arr[0],
             )
         ):
             raise ValueError(
@@ -170,10 +172,10 @@ class CalculationLightcurve:
             )
 
         if (
-            binning.t_right[-1] > t_model_value[-1]
+            binning.t_right[-1] > t_model_arr[-1]
             and not np.isclose(
                 binning.t_right[-1],
-                t_model[-1],
+                t_model_arr[-1],
             )
         ):
             raise ValueError(
@@ -191,14 +193,8 @@ class CalculationLightcurve:
         fnu_unit = cast(u.UnitBase,self.fnu_observer_frame.unit)
 
         width = binning.bin_width
-        t_model: FloatArray = QuantityConverter.to_FloatArray(
-            self.t_observer_frame,
-            binning.t_unit
-        )
-        fnu_model: FloatArray = QuantityConverter.to_FloatArray(
-            self.fnu_observer_frame,
-            fnu_unit
-        )
+        t_model = self.t_observer_frame.FloatArray_in(binning.t_unit)
+        fnu_model = self.fnu_observer_frame.FloatArray_in(fnu_unit)
 
         if np.any(np.diff(t_model) <= 0.0):
             raise ValueError(
@@ -285,11 +281,11 @@ class CalculationLightcurve:
         )
 
         return type(self)(
-            t_observer_frame=u.Quantity(
+            t_observer_frame=QuantityArray(
                 binning.t_center,
                 unit=t_unit,
             ),
-            fnu_observer_frame=u.Quantity(
+            fnu_observer_frame=QuantityArray(
                 fnu_average,
                 unit=fnu_unit,
             ),
@@ -312,8 +308,8 @@ def compute(
         distance=input.distance,
         doppler_delta=input.doppler_delta
     )
-    time_unit = config.t_obs.unit
-    fnu_unit = fnu_obs.unit
+    time_unit = str(config.t_obs.unit)
+    fnu_unit = str(fnu_obs.unit)
 
     t_value: FloatArray = np.asarray(
         config.t_obs.to_value(time_unit),
@@ -337,8 +333,14 @@ def compute(
             )
         )
     return CalculationLightcurve(
-        t_observer_frame=u.Quantity(t_value,time_unit),
-        fnu_observer_frame=u.Quantity(fnu_value,fnu_unit)
+        t_observer_frame=QuantityArray(
+            values=t_value,
+            unit=time_unit
+        ),
+        fnu_observer_frame=QuantityArray(
+            fnu_value,
+            fnu_unit
+        )
     )
 
 def build_inputs(path:Path):
