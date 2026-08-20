@@ -69,14 +69,22 @@ def calculate_lightcurve_chi2(
     )
 
 def append_chi2_for_input(
-    chi2_record: list[dict[str,int|float]],
+    chi2_records: list[dict[str,int|float]],
     idx: int,
     chi2: float,
 ):
-    return chi2_record.append({
+    return chi2_records.append({
         Columns.IDX: idx,
         Columns.CHI2: chi2
     })
+
+def build_dataframe_chi2(
+    chi2_records: list[dict[str,int|float]]
+):
+    df = pd.DataFrame(chi2_records)
+    df[Columns.IDX] = df[Columns.IDX].astype(int)
+    df = df.set_index(Columns.IDX)
+    return df
 
 def extract_minimum_chi2(
     df_chi2:pd.DataFrame

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 from module.utilities import filereaders as fr
 from dacite import from_dict
-from module import compute_lightcurve, input_dataclasses, mydataclasses
+from module import compute_lightcurve, input_dataclasses, mydataclasses, utils
 import numpy as np
 import pandas as pd
 
@@ -69,7 +69,6 @@ conf_sampling = conf_fitting.sampling
 
 obslc_general = observation.LongformatLightcurve.from_csv(path_obslc)
 obslc = obslc_general.extract_lightcurve(conf_sampling.nu.value)
-print(f"Frequency: {conf_sampling.nu.value} {conf_sampling.nu.unit}")
 
 obslc_selected = obslc.select_timewindow(conf_sampling.timewindow)
 n_data = len(obslc_selected.df)
@@ -100,14 +99,16 @@ for lc_input in compute_lightcurve.build_inputs(path_param_table):
         lc_input.values.idx,
         chi2
     )
-df = pd.DataFrame(chi2_records)
-df["idx"] = df["idx"].astype(int)
-df = df.set_index("idx")
+df = chi2_fitting.build_dataframe_chi2(chi2_records)
 chi2_min_data = chi2_fitting.build_minimum_chi2_summary(
     df_chi2= df,
     n_data = n_data,
     n_param= n_parameter
 )
 chi2_min_data.update_df_attrs(df)
-print(df.attrs)
-print(df)
+utils.FileWriter.df_to_csv(
+    path=outpath,
+    df = df,
+    save_attrs=True,
+    save_index=True
+)
