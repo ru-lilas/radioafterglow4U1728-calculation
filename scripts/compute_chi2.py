@@ -71,7 +71,6 @@ print(f"Frequency: {conf_sampling.nu.value} {conf_sampling.nu.unit}")
 
 obslc_selected = obslc.select_timewindow(conf_sampling.timewindow)
 timewindow = obslc_selected.time_bin_bounds(conf_sampling.timewindow)
-print(obslc_selected.df)
 
 fnu_observed = obslc_selected.to_FloatArray(observation.Columns.FNU_NET)
 fnu_err_observed = obslc_selected.to_FloatArray(observation.Columns.FNU_NET_ERR)
@@ -93,6 +92,4 @@ for i,lc_input in enumerate(lc_inputs):
         drop_incomplete_bin=True
     )
     df = lc_binned.to_df(t_unit="min",fnu_unit="mJy")
-    print(df.attrs)
-    print(df)
     fw.write_csv_with_params(df,df.attrs,outpath)

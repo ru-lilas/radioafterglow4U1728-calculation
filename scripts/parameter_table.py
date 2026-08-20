@@ -3,7 +3,6 @@ from dataclasses import asdict
 from pathlib import Path
 
 from dacite import from_dict
-from module import compute_scaling_parameters
 from module.input_reader import read_physical_parameters
 from module.parameter_table import PhysicalParameters
 from module.utilities import filereaders as fr
