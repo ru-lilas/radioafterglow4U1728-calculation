@@ -24,6 +24,7 @@ from module import observation
 from functools import cached_property
 import astropy.units as u
 from module.parameter_table import GeneralInputs
+from module import chi2_fitting
 
 parser = argparse.ArgumentParser()
 
@@ -63,6 +64,7 @@ outpath.parent.mkdir(parents=True,exist_ok=True)
 
 conf = GeneralInputs.from_yaml(path_conf)
 conf_fitting = conf.chi2fitting
+n_parameter = len(conf_fitting.free_parameters)
 conf_sampling = conf_fitting.sampling
 
 obslc_general = observation.LongformatLightcurve.from_csv(path_obslc)
@@ -70,18 +72,16 @@ obslc = obslc_general.extract_lightcurve(conf_sampling.nu.value)
 print(f"Frequency: {conf_sampling.nu.value} {conf_sampling.nu.unit}")
 
 obslc_selected = obslc.select_timewindow(conf_sampling.timewindow)
+n_data = len(obslc_selected.df)
 timewindow = obslc_selected.time_bin_bounds(conf_sampling.timewindow)
-
-fnu_observed = obslc_selected.to_FloatArray(observation.Columns.FNU_NET)
-fnu_err_observed = obslc_selected.to_FloatArray(observation.Columns.FNU_NET_ERR)
 
 # calculate model lightcurves
 lc_conf = conf_fitting.model
 table_integral = compute_lightcurve.ThermalSynchrotronTable.from_csv(path_integral_table)
 lc_model = compute_lightcurve.ThermalSynchrotron(table_integral)
-lc_inputs = compute_lightcurve.build_inputs(path_param_table)
 
-for i,lc_input in enumerate(lc_inputs):
+chi2_records: list[dict[str, int | float]] = []
+for lc_input in compute_lightcurve.build_inputs(path_param_table):
     lc = compute_lightcurve.compute(
         config=lc_conf,
         model=lc_model,
@@ -91,5 +91,23 @@ for i,lc_input in enumerate(lc_inputs):
         binning=timewindow,
         drop_incomplete_bin=True
     )
-    df = lc_binned.to_df(t_unit="min",fnu_unit="mJy")
-    fw.write_csv_with_params(df,df.attrs,outpath)
+    chi2 = chi2_fitting.calculate_lightcurve_chi2(
+        model= lc_binned,
+        observed=obslc_selected
+    )
+    chi2_fitting.append_chi2_for_input(
+        chi2_records,
+        lc_input.values.idx,
+        chi2
+    )
+df = pd.DataFrame(chi2_records)
+df["idx"] = df["idx"].astype(int)
+df = df.set_index("idx")
+chi2_min_data = chi2_fitting.build_minimum_chi2_summary(
+    df_chi2= df,
+    n_data = n_data,
+    n_param= n_parameter
+)
+chi2_min_data.update_df_attrs(df)
+print(df.attrs)
+print(df)

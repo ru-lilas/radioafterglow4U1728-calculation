@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Self, cast
@@ -138,15 +139,26 @@ class BinnedCalculationLightcurve:
             )
         )
 
+    @property
+    def t_center_quantity(self)->QuantityArray:
+        return QuantityArray(
+            values = self.t_center,
+            unit = self.units.t_unit
+        )
+
+    @property
+    def fnu_averaged_quantity(self)->QuantityArray:
+        return QuantityArray(
+            values = self.fnu_averaged,
+            unit = self.units.fnu_unit
+        )
+
     def to_df(self,t_unit:str,fnu_unit:str):
         t_left = QuantityArray(
             values = self.t_left,
             unit = self.units.t_unit
         )
-        t_center = QuantityArray(
-            values = self.t_center,
-            unit = self.units.t_unit
-        )
+        t_center = self.t_center_quantity
         t_right = QuantityArray(
             values = self.t_right,
             unit = self.units.t_unit
@@ -436,6 +448,24 @@ def compute(
     )
 
 
+
+# def build_inputs(
+#     path: Path,
+# ) -> Iterator[tuple[int, Input]]:
+#     df = fr.read_csv(path)
+#     input_units = InputUnits.from_keyvalue(path)
+#
+#     for record in df.to_dict("records"):
+#         idx = int(record["idx"])
+#
+#         yield (
+#             idx,
+#             Input(
+#                 values=InputValues(**record),
+#                 units=input_units,
+#             ),
+#         )
+#
 def build_inputs(path:Path):
     df = fr.read_csv(path)
     lc_inputunits = InputUnits.from_keyvalue(path)

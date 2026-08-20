@@ -4,16 +4,28 @@ import numpy as np
 from scipy import stats
 from dataclasses import dataclass,asdict
 from module.input_reader import InputReader
-
+from module.types import FloatArray
 type NDArray64 = NDArray[np.float64]
 
 def calculate_chi2(
-    x_model:NDArray64|float,
-    x_data:NDArray64,
-    sigma:NDArray64,
-):
+    x_model:FloatArray|float,
+    x_data:FloatArray,
+    sigma:FloatArray,
+)->float:
     chi_arr = (x_model - x_data)/sigma
     return np.sum(chi_arr**2).item()
+
+def calculate_ndof(
+    n_data: int,
+    n_parameter: int
+)->int:
+    ndof = n_data - n_parameter
+    if ndof <= 0:
+        raise ValueError(
+            "自由度は正でなければなりません."
+        )
+    else:
+        return ndof
 
 def calculate_reduced_chi2(
     chi2: float,
