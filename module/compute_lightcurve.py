@@ -1,7 +1,7 @@
-from collections.abc import Iterator
+from collections.abc import Iterator,Mapping
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Self, cast
+from typing import Self, cast, Any, Hashable
 from dacite import from_dict
 from numpy.typing import NDArray
 from functools import cached_property
@@ -12,7 +12,7 @@ from module.utilities import filereaders as fr
 import astropy.units as u
 import numpy as np
 import pandas as pd
-from module.utils import Integrator
+from module.utils import DataFrameUtils, Integrator,FileReader
 from module import dataframe_processors, observation
 from module.parameter_table import Configure
 from enum import StrEnum, auto
@@ -59,16 +59,52 @@ class InputUnits:
             cls,
             path:Path
     )->Self:
-        dict_data = fr.read_keyvalue(path)
+        dict_data = FileReader.keyvalue(path)
         return from_dict(
             data_class = cls,
             data = dict_data
         )
 
+def ensure_string_keys(
+    mapping: Mapping[Hashable, Any],
+) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+
+    for key, value in mapping.items():
+        if not isinstance(key, str):
+            raise TypeError(
+                f"辞書のキーはstrでなければなりません: {key!r}"
+            )
+
+        result[key] = value
+
+    return result
+
 @dataclass(frozen=True,slots=True)
 class Input:
     values: InputValues
     units: InputUnits
+
+    @classmethod
+    def from_idx(
+        cls,
+        df:pd.DataFrame,
+        idx: int
+    ):
+        row:pd.Series = DataFrameUtils.extract_row_by_index(df,idx)
+        values_dict = ensure_string_keys(
+            row.to_dict()
+        )
+        units_dict = ensure_string_keys(
+            df.attrs
+        )
+        return cls(
+            values = InputValues(
+                **values_dict,
+                idx=idx
+            ),
+            units = InputUnits(**units_dict)
+        )
 
     @property
     def a_wind(self)->u.Quantity:
