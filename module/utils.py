@@ -1,8 +1,10 @@
 import numpy as np
-from typing import Callable
+from typing import Callable,cast
 from module.types import FloatArray
 import pandas as pd
 from pathlib import Path
+import warnings
+from typing import Any
 
 class Integrator:
     @staticmethod
@@ -29,3 +31,82 @@ class FileWriter:
                 pass
 
             df.to_csv(f, index=save_index)
+
+def parse_value(value: str) -> Any:
+    value = value.strip()
+
+    # 空文字だけは warning
+    if value == "":
+        warnings.warn("empty value detected")
+        return value
+
+    # floatとして読めるならfloat
+    try:
+        return float(value)
+
+    # 失敗したら普通にstr
+    except ValueError:
+        return value
+
+class FileReader:
+
+    @staticmethod
+    def keyvalue(
+        path: Path,
+        split_sign:str="="
+    ):
+        keyvalue = {}
+        if not path.is_file():
+            print(f"ファイルが存在しません:{path}")
+        #=== try to open csv file
+        with open(path,"r", encoding="utf-8") as ofs:
+            lines = ofs.readlines()
+        for line in lines:
+            line = line.strip()  # remove whitespace
+            if line.startswith('#'):
+                line = line[1:].strip()
+                if split_sign in line:
+                    key, value = line.split(split_sign,1)
+
+                    key = key.strip()
+                    keyvalue[key] = parse_value(value)
+            else:
+                break
+        return keyvalue
+
+    @classmethod
+    def table_from_csv(
+        cls,
+        path: Path,
+        idx:str|None = None,
+        sep:str = ",",
+        split_sign:str = "=",
+    ):
+        metadata = cls.keyvalue(path,split_sign=split_sign)
+        df = pd.read_csv(
+            path,
+            index_col=None,
+            comment = "#",
+            sep = sep
+        )
+        if metadata is not None:
+            df.attrs = metadata
+        else:
+            pass
+
+        if idx is None:
+            return df
+        else:
+            return df.set_index(idx)
+
+class DataFrameUtils:
+
+    @staticmethod
+    def extract_row_by_index(
+        df: pd.DataFrame,
+        idx: int
+    )->pd.Series:
+        return cast(
+            pd.Series,
+            df.loc[idx]
+        )

@@ -1,4 +1,5 @@
 
+from typing import Self
 from module.compute_lightcurve import BinnedCalculationLightcurve
 from module import dataframe_utils, observation
 from module.mydataclasses import QuantityArray
@@ -8,6 +9,8 @@ import numpy as np
 import pandas as pd
 from enum import StrEnum, auto
 from dataclasses import dataclass
+from module.utils import FileReader
+from pathlib import Path
 
 class Columns(StrEnum):
     IDX = auto()
@@ -98,6 +101,19 @@ class MinimumChi2Summary:
     n_data: int
     n_param: int
 
+    @classmethod
+    def from_csv(
+        cls,
+        path:Path
+    )->Self:
+        dict_data = FileReader.keyvalue(path)
+        return cls(
+            idx = dict_data[Columns.IDX_MIN],
+            chi2_min = dict_data[Columns.CHI2MIN],
+            n_data = dict_data[Columns.N_DATA],
+            n_param = dict_data[Columns.N_PARAM]
+        )
+
     @property
     def ndof(self)->int:
         return mystatistics.calculate_ndof(
@@ -115,11 +131,8 @@ class MinimumChi2Summary:
     def update_df_attrs(self,df:pd.DataFrame):
         df.attrs[Columns.IDX_MIN] = self.idx
         df.attrs[Columns.CHI2MIN] = self.chi2_min
-        df.attrs[Columns.CHI2MIN_RED] = self.chi2_min_red
         df.attrs[Columns.N_DATA] = self.n_data
         df.attrs[Columns.N_PARAM] = self.n_param
-        df.attrs[Columns.N_DOF] = self.ndof
-        df.attrs[Columns.PVALUE] = self.pvalue
         return
 
 def build_minimum_chi2_summary(

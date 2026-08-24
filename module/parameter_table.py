@@ -10,7 +10,7 @@ from module.utilities import filereaders as fr
 import astropy.units as u
 import numpy as np
 import pandas as pd
-from module import mydataclasses, synchrotron_scaling_values
+from module import mydataclasses, synchrotron_scaling_values, utils
 from module import electron_temperature
 from enum import StrEnum, auto
 from module import quantity_converter
@@ -29,6 +29,7 @@ class Columns(StrEnum):
     TAU_THETA = auto()
     LNU_THETA = auto()
     DOPPLER_DELTA = auto()
+    IDX = auto()
 
 @dataclass(frozen=True,slots=True)
 class PhysicalParameters:
@@ -168,3 +169,13 @@ class Chi2FittingConfigure(input_reader.YAMLReadable):
 class GeneralInputs(input_reader.YAMLReadable):
     physical_parameters: PhysicalParameters
     chi2fitting: Chi2FittingConfigure
+
+def read_as_df(
+    path:Path
+)->pd.DataFrame:
+    return utils.FileReader.table_from_csv(
+        path = path,
+        idx = Columns.IDX,
+        sep = ",",
+        split_sign = "="
+    )
