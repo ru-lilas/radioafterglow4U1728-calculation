@@ -233,6 +233,29 @@ class LineStyle:
             if value is not None
         }
 
+@dataclass(frozen=True, slots=True)
+class ScatterStyle:
+    marker: str = "o"
+    markersize: float = 6.0
+    markerfacecolor: str = "#000000"
+    markeredgecolor: str = "#000000"
+    markeredgewidth: float = 1.0
+    ecolor: str = "#000000"
+    elinewidth: float = 1.0
+    capsize: float = 0.0
+    capthick: float = 1.0
+    linestyle: str = "none"
+    alpha: float | None = None
+    zorder: float | None = None
+    label: str | None = None
+
+    def to_kwargs(self)->dict[str,Any]:
+        return {
+            key: value
+            for key, value in asdict(self).items()
+            if value is not None
+        }
+
 def build_meshgrid(
     df,
     x_column:str,
