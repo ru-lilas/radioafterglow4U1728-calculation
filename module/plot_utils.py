@@ -66,9 +66,10 @@ class AxesConfig:
 class FigureConfig:
     figsize: FloatPair
     dpi: int = 300
+    layout_engine: str = "constrained"
 
 @dataclass(frozen=True, slots=True)
-class PlotConfig:
+class PlotLayoutConfig:
     figure: FigureConfig
     axes: AxesConfig
 
@@ -167,7 +168,7 @@ class AxesConfigurator:
         cls.apply_tick_style(ax,config.ticks)
 
 def create_configured_axes(
-    config: PlotConfig,
+    config: PlotLayoutConfig,
 ) -> tuple[Figure, Axes]:
     fig, ax = plt.subplots(
         figsize=config.figure.figsize,

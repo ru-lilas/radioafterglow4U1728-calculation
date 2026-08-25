@@ -5,6 +5,7 @@ from typing import Self, cast, Any, Hashable
 from dacite import from_dict
 from numpy.typing import NDArray
 from functools import cached_property
+from module import plot_utils
 from module.models import ThermalSynchrotron, ThermalSynchrotronTable, calculate_phi, calculate_xm
 from module.mydataclasses import QuantityData,QuantityArray
 from module.plot_utils import LineStyle
@@ -549,3 +550,23 @@ def build_inputs(path:Path):
         )
         for record in df.to_dict("records")
     ]
+
+@dataclass(frozen=True, slots=True)
+class LightcurveStyleConfig:
+    model_binned: plot_utils.LineStyle
+
+@dataclass(frozen=True, slots=True)
+class PlotConfig:
+    layout: plot_utils.PlotLayoutConfig
+    styles: LightcurveStyleConfig
+
+    @classmethod
+    def from_yaml(
+        cls,
+        path: Path
+    )->Self:
+        dict_data = FileReader.yaml_safe(path)
+        return from_dict(
+            data_class = cls,
+            data = dict_data
+        )
