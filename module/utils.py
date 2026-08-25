@@ -4,8 +4,9 @@ from module.types import FloatArray, FloatPair
 import pandas as pd
 from pathlib import Path
 import warnings
-from typing import Any
+from typing import Any,cast
 from ruamel.yaml import YAML
+from dacite import Config
 
 class Integrator:
     @staticmethod
@@ -167,3 +168,7 @@ class Convert:
             float(value[0]),
             float(value[1]),
         )
+
+DACITE_CONFIG = Config(
+    cast=[tuple],
+)
