@@ -62,7 +62,7 @@
 #       fmt: '.1f'
 #
 linestyles:
-  calculation:
+  bin_averaged: 
     color: "#000000"
     linewidth: 2.0
     linestyle: "-"
