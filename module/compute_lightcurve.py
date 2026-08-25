@@ -1,12 +1,10 @@
-from collections.abc import Iterator,Mapping
+from collections.abc import Mapping
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Self, cast, Any, Hashable
-from numpy.typing import NDArray
-from functools import cached_property
 from module import plot_utils
-from module.models import ThermalSynchrotron, ThermalSynchrotronTable, calculate_phi, calculate_xm
-from module.mydataclasses import QuantityData,QuantityArray
+from module.models import ThermalSynchrotron, calculate_xm
+from module.mydataclasses import QuantityArray
 from module.plot_utils import LineStyle
 from module.types import FloatArray
 from module.utilities import filereaders as fr
