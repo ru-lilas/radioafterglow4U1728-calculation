@@ -61,14 +61,14 @@
 #       prefix: '$\chi^2_\mathrm{red}$'
 #       fmt: '.1f'
 #
-linestyles:
-  bin_averaged: 
+styles:
+  model_binned: 
     color: "#000000"
     linewidth: 2.0
     linestyle: "-"
     alpha: null
     zorder: 1.0
-plot:
+layout:
   figure:
     figsize: [16,12]
     dpi: 100
