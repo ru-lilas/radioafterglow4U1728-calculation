@@ -2,7 +2,6 @@ from collections.abc import Iterator,Mapping
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Self, cast, Any, Hashable
-from dacite import from_dict
 from numpy.typing import NDArray
 from functools import cached_property
 from module import plot_utils
@@ -19,6 +18,9 @@ from module import dataframe_processors, observation
 from module.parameter_table import Configure
 from enum import StrEnum, auto
 from matplotlib.axes import Axes
+from cattrs import Converter
+
+DATACLASS_CONVERTER = Converter()
 
 class Columns(StrEnum):
     T_OBSERVER_FRAME = auto()
@@ -63,9 +65,9 @@ class InputUnits:
             path:Path
     )->Self:
         dict_data = FileReader.keyvalue(path)
-        return from_dict(
-            data_class = cls,
-            data = dict_data
+        return DATACLASS_CONVERTER.structure(
+            dict_data,
+            cls
         )
 
 def ensure_string_keys(
@@ -151,13 +153,15 @@ class BinnedCalculationLightcurve:
             cls,
             path:Path
     )->Self:
-        dict_data = fr.read_keyvalue(path)
         df = FileReader.table_from_csv(
             path=path,
         )
-        dict_data = df.attrs
+        metadata = ensure_string_keys(df.attrs)
         return cls(
-            units = from_dict(data_class=UnitMetadata,data=dict_data),
+            units = DATACLASS_CONVERTER.structure(
+                metadata,
+                UnitMetadata
+            ),
             t_center =dataframe_processors.convert_ndarray(
                     df,Columns.T_CENTER
                 ),
@@ -566,7 +570,7 @@ class PlotConfig:
         path: Path
     )->Self:
         dict_data = FileReader.yaml_safe(path)
-        return from_dict(
-            data_class = cls,
-            data = dict_data
+        return DATACLASS_CONVERTER.structure(
+            dict_data,
+            cls
         )
