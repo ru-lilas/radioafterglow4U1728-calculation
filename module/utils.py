@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Callable,cast
-from module.types import FloatArray
+from module.types import FloatArray, FloatPair
 import pandas as pd
 from pathlib import Path
 import warnings
@@ -146,4 +146,24 @@ class DataFrameUtils:
         return cast(
             pd.Series,
             df.loc[idx]
+        )
+
+class Convert:
+    @staticmethod
+    def to_FloatPair(
+        value: Any
+    )->FloatPair:
+        if not isinstance(value, (list, tuple)):
+            raise TypeError(
+                "FloatPairはlistまたはtupleで指定してください."
+            )
+
+        if len(value) != 2:
+            raise ValueError(
+                "FloatPairには2個の値が必要です."
+            )
+
+        return (
+            float(value[0]),
+            float(value[1]),
         )
