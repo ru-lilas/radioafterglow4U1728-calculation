@@ -1,72 +1,96 @@
-figsize: [16,12]
-TicksConfigure: &TicksConfigure_tmp
-  xlim: [-10.0,30.0]
-  ylim: [0.5,1.8]
-  xscale: "linear"
-  yscale: "linear"
-  fontsize: 24
-LabelConfigure: &LabelConfigure_tmp
-  xlabel: 'time since X-ray burst [min]'
-  ylabel: 'Flux Density [mJy]'
-  fontsize: 24
-nu_values:
-  - 5.5
-  - 9.0
-nu_unit: "GHz"
-t_unit: "min"
-fnu_unit: "mJy"
-calculation:
-  linestyle: "-"
-  linewidth: 2
-  color: "#000000"
-  label: ""
-observation_scatter:
-  size: 30
-  color: "#005AFF"
-  marker: "o"
-annotation:
-  config:
-    use: True
-    fontsize: 16
-    pos: [1.00,1.01]
-    ha: "right"
-    va: "bottom"
-  elements:
-    eps_b:
-      prefix: '$\varepsilon_{\mathrm{B}}$'
-      fmt: '.1e'
-    eps_th:
-      prefix: '$\varepsilon_{\mathrm{th}}$'
-      fmt: '.2f'
-    mu:
-      prefix: '$\mu$'
-      fmt: '.2f'
-    mu_e:
-      prefix: '$\mu_e$'
-      fmt: '.2f'
-  from_tabledata:
-    a_wind:
-      with_unit: True
-      tendency: "unique"
-      prefix: '$A_{\mathrm{w}}$'
-      fmt: '.1e'
-    beta_sh:
-      with_unit: False
-      tendency: "unique"
-      prefix: '$\beta_{\mathrm{sh}}$'
-      fmt: '.2f'
-    reduced_chi2:
-      with_unit: False
-      tendency: "unique"
-      prefix: '$\chi^2_\mathrm{red}$'
-      fmt: '.1f'
-
-hlines:
-  f9_per:
+# figsize: [16,12]
+# TicksConfigure: &TicksConfigure_tmp
+#   xlim: [-10.0,30.0]
+#   ylim: [0.5,1.8]
+#   xscale: "linear"
+#   yscale: "linear"
+#   fontsize: 24
+# LabelConfigure: &LabelConfigure_tmp
+#   xlabel: 'time since X-ray burst [min]'
+#   ylabel: 'Flux Density [mJy]'
+#   fontsize: 24
+# nu_values:
+#   - 5.5
+#   - 9.0
+# nu_unit: "GHz"
+# t_unit: "min"
+# fnu_unit: "mJy"
+# calculation:
+#   linestyle: "-"
+#   linewidth: 2
+#   color: "#000000"
+#   label: ""
+# observation_scatter:
+#   size: 30
+#   color: "#005AFF"
+#   marker: "o"
+# annotation:
+#   config:
+#     use: True
+#     fontsize: 16
+#     pos: [1.00,1.01]
+#     ha: "right"
+#     va: "bottom"
+#   elements:
+#     eps_b:
+#       prefix: '$\varepsilon_{\mathrm{B}}$'
+#       fmt: '.1e'
+#     eps_th:
+#       prefix: '$\varepsilon_{\mathrm{th}}$'
+#       fmt: '.2f'
+#     mu:
+#       prefix: '$\mu$'
+#       fmt: '.2f'
+#     mu_e:
+#       prefix: '$\mu_e$'
+#       fmt: '.2f'
+#   from_tabledata:
+#     a_wind:
+#       with_unit: True
+#       tendency: "unique"
+#       prefix: '$A_{\mathrm{w}}$'
+#       fmt: '.1e'
+#     beta_sh:
+#       with_unit: False
+#       tendency: "unique"
+#       prefix: '$\beta_{\mathrm{sh}}$'
+#       fmt: '.2f'
+#     reduced_chi2:
+#       with_unit: False
+#       tendency: "unique"
+#       prefix: '$\chi^2_\mathrm{red}$'
+#       fmt: '.1f'
+#
+linestyles:
+  calculation:
     color: "#000000"
-    ls: "--"
-    label: ""
-    # label_conf:
-    #   prefix: '$F_{\nu,\mathrm{per}}$'
-    #   fmt: '.2f'
-    #   unit: "mJy"
+    linewidth: 2.0
+    linestyle: "-"
+    alpha: null
+    zorder: 1.0
+plot:
+  figure:
+    figsize: [16,12]
+    dpi: 100
+  axes:
+    x:
+      scale: "linear"
+      limits: [-10.0,30.0]
+      label:
+        prefix: 'Time Since the X-ray Burst'
+        unit: "min"
+        fontsize: 16
+    y:
+      scale: "linear"
+      limits: [0.5,1.8]
+      label:
+        prefix: 'Flux Density'
+        unit: "mJy"
+        fontsize: 16
+    ticks:
+      labelsize: 24
+      direction: "in"
+      major_length: 10.0
+      minor_length: 8.0
+      width: 1.0
+      pad: 10.0
