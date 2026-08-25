@@ -64,7 +64,7 @@ class AxesConfig:
 
 @dataclass(frozen=True, slots=True)
 class FigureConfig:
-    figsize: FloatPair
+    figsize: tuple[float,float]
     dpi: int = 300
     layout_engine: str = "constrained"
 
