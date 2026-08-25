@@ -79,14 +79,14 @@ layout:
       label:
         prefix: 'Time Since the X-ray Burst'
         unit: "min"
-        fontsize: 16
+        fontsize: 24
     y:
       scale: "linear"
-      limits: [0.5,1.8]
+      limits: [0.0,1.2]
       label:
         prefix: 'Flux Density'
         unit: "mJy"
-        fontsize: 16
+        fontsize: 24
     ticks:
       labelsize: 24
       direction: "in"

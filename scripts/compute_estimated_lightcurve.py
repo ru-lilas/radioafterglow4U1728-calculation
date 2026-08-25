@@ -10,6 +10,7 @@ from module.chi2_fitting import MinimumChi2Summary
 from module import compute_lightcurve,observation
 from module.parameter_table import GeneralInputs,read_as_df
 from module.utils import FileWriter
+from module.models import ThermalSynchrotronTable
 
 def parse_args()->argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -69,7 +70,7 @@ def main():
     binning = obslc_nu_selected.time_bin_bounds(conf_sampling.timewindow)
 
     lc_conf = conf_fitting.model
-    table_integral = compute_lightcurve.ThermalSynchrotronTable.from_csv(
+    table_integral = ThermalSynchrotronTable.from_csv(
         path = args.integral_table
     )
     lc_model = compute_lightcurve.ThermalSynchrotron(table_integral)

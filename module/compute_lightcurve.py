@@ -135,8 +135,8 @@ class Input:
 
 @dataclass(frozen=True, slots=True)
 class UnitMetadata:
-    t_unit: str|u.UnitBase
-    fnu_unit: str|u.UnitBase
+    t_unit: str
+    fnu_unit: str
 
 @dataclass(frozen=True,slots=True)
 class BinnedCalculationLightcurve:
@@ -463,7 +463,7 @@ class CalculationLightcurve:
         return BinnedCalculationLightcurve(
             units = UnitMetadata(
                 t_unit = t_unit,
-                fnu_unit = fnu_unit
+                fnu_unit = str(fnu_unit),
             ),
             t_center= binning.t_center,
             t_left = binning.t_left,

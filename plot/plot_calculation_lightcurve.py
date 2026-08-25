@@ -8,7 +8,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 import pandas as pd
 from module.compute_lightcurve import BinnedCalculationLightcurve, CalculationLightcurve, PlotConfig
-from module import plot_utils
+from module import plot_utils,observation
 
 def main(args:argparse.Namespace):
     outpath:Path = args.output
@@ -16,6 +16,9 @@ def main(args:argparse.Namespace):
 
     lc = BinnedCalculationLightcurve.from_csv(
         args.lc
+    )
+    obslc = observation.LongformatLightcurve.from_csv(
+        args.obslc
     )
     conf_plot = PlotConfig.from_yaml(args.config)
 
@@ -46,6 +49,11 @@ if __name__ == "__main__":
     
     parser.add_argument(
         "--lc",
+        type=Path,
+        required=True
+    )
+    parser.add_argument(
+        "--obslc",
         type=Path,
         required=True
     )
