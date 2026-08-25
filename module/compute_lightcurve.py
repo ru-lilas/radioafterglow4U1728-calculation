@@ -7,6 +7,7 @@ from numpy.typing import NDArray
 from functools import cached_property
 from module.models import ThermalSynchrotron, ThermalSynchrotronTable, calculate_phi, calculate_xm
 from module.mydataclasses import QuantityData,QuantityArray
+from module.plot_utils import LineStyle
 from module.types import FloatArray
 from module.utilities import filereaders as fr
 import astropy.units as u
@@ -16,6 +17,7 @@ from module.utils import DataFrameUtils, Integrator,FileReader
 from module import dataframe_processors, observation
 from module.parameter_table import Configure
 from enum import StrEnum, auto
+from matplotlib.axes import Axes
 
 class Columns(StrEnum):
     T_OBSERVER_FRAME = auto()
@@ -149,7 +151,10 @@ class BinnedCalculationLightcurve:
             path:Path
     )->Self:
         dict_data = fr.read_keyvalue(path)
-        df = fr.read_csv(path)
+        df = FileReader.table_from_csv(
+            path=path,
+        )
+        dict_data = df.attrs
         return cls(
             units = from_dict(data_class=UnitMetadata,data=dict_data),
             t_center =dataframe_processors.convert_ndarray(
@@ -176,6 +181,27 @@ class BinnedCalculationLightcurve:
         )
 
     @property
+    def bin_edges_quantity(self):
+        return QuantityArray(
+            values=self.bin_edges,
+            unit=self.units.t_unit
+        )
+
+    @property
+    def t_left_quantity(self)->QuantityArray:
+        return QuantityArray(
+            values = self.t_left,
+            unit = self.units.t_unit
+        )
+
+    @property
+    def t_right_quantity(self)->QuantityArray:
+        return QuantityArray(
+            values = self.t_right,
+            unit = self.units.t_unit
+        )
+
+    @property
     def t_center_quantity(self)->QuantityArray:
         return QuantityArray(
             values = self.t_center,
@@ -190,29 +216,40 @@ class BinnedCalculationLightcurve:
         )
 
     def to_df(self,t_unit:str,fnu_unit:str):
-        t_left = QuantityArray(
-            values = self.t_left,
-            unit = self.units.t_unit
-        )
+        t_left = self.t_left_quantity
         t_center = self.t_center_quantity
-        t_right = QuantityArray(
-            values = self.t_right,
-            unit = self.units.t_unit
-        )
-        fnu_averaged = QuantityArray(
-            values = self.fnu_averaged,
-            unit = self.units.fnu_unit
-        )
+        t_right = self.t_right_quantity
+        fnu = self.fnu_averaged_quantity
+
         df = pd.DataFrame({
             Columns.T_LEFT: t_left.FloatArray_in(t_unit),
             Columns.T_CENTER: t_center.FloatArray_in(t_unit),
             Columns.T_RIGHT: t_right.FloatArray_in(t_unit),
-            Columns.FNU_AVERAGED: fnu_averaged.FloatArray_in(fnu_unit)
+            Columns.FNU_AVERAGED: fnu.FloatArray_in(fnu_unit)
         })
         df.attrs[Columns.T_UNIT] = t_unit
         df.attrs[Columns.FNU_UNIT] = fnu_unit
 
         return df
+
+    def plot(
+        self,
+        ax: Axes,
+        style: LineStyle,
+        *,
+        t_unit: str,
+        fnu_unit: str
+    ):
+        t_left = self.t_left_quantity.FloatArray_in(t_unit)
+        t_right = self.t_right_quantity.FloatArray_in(t_unit)
+        fnu = self.fnu_averaged_quantity.FloatArray_in(fnu_unit)
+        bin_edges = self.bin_edges_quantity.FloatArray_in(t_unit)
+
+        return ax.stairs(
+            fnu,
+            bin_edges,
+            **style.to_kwargs(),
+        )
 
 
 @dataclass(frozen=True, slots=True)

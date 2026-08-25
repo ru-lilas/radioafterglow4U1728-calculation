@@ -1,6 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from functools import cached_property
 from typing import Any, Literal
+from dacite import from_dict
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
 from matplotlib.ticker import LogLocator
@@ -11,6 +12,9 @@ from module.utilities import build_nparray
 from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 import numpy as np
+
+from pathlib import Path
+from module.utils import FileReader
 
 PlotScale = Literal["linear","log"]
 AxisDirection = Literal["x","y"]
@@ -61,6 +65,32 @@ class AxisConfigure:
         return dataframe_utils.extract_column_as_ndarray(
             df,self.data.value
         )
+
+@dataclass(frozen=True, slots=True)
+class LineStyle:
+    color: str = "#000000"
+    linewidth: float = 1.0
+    linestyle: str = "-"
+    alpha: float | None = None
+    zorder: float | None = None
+
+    @classmethod
+    def from_yaml(
+        cls,
+        path: Path
+    ):
+        dict_data = FileReader.yaml_safe(path)
+        return from_dict(
+            data_class= cls,
+            data = dict_data
+        )
+
+    def to_kwargs(self):
+        return {
+            key: value
+            for key, value in asdict(self).items()
+            if value is not None
+        }
 
 def build_meshgrid(
     df,

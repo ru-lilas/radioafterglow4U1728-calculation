@@ -5,6 +5,7 @@ import pandas as pd
 from pathlib import Path
 import warnings
 from typing import Any
+from ruamel.yaml import YAML
 
 class Integrator:
     @staticmethod
@@ -47,6 +48,36 @@ def parse_value(value: str) -> Any:
     # 失敗したら普通にstr
     except ValueError:
         return value
+
+def ensure_yaml_mapping(
+    yaml_raw:object
+)->dict[str,Any]:
+    if not isinstance(yaml_raw, dict):
+        raise TypeError(
+            "YAMLのトップレベルはmappingでなければなりません."
+        )
+
+    yaml_dict:dict[str,Any] = {}
+    for key, value in yaml_raw.items():
+        if not isinstance(key, str):
+            raise TypeError(
+                "YAMLのkeyは文字列(str)にしてください."
+            )
+        yaml_dict[key] = value
+
+    return yaml_dict
+
+class YAMLReader:
+    @staticmethod
+    def safe(
+        path: Path
+    )->dict[str,Any]:
+        yaml_parser = YAML(
+            typ="safe",
+            pure=True
+        )
+        yaml_raw = yaml_parser.load(path)
+        return ensure_yaml_mapping(yaml_raw)
 
 class FileReader:
 
@@ -98,6 +129,12 @@ class FileReader:
             return df
         else:
             return df.set_index(idx)
+
+    @staticmethod
+    def yaml_safe(
+        path: Path
+    )->dict[str,Any]:
+        return YAMLReader.safe(path)
 
 class DataFrameUtils:
 
