@@ -247,7 +247,6 @@ class ScatterStyle:
     linestyle: str = "none"
     alpha: float | None = None
     zorder: float | None = None
-    label: str | None = None
 
     def to_kwargs(self)->dict[str,Any]:
         return {

@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from module.utils import DataFrameUtils, Integrator,FileReader
 from module import dataframe_processors, observation
-from module.parameter_table import Configure
+from module.parameter_table import ModelConfigure
 from enum import StrEnum, auto
 from matplotlib.axes import Axes
 from cattrs import Converter
@@ -472,7 +472,7 @@ class CalculationLightcurve:
         )
 
 def compute(
-    config: Configure,
+    config: ModelConfigure,
     model: ThermalSynchrotron,
     input: Input,
 )->CalculationLightcurve:
@@ -556,6 +556,7 @@ def build_inputs(path:Path):
 @dataclass(frozen=True, slots=True)
 class LightcurveStyleConfig:
     model_binned: plot_utils.LineStyle
+    observation: plot_utils.ScatterStyle
 
 @dataclass(frozen=True, slots=True)
 class PlotConfig:

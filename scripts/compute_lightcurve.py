@@ -28,4 +28,4 @@ def main(
 ):
     table = compute_lightcurve.ThermalSynchrotronTable.from_csv(path_table)
     model = compute_lightcurve.ThermalSynchrotron(table)
-    conf = compute_lightcurve.Configure.from_yaml(path_conf_lc)
+    conf = compute_lightcurve.ModelConfigure.from_yaml(path_conf_lc)

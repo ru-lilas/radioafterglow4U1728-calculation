@@ -1,4 +1,5 @@
 from module import dataframe_processors, dataframe_utils
+from module.parameter_table import GeneralInputs
 from module.utilities import filereaders as fr
 from pathlib import Path
 import argparse
@@ -10,6 +11,13 @@ import pandas as pd
 from module.compute_lightcurve import BinnedCalculationLightcurve, CalculationLightcurve, PlotConfig
 from module import plot_utils,observation
 
+def fetch_obslc_nu(
+    path:Path,
+    nu:float
+)->observation.Lightcurve:
+    obslc_long = observation.LongformatLightcurve.from_csv(path)
+    return obslc_long.extract_lightcurve(nu)
+
 def main(args:argparse.Namespace):
     outpath:Path = args.output
     outpath.parent.mkdir(parents=True,exist_ok=True)
@@ -17,10 +25,12 @@ def main(args:argparse.Namespace):
     lc = BinnedCalculationLightcurve.from_csv(
         args.lc
     )
-    obslc = observation.LongformatLightcurve.from_csv(
-        args.obslc
+    conf = GeneralInputs.from_yaml(args.config)
+    conf_plot = PlotConfig.from_yaml(args.plotconfig)
+    obslc_nu = fetch_obslc_nu(
+        path=args.obslc,
+        nu=conf.chi2fitting.sampling.nu.value
     )
-    conf_plot = PlotConfig.from_yaml(args.config)
 
     with PdfPages(outpath) as pdf:
         fig,ax = plot_utils.create_configured_axes(conf_plot.layout)
@@ -36,6 +46,12 @@ def main(args:argparse.Namespace):
         lc.plot(
             ax,
             conf_plot.styles.model_binned,
+            t_unit=t_unit,
+            fnu_unit=fnu_unit
+        )
+        obslc_nu.plot(
+            ax,
+            style=conf_plot.styles.observation,
             t_unit=t_unit,
             fnu_unit=fnu_unit
         )
@@ -59,6 +75,11 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--config",
+        type=Path,
+        required=True
+    )
+    parser.add_argument(
+        "--plotconfig",
         type=Path,
         required=True
     )

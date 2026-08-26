@@ -2,6 +2,7 @@ from pathlib import Path
 from dataclasses import dataclass,replace
 from typing import Self, cast
 from dacite import from_dict
+from matplotlib.axes import Axes
 from numpy.typing import NDArray
 from functools import cached_property
 from module import dataframe_processors, parameter_table
@@ -14,7 +15,9 @@ import numpy as np
 import pandas as pd
 from module.types import FloatArray
 from enum import StrEnum, auto
-from module.parameter_table import SamplingTimewindow
+from module.inputs_as_dataclass import SamplingTimewindow
+from module import plot_utils
+from module.utils import FileReader
 
 class Columns(StrEnum):
     T = auto()
@@ -56,9 +59,21 @@ class Lightcurve:
     metadata: LightcurveMetadata
     df: pd.DataFrame
 
+    @classmethod
+    def from_csv(
+        cls,
+        path: Path
+    )->Self:
+        df = FileReader.table_from_csv(path)
+        metadata = FileReader.keyvalue(path)
+        return cls(
+            metadata = LightcurveMetadata(**metadata),
+            df = df
+        )
+
     def time_bin_bounds(
         self,
-        timewindow: parameter_table.SamplingTimewindow,
+        timewindow: SamplingTimewindow,
     ) -> Binning:
         t: FloatArray = np.asarray(
             self.df[Columns.T],
@@ -149,6 +164,49 @@ class Lightcurve:
             df=df_selected
         )
 
+    def plot(
+        self,
+        ax: Axes,
+        style: plot_utils.ScatterStyle,
+        *,
+        t_unit: str,
+        fnu_unit: str
+    ):
+        t_quantity = QuantityArray(
+            values = self.to_FloatArray(Columns.T),
+            unit = self.metadata.t_unit
+        )
+        fnu_quantity = QuantityArray(
+            values = self.to_FloatArray(Columns.FNU_NET),
+            unit = self.metadata.fnu_unit
+        )
+        fnu_err_quantity = QuantityArray(
+            values = self.to_FloatArray(Columns.FNU_NET_ERR),
+            unit = self.metadata.fnu_unit
+        )
+        t = t_quantity.FloatArray_in(t_unit)
+        fnu = fnu_quantity.FloatArray_in(fnu_unit)
+        fnu_err = fnu_err_quantity.FloatArray_in(fnu_unit)
+
+        ax.scatter(
+            t,fnu,
+            marker=style.marker,
+            s=style.markersize,
+            c=style.markerfacecolor,
+            alpha=style.alpha,
+            edgecolors=style.markeredgecolor,
+            linewidths=style.markeredgewidth
+        )
+        ax.errorbar(
+            t,fnu,
+            yerr=fnu_err,
+            ls=style.linestyle,
+            color=style.markeredgecolor,
+            capsize=style.capsize,
+            capthick=style.capthick
+        )
+        return
+
 
 @dataclass(frozen=True, slots=True)
 class LongformatLightcurve:
@@ -161,10 +219,7 @@ class LongformatLightcurve:
         path: Path,
     ) -> Self:
         metadata = LightcurveMetadata.from_keyvalue(path)
-
-        df_long = fr.read_csv(
-            path
-        )
+        df_long = FileReader.table_from_csv(path)
 
         required_columns = {
             Columns.T,

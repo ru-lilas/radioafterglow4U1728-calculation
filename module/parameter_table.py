@@ -14,7 +14,8 @@ from module import mydataclasses, synchrotron_scaling_values, utils
 from module import electron_temperature
 from enum import StrEnum, auto
 from module import quantity_converter
-from module import compute_lightcurve, input_reader
+from module import input_reader
+from module import inputs_as_dataclass
 
 class Columns(StrEnum):
     A_WIND = auto()
@@ -105,33 +106,8 @@ class PhysicalParameters:
             Columns.LNU_THETA: cast(u.UnitBase,self.lnu_theta.unit).to_string()
         }
 
-@dataclass
-class SamplingTimewindow:
-    min: float
-    max: float
-    unit: str
-
-    @cached_property
-    def t_min(self):
-        return mydataclasses.QuantityData(
-            value=self.min,
-            unit=self.unit
-        )
-
-    @cached_property
-    def t_max(self):
-        return mydataclasses.QuantityData(
-            value=self.max,
-            unit=self.unit
-        )
-
-@dataclass
-class SamplingConfigure:
-    nu: mydataclasses.QuantityData
-    timewindow: SamplingTimewindow
-
 @dataclass(frozen=True,slots=True)
-class Configure:
+class ModelConfigure:
     time: QuantityArrayBase
     fnu_unit: str
     nu: QuantityData
@@ -158,8 +134,8 @@ class Configure:
 @dataclass(frozen=True)
 class Chi2FittingConfigure(input_reader.YAMLReadable):
     free_parameters: list
-    model: Configure
-    sampling: SamplingConfigure
+    model: ModelConfigure
+    sampling: inputs_as_dataclass.SamplingConfigure
 
     @property
     def n_model(self):
