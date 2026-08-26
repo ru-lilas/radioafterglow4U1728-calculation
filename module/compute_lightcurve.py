@@ -13,10 +13,10 @@ import numpy as np
 import pandas as pd
 from module.utils import DataFrameUtils, Integrator,FileReader
 from module import dataframe_processors, observation
-from module.parameter_table import ModelConfigure
 from enum import StrEnum, auto
 from matplotlib.axes import Axes
 from cattrs import Converter
+from module import inputs_as_dataclass
 
 DATACLASS_CONVERTER = Converter()
 
@@ -472,7 +472,7 @@ class CalculationLightcurve:
         )
 
 def compute(
-    config: ModelConfigure,
+    config: inputs_as_dataclass.ModelConfigure,
     model: ThermalSynchrotron,
     input: Input,
 )->CalculationLightcurve:

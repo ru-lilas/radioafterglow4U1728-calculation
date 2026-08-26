@@ -1,14 +1,8 @@
 from pathlib import Path
-from typing import Self, cast
-from dacite import from_dict
-from dataclasses import dataclass
-from functools import cached_property
 from typing import cast
-from module.mydataclasses import QuantityArrayBase, QuantityData,QuantityArray
+from dataclasses import dataclass
 from module.types import FloatArray
-from module.utilities import filereaders as fr
 import astropy.units as u
-import numpy as np
 import pandas as pd
 from module import mydataclasses, synchrotron_scaling_values, utils
 from module import electron_temperature
@@ -106,45 +100,10 @@ class PhysicalParameters:
             Columns.LNU_THETA: cast(u.UnitBase,self.lnu_theta.unit).to_string()
         }
 
-@dataclass(frozen=True,slots=True)
-class ModelConfigure:
-    time: QuantityArrayBase
-    fnu_unit: str
-    nu: QuantityData
-
-    @classmethod
-    def from_yaml(
-            cls,
-            path:Path
-    )->Self:
-        dict_data = fr.read_yaml_pyyaml(path)
-        return from_dict(
-            data_class = cls,
-            data = dict_data
-        )
-
-    @property
-    def t_obs(self)->u.Quantity:
-        return u.Quantity(self.time.values.arr,self.time.unit)
-    
-    @property
-    def nu_obs(self)->u.Quantity:
-        return u.Quantity(self.nu.value,self.nu.unit)
-
-@dataclass(frozen=True)
-class Chi2FittingConfigure(input_reader.YAMLReadable):
-    free_parameters: list
-    model: ModelConfigure
-    sampling: inputs_as_dataclass.SamplingConfigure
-
-    @property
-    def n_model(self):
-        return len(self.free_parameters)
-
 @dataclass(frozen=True)
 class GeneralInputs(input_reader.YAMLReadable):
     physical_parameters: PhysicalParameters
-    chi2fitting: Chi2FittingConfigure
+    chi2fitting: inputs_as_dataclass.Chi2FittingConfigure
 
 def read_as_df(
     path:Path
