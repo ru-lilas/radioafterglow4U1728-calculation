@@ -3,6 +3,7 @@ from dataclasses import dataclass,replace
 from typing import Self, cast
 from dacite import from_dict
 from matplotlib.axes import Axes
+from matplotlib.lines import Line2D
 from numpy.typing import NDArray
 from functools import cached_property
 from module import dataframe_processors, dataframe_utils, parameter_table
@@ -227,6 +228,25 @@ class Lightcurve:
             capthick=style.capthick
         )
         return
+
+    def plot_persistent(
+        self,
+        ax: Axes,
+        style: plot_utils.LineStyle,
+        *,
+        t_unit: str,
+        fnu_unit: str
+    )->list[Line2D]:
+        t_quantity = QuantityArray(
+            values = self.to_FloatArray(Columns.T),
+            unit = self.metadata.t_unit
+        )
+        t = t_quantity.FloatArray_in(t_unit)
+        fnu_per = self.fnu_persistent.FloatArray_in(fnu_unit)
+        return ax.plot(
+            t,fnu_per,
+            **style.to_kwargs(),
+        )
 
 
 @dataclass(frozen=True, slots=True)
