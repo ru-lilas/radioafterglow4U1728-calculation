@@ -95,7 +95,7 @@ layout:
         fontsize: 32
     y:
       scale: "linear"
-      limits: [-0.1,0.8]
+      limits: [0.0,2.0]
       label:
         prefix: 'Net Flux Density'
         unit: "mJy"

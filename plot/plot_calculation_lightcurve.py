@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 import pandas as pd
-from module.compute_lightcurve import BinnedCalculationLightcurve, CalculationLightcurve, PlotConfig
+from module.compute_lightcurve import BinnedCalculationLightcurve, BinnedPredictedLightcurve, CalculationLightcurve, PlotConfig
 from module import plot_utils,observation
 
 def fetch_obslc_nu(
@@ -22,7 +22,7 @@ def main(args:argparse.Namespace):
     outpath:Path = args.output
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
-    lc = BinnedCalculationLightcurve.from_csv(
+    lc = BinnedPredictedLightcurve.from_csv(
         args.lc
     )
     conf = GeneralInputs.from_yaml(args.config)
