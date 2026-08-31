@@ -198,11 +198,11 @@ class Lightcurve:
             unit = self.metadata.t_unit
         )
         fnu_quantity = QuantityArray(
-            values = self.to_FloatArray(Columns.FNU_NET),
+            values = self.to_FloatArray(Columns.FNU),
             unit = self.metadata.fnu_unit
         )
         fnu_err_quantity = QuantityArray(
-            values = self.to_FloatArray(Columns.FNU_NET_ERR),
+            values = self.to_FloatArray(Columns.FNU_ERR),
             unit = self.metadata.fnu_unit
         )
         t = t_quantity.FloatArray_in(t_unit)
