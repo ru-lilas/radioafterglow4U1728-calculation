@@ -84,8 +84,12 @@ def main():
         binning=binning,
         drop_incomplete_bin=True
     )
+    lc_predicted = lc_binned.add_persistent_flux(
+        persistent=obslc_nu_selected.fnu_persistent,
+        persistent_err=obslc_nu_selected.fnu_persistent_err
+    )
 
-    df = lc_binned.to_df(t_unit="min",fnu_unit="mJy")
+    df = lc_predicted.to_df(t_unit="min",fnu_unit="mJy")
     FileWriter.df_to_csv(
         args.output,
         df,
