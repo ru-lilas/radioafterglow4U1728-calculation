@@ -1,30 +1,14 @@
-from functools import cached_property
-from typing import Any, cast
 import argparse
 from pathlib import Path
-from math import isclose
-from dataclasses import dataclass
 
-from module.utilities import filereaders as fr
-from dacite import from_dict
-from module import compute_lightcurve, input_dataclasses, mydataclasses, utils
-import numpy as np
-import pandas as pd
-
-from tqdm import tqdm
-from module.dataframe_processors import filter_df_value_window
-from module.utilities import filewriters as fw
-from module.strenums import KeyNames, EstimationConfigNames, LightcurveColumns
-from module.strenums import Chi2Columns
-from module.fetch_numerical_table import fetch_numerical_table_path
-from module.utilities.quantity_data import QuantityData
-from module import compute_lightcurve, dataframe_utils, input_reader
-from module import mystatistics
-from module import observation
-from functools import cached_property
-import astropy.units as u
+from module import (
+    compute_lightcurve,
+    utils,
+    models,
+    observation,
+    chi2_fitting,
+)
 from module.parameter_table import GeneralInputs
-from module import chi2_fitting
 
 parser = argparse.ArgumentParser()
 
@@ -76,7 +60,7 @@ timewindow = obslc_selected.time_bin_bounds(conf_sampling.timewindow)
 
 # calculate model lightcurves
 lc_conf = conf_fitting.model
-table_integral = compute_lightcurve.ThermalSynchrotronTable.from_csv(path_integral_table)
+table_integral = models.ThermalSynchrotronTable.from_csv(path_integral_table)
 lc_model = compute_lightcurve.ThermalSynchrotron(table_integral)
 
 chi2_records: list[dict[str, int | float]] = []
