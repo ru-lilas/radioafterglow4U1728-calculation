@@ -6,7 +6,7 @@ from typing import Self, cast, Any, Hashable
 from matplotlib.patches import StepPatch
 from module import plot_utils
 from module.models import ThermalSynchrotron, calculate_xm
-from module.mydataclasses import QuantityArray
+from module.mydataclasses import QuantityArray, QuantityData
 from module.plot_utils import LineStyle
 from module.types import FloatArray
 from module.utilities import filereaders as fr
@@ -144,6 +144,17 @@ class UnitMetadata:
     fnu_unit: str
 
 @dataclass(frozen=True, slots=True)
+class EstimatedParameters:
+    a_wind: QuantityData
+    beta_sh: float
+    eps_b: float
+    eps_th:float
+    mu:float
+    mu_e:float
+    distance: QuantityData
+
+
+@dataclass(frozen=True, slots=True)
 class BinnedPredictedLightcurve:
     t_center:   QuantityArray
     t_left:     QuantityArray
@@ -270,39 +281,12 @@ class BinnedPredictedLightcurve:
 
 @dataclass(frozen=True,slots=True)
 class BinnedCalculationLightcurve:
+    estimated_params: EstimatedParameters
     units: UnitMetadata
     t_center: FloatArray
     t_left: FloatArray
     t_right: FloatArray
     fnu_averaged: FloatArray
-
-    @classmethod
-    def from_csv(
-            cls,
-            path:Path
-    )->Self:
-        df = FileReader.table_from_csv(
-            path=path,
-        )
-        metadata = ensure_string_keys(df.attrs)
-        return cls(
-            units = DATACLASS_CONVERTER.structure(
-                metadata,
-                UnitMetadata
-            ),
-            t_center =dataframe_processors.convert_ndarray(
-                    df,Columns.T_CENTER
-                ),
-            t_right = dataframe_processors.convert_ndarray(
-                df,Columns.T_RIGHT
-            ),
-            t_left = dataframe_processors.convert_ndarray(
-                df,Columns.T_LEFT
-            ),
-            fnu_averaged = dataframe_processors.convert_ndarray(
-                df,Columns.FNU_AVERAGED
-            )
-        )
 
     @property
     def bin_edges(self):
@@ -374,80 +358,11 @@ class BinnedCalculationLightcurve:
             fnu_persistent_err = persistent_err
         )
 
-    def to_df(self,t_unit:str,fnu_unit:str):
-        t_left = self.t_left_quantity
-        t_center = self.t_center_quantity
-        t_right = self.t_right_quantity
-        fnu = self.fnu_averaged_quantity
-
-        df = pd.DataFrame({
-            Columns.T_LEFT: t_left.FloatArray_in(t_unit),
-            Columns.T_CENTER: t_center.FloatArray_in(t_unit),
-            Columns.T_RIGHT: t_right.FloatArray_in(t_unit),
-            Columns.FNU_AVERAGED: fnu.FloatArray_in(fnu_unit)
-        })
-        df.attrs[Columns.T_UNIT] = t_unit
-        df.attrs[Columns.FNU_UNIT] = fnu_unit
-
-        return df
-
-    def plot(
-        self,
-        ax: Axes,
-        style: LineStyle,
-        *,
-        t_unit: str,
-        fnu_unit: str
-    ):
-        t_left = self.t_left_quantity.FloatArray_in(t_unit)
-        t_right = self.t_right_quantity.FloatArray_in(t_unit)
-        fnu = self.fnu_averaged_quantity.FloatArray_in(fnu_unit)
-        bin_edges = self.bin_edges_quantity.FloatArray_in(t_unit)
-
-        return ax.stairs(
-            fnu,
-            bin_edges,
-            **style.to_kwargs(),
-        )
-
-
-
 @dataclass(frozen=True, slots=True)
 class CalculationLightcurve:
+    estimated_params: EstimatedParameters
     t_observer_frame: QuantityArray
     fnu_observer_frame: QuantityArray
-
-    @classmethod
-    def from_csv(
-            cls,
-            path:Path
-    )->Self:
-        dict_data = fr.read_keyvalue(path)
-        df = fr.read_csv(path)
-        return cls(
-            t_observer_frame = QuantityArray(
-                values=dataframe_processors.convert_ndarray(
-                    df,Columns.T_OBSERVER_FRAME
-                ),
-                unit=dict_data[Columns.T_UNIT]
-            ),
-            fnu_observer_frame = QuantityArray(
-                values = dataframe_processors.convert_ndarray(
-                    df,Columns.FNU_OBSERVER_FRAME
-                ),
-                unit=dict_data[Columns.FNU_UNIT]
-            )
-        )
-
-    def to_df(self,t_unit:str,fnu_unit:str):
-        df = pd.DataFrame({
-            Columns.T_OBSERVER_FRAME: self.t_observer_frame.FloatArray_in(t_unit),
-            Columns.FNU_OBSERVER_FRAME: self.fnu_observer_frame.FloatArray_in(fnu_unit)
-        })
-        df.attrs[Columns.T_UNIT] = t_unit
-        df.attrs[Columns.FNU_UNIT] = fnu_unit
-        return df
-
 
     @staticmethod
     def _make_bin_edges(
@@ -607,17 +522,8 @@ class CalculationLightcurve:
             dtype=np.float64,
         )
 
-        # return type(self)(
-        #     t_observer_frame=QuantityArray(
-        #         binning.t_center,
-        #         unit=t_unit,
-        #     ),
-        #     fnu_observer_frame=QuantityArray(
-        #         fnu_average,
-        #         unit=fnu_unit,
-        #     ),
-        # )
         return BinnedCalculationLightcurve(
+            estimated_params=self.estimated_params,
             units = UnitMetadata(
                 t_unit = t_unit,
                 fnu_unit = str(fnu_unit),
@@ -670,6 +576,15 @@ def compute(
             )
         )
     return CalculationLightcurve(
+        estimated_params=EstimatedParameters(
+            a_wind = QuantityData(value=input.values.a_wind,unit=input.units.a_wind),
+            beta_sh = input.values.beta_sh,
+            eps_b= input.values.eps_b,
+            eps_th = input.values.eps_th,
+            mu = input.values.mu,
+            mu_e = input.values.mu_e,
+            distance = QuantityData(value=input.values.distance,unit=input.units.distance)
+        ),
         t_observer_frame=QuantityArray(
             values=t_value,
             unit=time_unit
