@@ -83,21 +83,21 @@ styles:
     zorder: 0.0
 layout:
   figure:
-    figsize: [16,12]
+    figsize: [16,9]
     dpi: 100
   axes:
     x:
       scale: "linear"
-      limits: [-10.0,30.0]
+      limits: [-10.0,34.0]
       label:
         prefix: 'Time Since the X-ray Burst'
         unit: "min"
         fontsize: 32
     y:
       scale: "linear"
-      limits: [0.0,2.0]
+      limits: [0.5,1.5]
       label:
-        prefix: 'Net Flux Density'
+        prefix: 'Radio Flux Density'
         unit: "mJy"
         fontsize: 32
     ticks:
