@@ -92,16 +92,16 @@ layout:
       label:
         prefix: 'Time Since the X-ray Burst'
         unit: "min"
-        fontsize: 24
+        fontsize: 32
     y:
       scale: "linear"
       limits: [-0.1,0.8]
       label:
         prefix: 'Net Flux Density'
         unit: "mJy"
-        fontsize: 24
+        fontsize: 32
     ticks:
-      labelsize: 24
+      labelsize: 32
       direction: "in"
       major_length: 10.0
       minor_length: 8.0
