@@ -5,7 +5,7 @@ from dacite import from_dict
 from matplotlib.axes import Axes
 from numpy.typing import NDArray
 from functools import cached_property
-from module import dataframe_processors, parameter_table
+from module import dataframe_processors, dataframe_utils, parameter_table
 from module.models import ThermalSynchrotron, ThermalSynchrotronTable, calculate_phi, calculate_xm
 from module.mydataclasses import QuantityData,QuantityArray
 from module.types import FloatArray
@@ -26,6 +26,8 @@ class Columns(StrEnum):
     FNU_ERR = auto()
     FNU_NET = auto()
     FNU_NET_ERR = auto()
+    BG = auto()
+    BG_ERR = auto()
 
 @dataclass
 class LightcurveMetadata:
@@ -69,6 +71,25 @@ class Lightcurve:
         return cls(
             metadata = LightcurveMetadata(**metadata),
             df = df
+        )
+
+    @property
+    def fnu_persistent(self):
+        return QuantityArray(
+            values = dataframe_processors.convert_ndarray(
+                self.df,
+                column=Columns.BG
+            ),
+            unit=self.metadata.fnu_unit
+        )
+    @property
+    def fnu_persistent_err(self):
+        return QuantityArray(
+            values = dataframe_processors.convert_ndarray(
+                self.df,
+                column=Columns.BG_ERR
+            ),
+            unit=self.metadata.fnu_unit
         )
 
     def time_bin_bounds(
