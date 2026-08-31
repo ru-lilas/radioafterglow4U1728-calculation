@@ -2,6 +2,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from dataclasses import dataclass
 from typing import Self, cast, Any, Hashable
+
+from matplotlib.patches import StepPatch
 from module import plot_utils
 from module.models import ThermalSynchrotron, calculate_xm
 from module.mydataclasses import QuantityArray
@@ -208,6 +210,32 @@ class BinnedPredictedLightcurve:
             fnu_persistent_err = fnu_persistent_err
         )
 
+    @property
+    def bin_edges(self):
+        t_unit = self.t_left.unit
+        t_left = self.t_left.FloatArray_in(t_unit)
+        t_right = self.t_right.FloatArray_in(t_unit)
+        bin_edges = np.concatenate(
+            (
+                t_left,
+                np.array([t_right[-1]]),
+            )
+        )
+        return QuantityArray(
+            values=bin_edges,
+            unit=t_unit
+        )
+
+    @property
+    def fnu_total(self):
+        fnu_unit = self.fnu_transient.unit
+        fnu_trans = self.fnu_transient.FloatArray_in(fnu_unit)
+        fnu_per = self.fnu_persistent.FloatArray_in(fnu_unit)
+        return QuantityArray(
+            values = fnu_trans + fnu_per,
+            unit = fnu_unit
+        )
+
     def to_df(self,t_unit:str,fnu_unit:str):
         df = pd.DataFrame({
             Columns.T_LEFT: self.t_left.FloatArray_in(t_unit),
@@ -221,6 +249,25 @@ class BinnedPredictedLightcurve:
         df.attrs[Columns.FNU_UNIT] = fnu_unit
 
         return df
+
+    def plot(
+        self,
+        ax: Axes,
+        style: LineStyle,
+        *,
+        t_unit: str,
+        fnu_unit: str
+    )->StepPatch:
+        t_left = self.t_left.FloatArray_in(t_unit)
+        t_right = self.t_right.FloatArray_in(t_unit)
+        fnu_total = self.fnu_total.FloatArray_in(fnu_unit)
+        bin_edges = self.bin_edges.FloatArray_in(t_unit)
+
+        return ax.stairs(
+            fnu_total,
+            bin_edges,
+            **style.to_kwargs(),
+        )
 
 @dataclass(frozen=True,slots=True)
 class BinnedCalculationLightcurve:
