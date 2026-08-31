@@ -33,6 +33,9 @@ class Columns(StrEnum):
     T_LEFT = auto()
     T_RIGHT = auto()
     FNU_AVERAGED = auto()
+    FNU_TRANSIENT = auto()
+    FNU_PERSISTENT = auto()
+    FNU_PERSISTENT_ERR = auto()
 
 @dataclass(frozen=True,slots=True)
 class InputValues:
@@ -138,6 +141,87 @@ class UnitMetadata:
     t_unit: str
     fnu_unit: str
 
+@dataclass(frozen=True, slots=True)
+class BinnedPredictedLightcurve:
+    t_center:   QuantityArray
+    t_left:     QuantityArray
+    t_right:    QuantityArray
+    fnu_transient:  QuantityArray
+    fnu_persistent: QuantityArray
+    fnu_persistent_err: QuantityArray
+
+    @classmethod
+    def from_csv(
+        cls,
+        path:Path
+    )->Self:
+        df = FileReader.table_from_csv(
+            path=path,
+        )
+        metadata = ensure_string_keys(df.attrs)
+        units = DATACLASS_CONVERTER.structure(
+            metadata,
+            UnitMetadata
+        )
+        t_center = QuantityArray(
+                values = dataframe_processors.convert_ndarray(
+                            df,Columns.T_CENTER
+                        ),
+                unit = units.t_unit
+        )
+        t_right = QuantityArray(
+                values = dataframe_processors.convert_ndarray(
+                            df,Columns.T_RIGHT
+                        ),
+                unit = units.t_unit
+        )
+        t_left = QuantityArray(
+                values = dataframe_processors.convert_ndarray(
+                            df,Columns.T_LEFT
+                        ),
+                unit = units.t_unit
+        )
+        fnu_transient = QuantityArray(
+                values = dataframe_processors.convert_ndarray(
+                            df,Columns.FNU_TRANSIENT
+                        ),
+                unit = units.fnu_unit
+        )
+        fnu_persistent = QuantityArray(
+                values = dataframe_processors.convert_ndarray(
+                            df,Columns.FNU_PERSISTENT
+                        ),
+                unit = units.fnu_unit
+        )
+        fnu_persistent_err = QuantityArray(
+                values = dataframe_processors.convert_ndarray(
+                            df,Columns.FNU_PERSISTENT_ERR
+                        ),
+                unit = units.fnu_unit
+        )
+        return cls(
+            t_center=t_center,
+            t_left = t_left,
+            t_right = t_right,
+            fnu_transient = fnu_transient,
+            fnu_persistent = fnu_persistent,
+            fnu_persistent_err = fnu_persistent_err
+        )
+
+    def to_df(self,t_unit:str,fnu_unit:str):
+        df = pd.DataFrame({
+            Columns.T_LEFT: self.t_left.FloatArray_in(t_unit),
+            Columns.T_CENTER: self.t_center.FloatArray_in(t_unit),
+            Columns.T_RIGHT: self.t_right.FloatArray_in(t_unit),
+            Columns.FNU_TRANSIENT: self.fnu_transient.FloatArray_in(fnu_unit),
+            Columns.FNU_PERSISTENT: self.fnu_persistent.FloatArray_in(fnu_unit),
+            Columns.FNU_PERSISTENT_ERR: self.fnu_persistent_err.FloatArray_in(fnu_unit),
+        })
+        df.attrs[Columns.T_UNIT] = t_unit
+        df.attrs[Columns.FNU_UNIT] = fnu_unit
+
+        return df
+
 @dataclass(frozen=True,slots=True)
 class BinnedCalculationLightcurve:
     units: UnitMetadata
@@ -218,6 +302,32 @@ class BinnedCalculationLightcurve:
             unit = self.units.fnu_unit
         )
 
+    def add_persistent_flux(
+        self,
+        persistent: QuantityArray,
+        persistent_err: QuantityArray
+    )->BinnedPredictedLightcurve:
+        fnu_unit = self.units.fnu_unit
+        fnu_per = persistent.FloatArray_in(fnu_unit)
+        fnu_per_err = persistent_err.FloatArray_in(fnu_unit)
+
+        if not (
+            self.t_center.size
+            == fnu_per.size
+            == fnu_per_err.size
+        ):
+            raise ValueError(
+                "計算光度曲線と定常放射の配列の長さが一致しません."
+            )
+        return BinnedPredictedLightcurve(
+            t_center =  self.t_center_quantity,
+            t_left =    self.t_left_quantity,
+            t_right =   self.t_right_quantity,    
+            fnu_transient = self.fnu_averaged_quantity,
+            fnu_persistent = persistent,
+            fnu_persistent_err = persistent_err
+        )
+
     def to_df(self,t_unit:str,fnu_unit:str):
         t_left = self.t_left_quantity
         t_center = self.t_center_quantity
@@ -253,6 +363,7 @@ class BinnedCalculationLightcurve:
             bin_edges,
             **style.to_kwargs(),
         )
+
 
 
 @dataclass(frozen=True, slots=True)
