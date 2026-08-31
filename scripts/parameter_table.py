@@ -6,6 +6,7 @@ from dacite import from_dict
 from module.input_reader import read_physical_parameters
 from module.parameter_table import PhysicalParameters
 from module.utilities import filereaders as fr
+from module.utils import FileReader
 from module.utilities import filewriters as fw
 
 def main(args:argparse.Namespace):

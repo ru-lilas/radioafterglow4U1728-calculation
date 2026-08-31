@@ -88,6 +88,7 @@ class PhysicalParameters:
             Columns.DISTANCE: self.distance.value,
             Columns.THETA: self.theta,
             Columns.PHI_THETA: self.phi_theta.value,
+            Columns.TAU_THETA: self.tau_theta,
             Columns.LNU_THETA: self.lnu_theta.value,
             Columns.DOPPLER_DELTA: self.doppler_delta
         })
