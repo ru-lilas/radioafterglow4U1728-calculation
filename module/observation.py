@@ -7,7 +7,7 @@ from matplotlib.lines import Line2D
 from numpy.typing import NDArray
 from functools import cached_property
 from module import dataframe_processors, dataframe_utils, parameter_table
-from module.models import ThermalSynchrotron, ThermalSynchrotronTable, calculate_phi, calculate_xm
+from module.models import ThermalSynchrotronUtils, ThermalSynchrotronTable, calculate_phi, calculate_xm
 from module.mydataclasses import QuantityData,QuantityArray
 from module.types import FloatArray
 import astropy.units as u

@@ -9,7 +9,7 @@ from module import quantity_converter
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass
-from module.types import FloatArray
+from module.types import FloatArray, FloatArrayLike
 
 from numpy.typing import NDArray
 from module import synchrotron_scaling_values
@@ -187,7 +187,25 @@ class ThermalSynchrotronTable:
     def interpolate_ip(self,x:FloatArray)->FloatArray:
         return np.exp(self.interpolate_log_ip(x))
 
+@dataclass(slots=True)
 class ThermalSynchrotron:
+    integral_table: ThermalSynchrotronTable
+    xm: FloatArray
+    tau_theta: FloatArrayLike
+
+    @property
+    def lambda_theta(self)->FloatArray:
+        ip = self.integral_table.interpolate_ip(self.xm)
+        optical_depth = ip*self.tau_theta/self.xm
+        f_esc = -np.expm1(-optical_depth)
+        xm2 = self.xm**2
+        return xm2 * f_esc
+
+    @property
+    def lambda_theta_max(self)->float:
+        return float(np.argmax(self.lambda_theta))
+
+class ThermalSynchrotronUtils:
     def __init__(
         self,
         table: ThermalSynchrotronTable,

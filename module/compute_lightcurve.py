@@ -5,7 +5,7 @@ from typing import Self, cast, Any, Hashable
 
 from matplotlib.patches import StepPatch
 from module import plot_utils
-from module.models import ThermalSynchrotron, calculate_xm
+from module.models import ThermalSynchrotronUtils, calculate_xm
 from module.mydataclasses import QuantityArray, QuantityData
 from module.plot_utils import LineStyle
 from module.types import FloatArray
@@ -535,7 +535,7 @@ class CalculationLightcurve:
 
 def compute(
     config: inputs_as_dataclass.ModelConfigure,
-    model: ThermalSynchrotron,
+    model: ThermalSynchrotronUtils,
     input: Input,
 )->CalculationLightcurve:
     xm = calculate_xm(

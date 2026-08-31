@@ -73,7 +73,7 @@ def main():
     table_integral = ThermalSynchrotronTable.from_csv(
         path = args.integral_table
     )
-    lc_model = compute_lightcurve.ThermalSynchrotron(table_integral)
+    lc_model = compute_lightcurve.ThermalSynchrotronUtils(table_integral)
 
     lc = compute_lightcurve.compute(
         config=lc_conf,

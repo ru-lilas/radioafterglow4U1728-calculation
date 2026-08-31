@@ -61,7 +61,7 @@ timewindow = obslc_selected.time_bin_bounds(conf_sampling.timewindow)
 # calculate model lightcurves
 lc_conf = conf_fitting.model
 table_integral = models.ThermalSynchrotronTable.from_csv(path_integral_table)
-lc_model = compute_lightcurve.ThermalSynchrotron(table_integral)
+lc_model = compute_lightcurve.ThermalSynchrotronUtils(table_integral)
 
 chi2_records: list[dict[str, int | float]] = []
 for lc_input in compute_lightcurve.build_inputs(path_param_table):
