@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Self
 import astropy.units as u
 from module import quantity_converter
-from module.utilities import filereaders as fr
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass
@@ -18,6 +17,7 @@ from module import electron_temperature
 from module import tabular
 from module.utilities import bisection, unit_aliases as unit
 from module import calculate_lnu_th
+from module.utils import FileReader
 
 # @dataclass
 # class ThermalSynchrotronScalingValues:
@@ -175,7 +175,7 @@ class ThermalSynchrotronTable:
             cls,
             path:Path
     )-> Self:
-        df = fr.read_csv(path)
+        df = FileReader.table_from_csv(path)
         return cls(
             xm = df["xm"].to_numpy(dtype=np.float64),
             ln_ip = df["ln_ip"].to_numpy(dtype=np.float64)

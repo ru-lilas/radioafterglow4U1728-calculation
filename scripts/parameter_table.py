@@ -5,7 +5,6 @@ from pathlib import Path
 from dacite import from_dict
 from module.input_reader import read_physical_parameters
 from module.parameter_table import PhysicalParameters
-from module.utilities import filereaders as fr
 from module.utils import FileReader
 from module.utilities import filewriters as fw
 
@@ -13,8 +12,7 @@ def main(args:argparse.Namespace):
     outpath:Path = args.output
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
-    inpath:Path = args.input
-    inputs:dict = fr.read_yaml_pyyaml(inpath)
+    inputs:dict = FileReader.yaml_safe(args.input)
     physical_params = from_dict(
         data_class=PhysicalParameters,
         data = inputs["physical_parameters"]

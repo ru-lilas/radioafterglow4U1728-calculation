@@ -10,7 +10,6 @@ from module import dataframe_processors, dataframe_utils, parameter_table
 from module.models import ThermalSynchrotron, ThermalSynchrotronTable, calculate_phi, calculate_xm
 from module.mydataclasses import QuantityData,QuantityArray
 from module.types import FloatArray
-from module.utilities import filereaders as fr
 import astropy.units as u
 import numpy as np
 import pandas as pd
@@ -42,8 +41,8 @@ class LightcurveMetadata:
             cls,
             path:Path
     )->Self:
-        dict_data = fr.read_keyvalue(path)
-        return cls(**dict_data)
+        metadata = FileReader.keyvalue(path)
+        return cls(**metadata)
 
     @cached_property
     def bin_width(self):

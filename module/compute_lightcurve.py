@@ -9,7 +9,6 @@ from module.models import ThermalSynchrotron, calculate_xm
 from module.mydataclasses import QuantityArray, QuantityData
 from module.plot_utils import LineStyle
 from module.types import FloatArray
-from module.utilities import filereaders as fr
 import astropy.units as u
 import numpy as np
 import pandas as pd
@@ -615,7 +614,7 @@ def compute(
 #         )
 #
 def build_inputs(path:Path):
-    df = fr.read_csv(path)
+    df = FileReader.table_from_csv(path)
     lc_inputunits = InputUnits.from_keyvalue(path)
     return [
         Input(
