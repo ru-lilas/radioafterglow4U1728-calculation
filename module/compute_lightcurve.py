@@ -714,6 +714,7 @@ def build_inputs(path:Path):
 class LightcurveStyleConfig:
     model_binned: plot_utils.LineStyle
     observation: plot_utils.ScatterStyle
+    persistent: plot_utils.LineStyle
 
 @dataclass(frozen=True, slots=True)
 class PlotConfig:

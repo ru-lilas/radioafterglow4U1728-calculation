@@ -55,6 +55,12 @@ def main(args:argparse.Namespace):
             t_unit=t_unit,
             fnu_unit=fnu_unit
         )
+        obslc_nu.plot_persistent(
+            ax,
+            style=conf_plot.styles.persistent,
+            t_unit=t_unit,
+            fnu_unit=fnu_unit
+        )
         pdf.savefig(fig)
         plt.close(fig)
 

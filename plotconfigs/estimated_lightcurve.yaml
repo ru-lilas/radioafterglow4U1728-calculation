@@ -81,6 +81,12 @@ styles:
     linestyle: "none"
     alpha: null
     zorder: 0.0
+  persistent: 
+    color: "#000000"
+    linewidth: 1.0
+    linestyle: "--"
+    alpha: null
+    zorder: 1.0
 layout:
   figure:
     figsize: [16,9]
