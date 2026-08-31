@@ -258,14 +258,13 @@ class BinnedPredictedLightcurve:
         t_unit: str,
         fnu_unit: str
     )->StepPatch:
-        t_left = self.t_left.FloatArray_in(t_unit)
-        t_right = self.t_right.FloatArray_in(t_unit)
         fnu_total = self.fnu_total.FloatArray_in(fnu_unit)
         bin_edges = self.bin_edges.FloatArray_in(t_unit)
 
         return ax.stairs(
             fnu_total,
             bin_edges,
+            baseline=self.fnu_persistent.FloatArray_in(fnu_unit)[0],
             **style.to_kwargs(),
         )
 
