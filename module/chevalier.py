@@ -1,6 +1,8 @@
 import numpy as np
 from dataclasses import dataclass
 import pandas as pd
+from pathlib import Path
+from typing import Self
 
 from module.mydataclasses import QuantityArray
 from module import models
@@ -97,6 +99,17 @@ class ChevalierGrid:
 class ChevalierInputs:
     physical_parameters: PhysicalParameters
     peak_table: LambdaPeakTable
+
+    @classmethod
+    def import_from(
+        cls,
+        path_input: Path,
+        path_peak_table: Path
+    )->Self:
+        return cls(
+            physical_parameters = PhysicalParameters.from_yaml(path_input),
+            peak_table = LambdaPeakTable.from_csv(path_peak_table)
+        )
 
     @property
     def tau_theta(self)->FloatArray:

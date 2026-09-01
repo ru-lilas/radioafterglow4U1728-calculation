@@ -259,7 +259,7 @@ def lnu_into_fnu(
     distance: QuantityData
 )->QuantityArray:
     values:FloatArray = lnu.values / (4.0*np.pi*distance.value**2)
-    unit:str = u.Unit(lnu.unit)/u.Unit(distance.unit)
+    unit:str = u.Unit(lnu.unit)/u.Unit(distance.unit)**2
     return QuantityArray(
         values = values,
         unit = unit
