@@ -9,6 +9,7 @@ from module import quantity_converter
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass
+from module.mydataclasses import QuantityArray, QuantityData
 from module.types import FloatArray, FloatArrayLike
 
 from numpy.typing import NDArray
@@ -252,6 +253,26 @@ class ThermalSynchrotronUtils:
     )->u.Quantity:
         fnu_obs = self.fnu_src(xm,tau_theta,lnu_theta,distance)
         return doppler_delta**3 * fnu_obs
+
+def lnu_into_fnu(
+    lnu: QuantityArray,
+    distance: QuantityData
+)->QuantityArray:
+    values:FloatArray = lnu.values / (4.0*np.pi*distance.value**2)
+    unit:str = u.Unit(lnu.unit)/u.Unit(distance.unit)
+    return QuantityArray(
+        values = values,
+        unit = unit
+    )
+
+def fnu_sourceframe_into_fnu_observerframe(
+    fnu_sourceframe: QuantityArray,
+    doppler_delta: FloatArrayLike
+)->QuantityArray:
+    return QuantityArray(
+        values = fnu_sourceframe.values*doppler_delta**3,
+        unit = fnu_sourceframe.unit
+    )
 
 def calculate_phi(
     t_obs: u.Quantity,

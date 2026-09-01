@@ -1,7 +1,26 @@
 from dataclasses import dataclass
 from typing import Literal
+from pathlib import Path
 
 type ValueScale = Literal["linear","log"]
+from module.types import FloatArray
+from module.mydataclasses import (
+    QuantityArray,
+    QuantityArrayBase,
+    QuantityData,
+    YAMLReadable,
+    ValueArray
+)
+
+@dataclass(frozen=True,slots=True)
+class PhysicalParametersBase:
+    a_wind: QuantityArrayBase
+    beta_sh: ValueArray
+    eps_b: float
+    eps_th: float
+    mu: float
+    mu_e: float
+    distance: QuantityData
 
 @dataclass
 class MICROPHYSICS:
@@ -45,10 +64,3 @@ class SAMPLING:
     max: float
     unit: str
 
-@dataclass
-class PhysicalParameters:
-    beta_sh_arr: VALUE_ARR
-    a_wind_arr: VALUE_ARR
-    microphysics: MICROPHYSICS
-    distance: DISTANCE
-    units: UNITS

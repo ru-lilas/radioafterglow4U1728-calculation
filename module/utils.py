@@ -7,6 +7,8 @@ import warnings
 from typing import Any,cast
 from ruamel.yaml import YAML
 from dacite import Config
+from cattrs import Converter
+DATACLASS_CONVERTER = Converter()
 
 class Integrator:
     @staticmethod

@@ -4,7 +4,7 @@ from pathlib import Path
 
 from dacite import from_dict
 from module.input_reader import read_physical_parameters
-from module.parameter_table import PhysicalParameters
+from module.parameter_table import PhysicalParameters:
 from module.utils import FileReader
 from module.utilities import filewriters as fw
 
@@ -14,7 +14,7 @@ def main(args:argparse.Namespace):
 
     inputs:dict = FileReader.yaml_safe(args.input)
     physical_params = from_dict(
-        data_class=PhysicalParameters,
+        data_class=PhysicalParameters:,
         data = inputs["physical_parameters"]
     )
 

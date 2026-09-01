@@ -14,7 +14,12 @@ from module import input_reader
 from module import inputs_as_dataclass
 from module.mydataclasses import (
     QuantityArray,
+    QuantityArrayBase,
+    QuantityData,
+    YAMLReadable,
+    ValueArray
 )
+from module.utils import FileReader
 
 class Columns(StrEnum):
     A_WIND = auto()
@@ -34,14 +39,40 @@ class Columns(StrEnum):
     IDX = auto()
 
 @dataclass(frozen=True,slots=True)
-class PhysicalParameters:
-    a_wind: mydataclasses.QuantityArrayBase
-    beta_sh: mydataclasses.ValueArray
+class PhysicalParametersInput(YAMLReadable):
+    a_wind: QuantityArrayBase
+    beta_sh: ValueArray
     eps_b: float
     eps_th: float
     mu: float
     mu_e: float
-    distance: mydataclasses.QuantityData
+    distance: QuantityData
+
+@dataclass(frozen=True,slots=True)
+class PhysicalParameters:
+    a_wind: QuantityArray
+    beta_sh: FloatArray
+    eps_b: float
+    eps_th: float
+    mu: float
+    mu_e: float
+    distance: QuantityData
+
+    @classmethod
+    def from_yaml(
+        cls,
+        path:Path
+    ):
+        indata = PhysicalParametersInput.from_yaml(path)
+        return cls(
+            a_wind = indata.a_wind.quantity_array,
+            beta_sh = indata.beta_sh.arr,
+            eps_b = indata.eps_b,
+            eps_th = indata.eps_th,
+            mu = indata.mu,
+            mu_e = indata.mu_e,
+            distance = indata.distance
+        )
 
     @property
     def theta(self)->FloatArray:
@@ -49,7 +80,7 @@ class PhysicalParameters:
             eps_th=self.eps_th,
             mu=self.mu,
             mu_e=self.mu_e,
-            beta_sh=self.beta_sh.arr
+            beta_sh=self.beta_sh
         )
 
     @property
@@ -66,7 +97,7 @@ class PhysicalParameters:
             theta = self.theta,
             eps_b = self.eps_b,
             a_wind = self.a_wind.quantity,
-            beta_sh=self.beta_sh.arr,
+            beta_sh=self.beta_sh,
             mu=self.mu,
             mu_e=self.mu_e,
         )
@@ -77,39 +108,17 @@ class PhysicalParameters:
             theta = self.theta,
             eps_b = self.eps_b,
             a_wind = self.a_wind.quantity,
-            beta_sh=self.beta_sh.arr,
+            beta_sh=self.beta_sh,
         )
 
     @property
     def doppler_delta(self):
-        return quantity_converter.beta_into_doppler_delta(self.beta_sh.arr)
-
-    def phi_peak(
-        self,
-        xm_peak:FloatArray
-    )->QuantityArray:
-        phi_theta_arr:FloatArray = self.phi_theta.value
-        unit = self.phi_theta._unitstr
-        return QuantityArray(
-            values = phi_theta_arr*xm_peak,
-            unit = unit
-        )
-
-    def lnu_peak(
-        self,
-        lambda_theta_peak:FloatArray
-    )->QuantityArray:
-        lnu_theta_arr:FloatArray = self.lnu_theta.value
-        unit = self.lnu_theta._unitstr
-        return QuantityArray(
-            values = lnu_theta_arr*lambda_theta_peak,
-            unit = unit
-        )
+        return quantity_converter.beta_into_doppler_delta(self.beta_sh)
 
     def to_df(self):
         return pd.DataFrame({
-            Columns.A_WIND: self.a_wind.values.arr,
-            Columns.BETA_SH: self.beta_sh.arr,
+            Columns.A_WIND: self.a_wind.values,
+            Columns.BETA_SH: self.beta_sh,
             Columns.EPS_B: self.eps_b,
             Columns.EPS_TH: self.eps_th,
             Columns.MU: self.mu,
