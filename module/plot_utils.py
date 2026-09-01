@@ -8,6 +8,7 @@ from matplotlib.ticker import LogLocator
 from matplotlib.colorbar import Colorbar
 from numpy.typing import NDArray
 from module import dataframe_utils
+from module.mydataclasses import ValueArray, YAMLReadable
 from module.utilities import build_nparray
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
@@ -16,7 +17,7 @@ import numpy as np
 
 from pathlib import Path
 from module.utils import FileReader
-from module.types import ValueScale,FloatPair
+from module.types import FloatArray, ValueScale,FloatPair
 
 PlotScale = Literal["linear","log"]
 AxisDirection = Literal["x","y"]
@@ -208,6 +209,15 @@ class AxisConfigure:
         )
 
 @dataclass(frozen=True, slots=True)
+class Style:
+    def to_kwargs(self)->dict[str,Any]:
+        return {
+            key: value
+            for key, value in asdict(self).items()
+            if value is not None
+        }
+
+@dataclass(frozen=True, slots=True)
 class LineStyle:
     color: str = "#000000"
     linewidth: float = 1.0
@@ -255,6 +265,39 @@ class ScatterStyle:
             if value is not None
         }
 
+@dataclass(frozen=True, slots=True)
+class ContourLevelConfigure:
+    start: float|None
+    stop: float|None
+    num: int
+
+    def to_nparray(self,grid:FloatArray):
+        if self.start is None:
+            start_compensated:float = grid.min()
+        else:
+            start_compensated = self.start
+    
+        if self.stop is None:
+            stop_compensated:float = grid.max()
+        else:
+            stop_compensated = self.stop
+
+        return np.geomspace(
+            start=start_compensated,
+            stop=stop_compensated,
+            num=self.num
+        )
+
+@dataclass(frozen=True,slots=True)
+class ContourStyle(Style):
+    colors: str = "#000000"
+    linestyles: str = "-"
+
+@dataclass(frozen=True,slots=True)
+class ContourConfigure:
+    style: ContourStyle
+    levels: ContourLevelConfigure
+
 def build_meshgrid(
     df,
     x_column:str,
@@ -289,25 +332,6 @@ class ColormapConfigure:
             cmap.set_under(self.under)
         return cmap
 
-@dataclass
-class ContourLevelConfigure:
-    scale: PlotScale
-    arr: dict[str,float]
-
-    @cached_property
-    def levels(self):
-        if self.scale == "linear":
-            arr = build_nparray.linear(self.arr)
-        else:
-            arr = build_nparray.log(self.arr)
-        return np.concatenate([arr,])
-
-@dataclass
-class ContourfConfigure:
-    zdata: PlotData
-    zscale: PlotScale
-    extend: str|None
-    levels: NDArray[np.float64]
 
 @dataclass
 class ColorbarConfigure:

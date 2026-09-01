@@ -5,6 +5,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Self
+import numpy as np
 
 from module.types import FloatArray
 from module import electron_temperature,synchrotron_scaling_values,quantity_converter
@@ -80,6 +81,7 @@ class Chi2FittingConfigure:
     def n_model(self):
         return len(self.free_parameters)
 
+
 @dataclass(frozen=True,slots=True)
 class PhysicalParameters:
     a_wind: QuantityArray
@@ -106,6 +108,29 @@ class PhysicalParameters:
             mu_e = indata.mu_e,
             distance = indata.distance
         )
+
+    @property
+    def a_wind_axis(self)->FloatArray:
+        return np.unique(self.a_wind.values)
+
+    @property
+    def beta_sh_axis(self)->FloatArray:
+        return np.unique(self.beta_sh)
+
+    def build_meshgrid(self):
+        a_wind_unit = self.a_wind.unit
+
+        a_wind_value_grid,beta_sh_grid = np.meshgrid(
+            self.a_wind_axis,
+            self.beta_sh_axis,
+            indexing="xy",
+            sparse=True
+        )
+        a_wind_grid = QuantityArray(
+            values = a_wind_value_grid,
+            unit = a_wind_unit
+        )
+        return (a_wind_grid,beta_sh_grid)
 
     @property
     def theta(self)->FloatArray:

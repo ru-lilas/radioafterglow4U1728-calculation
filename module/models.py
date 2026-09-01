@@ -301,3 +301,62 @@ def calculate_xm(
         dtype=np.float64
     )
 
+
+def theta(
+    eps_th:FloatArrayLike,
+    mu: FloatArrayLike,
+    mu_e: FloatArrayLike,
+    beta_sh: FloatArrayLike,
+)->FloatArray:
+    return electron_temperature.calculate_theta_e(
+        eps_th=eps_th,
+        mu=mu,
+        mu_e=mu_e,
+        beta_sh=beta_sh
+    )
+
+def phi_theta(
+    theta:FloatArrayLike,
+    eps_b:FloatArrayLike,
+    a_wind: QuantityArray
+):
+    return synchrotron_scaling_values.calculate_phi_theta(
+        theta = theta,
+        eps_b = eps_b,
+        a_wind = a_wind.quantity
+    )
+
+def tau_theta(
+    theta:FloatArrayLike,
+    eps_b:FloatArrayLike,
+    a_wind: QuantityArray,
+    beta_sh:FloatArrayLike,
+    mu:FloatArrayLike,
+    mu_e:FloatArrayLike
+):
+    return synchrotron_scaling_values.calculate_tau_theta(
+        theta = theta,
+        eps_b = eps_b,
+        a_wind = a_wind.quantity,
+        beta_sh=beta_sh,
+        mu=mu,
+        mu_e=mu_e,
+    )
+
+def lnu_theta(
+    theta:FloatArrayLike,
+    eps_b:FloatArrayLike,
+    a_wind: QuantityArray,
+    beta_sh:FloatArrayLike,
+):
+    return synchrotron_scaling_values.calculate_l_theta(
+        theta = theta,
+        eps_b = eps_b,
+        a_wind =a_wind.quantity,
+        beta_sh=beta_sh,
+    )
+
+def doppler_delta(
+    beta_sh:FloatArrayLike
+):
+    return quantity_converter.beta_into_doppler_delta(beta_sh)
