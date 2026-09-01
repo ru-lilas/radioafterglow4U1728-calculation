@@ -94,13 +94,13 @@ class ChevalierGrid:
         return self.df_pivot(GridColumns.FNU_PEAK)
 
 @dataclass(frozen=True,slots=True)
-class PeakValues:
-    parameter_table: PhysicalParameters
+class ChevalierInputs:
+    physical_parameters: PhysicalParameters
     peak_table: LambdaPeakTable
 
     @property
     def tau_theta(self)->FloatArray:
-        return self.parameter_table.tau_theta
+        return self.physical_parameters.tau_theta
 
     @property
     def xm_peak(self)->FloatArray:
@@ -114,8 +114,8 @@ class PeakValues:
     def phi_peak(
         self,
     )->QuantityArray:
-        phi_theta_arr:FloatArray = self.parameter_table.phi_theta.value
-        unit = self.parameter_table.phi_theta._unitstr
+        phi_theta_arr:FloatArray = self.physical_parameters.phi_theta.value
+        unit = self.physical_parameters.phi_theta._unitstr
         return QuantityArray(
             values = phi_theta_arr*self.xm_peak,
             unit = unit
@@ -125,8 +125,8 @@ class PeakValues:
     def lnu_peak(
         self,
     )->QuantityArray:
-        lnu_theta_arr:FloatArray = self.parameter_table.lnu_theta.value
-        unit = self.parameter_table.lnu_theta._unitstr
+        lnu_theta_arr:FloatArray = self.physical_parameters.lnu_theta.value
+        unit = self.physical_parameters.lnu_theta._unitstr
         return QuantityArray(
             values = lnu_theta_arr*self.lambda_theta_peak,
             unit = unit
@@ -136,8 +136,8 @@ class PeakValues:
     def fnu_peak_observerframe(
         self
     )->QuantityArray:
-        distance = self.parameter_table.distance
-        doppler_delta = self.parameter_table.doppler_delta
+        distance = self.physical_parameters.distance
+        doppler_delta = self.physical_parameters.doppler_delta
         fnu_sourceframe = models.lnu_into_fnu(
             lnu = self.lnu_peak,
             distance = distance
@@ -154,8 +154,8 @@ class PeakValues:
         fnu_unit: str
     )->ChevalierGrid:
         return ChevalierGrid(
-            a_wind_arr=self.parameter_table.a_wind.FloatArray_in(a_wind_unit),
-            beta_sh_arr = self.parameter_table.beta_sh,
+            a_wind_arr=self.physical_parameters.a_wind.FloatArray_in(a_wind_unit),
+            beta_sh_arr = self.physical_parameters.beta_sh,
             phi_peak_arr= self.phi_peak.FloatArray_in(phi_unit),
             fnu_peak_arr= self.fnu_peak_observerframe.FloatArray_in(fnu_unit)
         )
