@@ -1,15 +1,20 @@
 from pathlib import Path
-from typing import cast
+from typing import Self, cast
 from dataclasses import dataclass
+from module.dataframe_processors import convert_ndarray
 from module.types import FloatArray
 import astropy.units as u
 import pandas as pd
+import numpy as np
 from module import mydataclasses, synchrotron_scaling_values, utils
 from module import electron_temperature
 from enum import StrEnum, auto
 from module import quantity_converter
 from module import input_reader
 from module import inputs_as_dataclass
+from module.mydataclasses import (
+    QuantityArray,
+)
 
 class Columns(StrEnum):
     A_WIND = auto()
@@ -24,6 +29,8 @@ class Columns(StrEnum):
     TAU_THETA = auto()
     LNU_THETA = auto()
     DOPPLER_DELTA = auto()
+    XM_PEAK = auto()
+    LAMBDA_PEAK = auto()
     IDX = auto()
 
 @dataclass(frozen=True,slots=True)
@@ -77,6 +84,28 @@ class PhysicalParameters:
     def doppler_delta(self):
         return quantity_converter.beta_into_doppler_delta(self.beta_sh.arr)
 
+    def phi_peak(
+        self,
+        xm_peak:FloatArray
+    )->QuantityArray:
+        phi_theta_arr:FloatArray = self.phi_theta.value
+        unit = self.phi_theta._unitstr
+        return QuantityArray(
+            values = phi_theta_arr*xm_peak,
+            unit = unit
+        )
+
+    def lnu_peak(
+        self,
+        lambda_theta_peak:FloatArray
+    )->QuantityArray:
+        lnu_theta_arr:FloatArray = self.lnu_theta.value
+        unit = self.lnu_theta._unitstr
+        return QuantityArray(
+            values = lnu_theta_arr*lambda_theta_peak,
+            unit = unit
+        )
+
     def to_df(self):
         return pd.DataFrame({
             Columns.A_WIND: self.a_wind.values.arr,
@@ -115,3 +144,41 @@ def read_as_df(
         sep = ",",
         split_sign = "="
     )
+
+@dataclass(frozen=True,slots=True)
+class LambdaPeakTable:
+    tau_theta_ref: FloatArray
+    xm_peak_ref: FloatArray
+    lambda_peak_ref: FloatArray
+
+    @classmethod
+    def from_csv(
+            cls,
+            path:Path
+    )->Self:
+        df = utils.FileReader.table_from_csv(path)
+        return cls(
+            tau_theta_ref = convert_ndarray(df,Columns.TAU_THETA),
+            xm_peak_ref = convert_ndarray(df,Columns.XM_PEAK),
+            lambda_peak_ref = convert_ndarray(df,Columns.LAMBDA_PEAK),
+        )
+
+    def interpolated_xm_peak(
+        self,
+        tau_theta:FloatArray
+    )->FloatArray:
+        return np.interp(
+            tau_theta,
+            self.tau_theta_ref,
+            self.xm_peak_ref
+        )
+
+    def interpolated_lambda_peak(
+        self,
+        tau_theta:FloatArray
+    )->FloatArray:
+        return np.interp(
+            tau_theta,
+            self.tau_theta_ref,
+            self.lambda_peak_ref
+        )
