@@ -4,9 +4,7 @@ import pandas as pd
 from pathlib import Path
 import warnings
 from ruamel.yaml import YAML, CommentedMap
-from typing import Self
 from dacite import from_dict
-from typing import TypeVar
 
 def read_csv(filepath:Path,sep:str=","):
     df = pd.read_csv(
@@ -72,24 +70,3 @@ def read_keyvalue(filepath:Path,split_sign:str="=")->dict[str,Any]:
         else:
             break
     return keyvalue
-
-T = TypeVar("T")
-class InputReader:
-    @staticmethod
-    def read(path: Path, data_class: type[T]) -> T:
-        dict_data = read_yaml_pyyaml(path)
-        return from_dict(
-            data_class=data_class,
-            data=dict_data,
-        )
-
-class YAMLReadable:
-    @classmethod
-    def from_yaml(
-            cls,
-            path:Path
-    )-> Self:
-        return InputReader.read(
-            path,cls
-        )
-

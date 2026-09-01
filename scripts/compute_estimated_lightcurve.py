@@ -8,7 +8,7 @@ from pathlib import Path
 
 from module.chi2_fitting import MinimumChi2Summary
 from module import compute_lightcurve,observation
-from module.parameter_table import GeneralInputs,read_as_df
+from module.inputs_as_dataclass import GeneralInputs
 from module.utils import FileWriter
 from module.models import ThermalSynchrotronTable
 

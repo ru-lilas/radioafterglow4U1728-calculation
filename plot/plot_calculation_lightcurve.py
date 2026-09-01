@@ -1,5 +1,5 @@
 from module import dataframe_processors, dataframe_utils
-from module.parameter_table import GeneralInputs
+from module.inputs_as_dataclass import GeneralInputs
 from module.utilities import filereaders as fr
 from pathlib import Path
 import argparse

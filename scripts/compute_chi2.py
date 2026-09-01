@@ -8,7 +8,7 @@ from module import (
     observation,
     chi2_fitting,
 )
-from module.parameter_table import GeneralInputs
+from module.inputs_as_dataclass import GeneralInputs
 
 parser = argparse.ArgumentParser()
 

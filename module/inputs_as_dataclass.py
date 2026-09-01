@@ -6,9 +6,26 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Self
 
-from module.mydataclasses import QuantityArrayBase, QuantityData,QuantityArray
 from module.types import FloatArray
-from module import electron_temperature,synchrotron_scaling_values
+from module import electron_temperature,synchrotron_scaling_values,quantity_converter
+from module.mydataclasses import (
+    QuantityArray,
+    QuantityArrayBase,
+    QuantityData,
+    YAMLReadable,
+    ValueArray
+)
+
+@dataclass(frozen=True,slots=True)
+class PhysicalParametersBase:
+    a_wind: QuantityArrayBase
+    beta_sh: ValueArray
+    eps_b: float
+    eps_th: float
+    mu: float
+    mu_e: float
+    distance: QuantityData
+
 
 @dataclass(frozen=True)
 class SamplingTimewindow:
@@ -56,8 +73,8 @@ class ModelConfigure:
 @dataclass(frozen=True)
 class Chi2FittingConfigure:
     free_parameters: list
-    model: ModelConfigure
     sampling: SamplingConfigure
+    model: ModelConfigure
 
     @property
     def n_model(self):
@@ -72,6 +89,23 @@ class PhysicalParameters:
     mu: float
     mu_e: float
     distance: QuantityData
+
+    @classmethod
+    def from_yaml(
+        cls,
+        path:Path
+    )->Self:
+        generalinput = GeneralInputs.from_yaml(path)
+        indata = generalinput.physical_parameters
+        return cls(
+            a_wind = indata.a_wind.quantity_array,
+            beta_sh = indata.beta_sh.arr,
+            eps_b = indata.eps_b,
+            eps_th = indata.eps_th,
+            mu = indata.mu,
+            mu_e = indata.mu_e,
+            distance = indata.distance
+        )
 
     @property
     def theta(self)->FloatArray:
@@ -112,4 +146,9 @@ class PhysicalParameters:
 
     @property
     def doppler_delta(self):
-        return quantity_converter.beta_into_doppler_delta(self.beta_sh.arr)
+        return quantity_converter.beta_into_doppler_delta(self.beta_sh)
+
+@dataclass(frozen=True)
+class GeneralInputs(YAMLReadable):
+    physical_parameters: PhysicalParametersBase
+    chi2fitting: Chi2FittingConfigure

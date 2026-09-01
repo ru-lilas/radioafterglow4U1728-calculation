@@ -5,7 +5,10 @@ import pandas as pd
 from module.mydataclasses import QuantityArray
 from module import models
 from module.types import FloatArray
-from module.parameter_table import PhysicalParameters,LambdaPeakTable
+from module.inputs_as_dataclass import(
+    PhysicalParameters
+)
+from module.parameter_table import LambdaPeakTable
 from enum import StrEnum, auto
 
 class GridColumns(StrEnum):
@@ -92,7 +95,7 @@ class ChevalierGrid:
 
 @dataclass(frozen=True,slots=True)
 class PeakValues:
-    parameter_table: PhysicalParameters:
+    parameter_table: PhysicalParameters
     peak_table: LambdaPeakTable
 
     @property
