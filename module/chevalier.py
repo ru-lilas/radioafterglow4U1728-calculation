@@ -110,6 +110,35 @@ class ChevalierGrid:
             beta_sh = self.beta_sh_grid
         )
 
+    def lambda_theta_peak(self,peak_table:LambdaPeakTable):
+        return peak_table.interpolated_lambda_peak(self.tau_theta)
+
+    def xm_peak(self,peak_table:LambdaPeakTable)->FloatArray:
+        return peak_table.interpolated_xm_peak(self.tau_theta)
+
+    def phi_peak(
+        self,
+        peak_table:LambdaPeakTable
+    )->QuantityArray:
+        phi_theta_arr:FloatArray = self.phi_theta.values
+        unit = self.phi_theta.unit
+        return QuantityArray(
+            values = phi_theta_arr*self.xm_peak(peak_table),
+            unit = unit
+        )
+
+    def lnu_peak(
+        self,
+        peak_table:LambdaPeakTable
+    )->QuantityArray:
+        lnu_theta_arr:FloatArray = self.lnu_theta.values
+        unit = self.lnu_theta.unit
+        return QuantityArray(
+            values = lnu_theta_arr*self.lambda_theta_peak(peak_table),
+            unit = unit
+        )
+
+
 @dataclass(frozen=True,slots=True)
 class ChevalierGridBase:
     a_wind_arr: FloatArray
