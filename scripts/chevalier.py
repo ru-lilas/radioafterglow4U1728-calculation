@@ -5,8 +5,6 @@ from matplotlib.backends.backend_pdf import PdfPages
 from module import plot_utils
 from module.chevalier import (
     ChevalierGrid,
-    ChevalierInputs,
-    ChevalierGridBase,
     PlotConfig
 )
 from module.inputs_as_dataclass import PhysicalParameters
@@ -42,32 +40,31 @@ def main():
     outpath:Path = args.output
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
-    grid = ChevalierGrid.from_yaml(args.input)
+    grids = ChevalierGrid.from_yaml(args.input)
     peak_table = LambdaPeakTable.from_csv(args.peak_table)
-    fnu_peak = grid.fnu_peak_observerframe(peak_table)
-    phi_peak = grid.phi_peak(peak_table)
 
-    print("===fnu_peak===")
-    print(fnu_peak.FloatArray_in("mJy"))
-    print("===phi_peak===")
-    print(phi_peak.FloatArray_in("GHz min"))
+    plotconf = PlotConfig.from_yaml(args.plotconfig)
+    with PdfPages(outpath) as pdf:
+        fig,ax = plot_utils.create_configured_axes(plotconf.layout)
+        fig.set_layout_engine("constrained")
 
-    # grids = inputs.build_chevalier_grid(
-    #     a_wind_unit="g cm-1",
-    #     phi_unit="GHz min",
-    #     fnu_unit="mJy"
-    # )
-    # plotconf = PlotConfig.from_yaml(args.plotconfig)
-    # with PdfPages(outpath) as pdf:
-    #     fig,ax = plot_utils.create_configured_axes(plotconf.layout)
-    #     fig.set_layout_engine("constrained")
-    #
-    #     grids.plot(
-    #         ax,
-    #         contourconfs=plotconf.contours
-    #     )
-    #     pdf.savefig(fig)
-    #     plt.close(fig)
+        phi_unit = plotconf.layout.axes.x.label.unit
+        fnu_unit=plotconf.layout.axes.y.label.unit
+
+        if (phi_unit is None):
+            raise ValueError("phi_unitの単位が指定されていません")
+        if (fnu_unit is None):
+            raise ValueError("fnu_unitの単位が指定されていません")
+
+        grids.plot(
+            ax,
+            peak_table=peak_table,
+            contourconfs=plotconf.contours,
+            phi_unit=phi_unit,
+            fnu_unit=fnu_unit,
+        )
+        pdf.savefig(fig)
+        plt.close(fig)
 
 if __name__ == "__main__":
     main()

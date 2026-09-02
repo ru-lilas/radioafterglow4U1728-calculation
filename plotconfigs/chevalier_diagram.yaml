@@ -1,20 +1,20 @@
 layout:
   figure:
-    figsize: [16,9]
+    figsize: [12,12]
     dpi: 100
   axes:
     x:
       scale: "linear"
-      limits: [-10.0,34.0]
+      limits: [1.0e+01,1.0e+02]
       label:
-        prefix: 'Time Since the X-ray Burst'
-        unit: "min"
+        prefix: '$\nu t_{\mathrm{peak}}$'
+        unit: "GHz min"
         fontsize: 32
     y:
-      scale: "linear"
-      limits: [0.5,1.5]
+      scale: "log"
+      limits: [1.0e-01,1.0e+01]
       label:
-        prefix: 'Radio Flux Density'
+        prefix: '$F_{\nu,\mathrm{net,peak}}$'
         unit: "mJy"
         fontsize: 32
     ticks:
