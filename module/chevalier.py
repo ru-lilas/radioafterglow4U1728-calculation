@@ -42,6 +42,35 @@ class ChevalierGrid:
     mu_e: float
     distance: QuantityData
 
+    def __post_init__(self) -> None:
+        a_wind_shape = self.a_wind_grid.values.shape
+        beta_sh_shape = self.beta_sh_grid.shape
+
+        if len(a_wind_shape) != 2:
+            raise ValueError(
+                "a_wind_gridは2次元でなければなりません. "
+                f"shape={a_wind_shape}"
+            )
+
+        if len(beta_sh_shape) != 2:
+            raise ValueError(
+                "beta_sh_gridは2次元でなければなりません. "
+                f"shape={beta_sh_shape}"
+            )
+
+        try:
+            np.broadcast_shapes(
+                a_wind_shape,
+                beta_sh_shape,
+            )
+        except ValueError as error:
+            raise ValueError(
+                "a_wind_gridとbeta_sh_gridを"
+                "ブロードキャストできません. "
+                f"a_wind={a_wind_shape}, "
+                f"beta_sh={beta_sh_shape}"
+            ) from error
+
     @classmethod
     def from_yaml(
         cls,
@@ -75,9 +104,11 @@ class ChevalierGrid:
             eps_b = self.eps_b,
             a_wind = self.a_wind_grid
         )
+        if phi_theta.unit is None:
+            raise ValueError("phi_thetaの単位がありません.")
         return QuantityArray(
             values = phi_theta.value,
-            unit = phi_theta._unitstr
+            unit = phi_theta.unit.to_string()
         )
     
     @property
@@ -99,9 +130,11 @@ class ChevalierGrid:
             a_wind = self.a_wind_grid,
             beta_sh = self.beta_sh_grid,
         )
+        if lnu.unit is None:
+            raise ValueError("lnuの単位がありません.")
         return QuantityArray(
             values = lnu.value,
-            unit = lnu._unitstr
+            unit = lnu.unit.to_string()
         )
 
     @property
@@ -120,22 +153,35 @@ class ChevalierGrid:
         self,
         peak_table:LambdaPeakTable
     )->QuantityArray:
-        phi_theta_arr:FloatArray = self.phi_theta.values
-        unit = self.phi_theta.unit
+        phi_theta_quantity = self.phi_theta
         return QuantityArray(
-            values = phi_theta_arr*self.xm_peak(peak_table),
-            unit = unit
+            values = phi_theta_quantity.values
+                *self.xm_peak(peak_table),
+            unit = phi_theta_quantity.unit
         )
 
     def lnu_peak(
         self,
         peak_table:LambdaPeakTable
     )->QuantityArray:
-        lnu_theta_arr:FloatArray = self.lnu_theta.values
-        unit = self.lnu_theta.unit
+        lnu_theta_quantity = self.lnu_theta
         return QuantityArray(
-            values = lnu_theta_arr*self.lambda_theta_peak(peak_table),
-            unit = unit
+            values = lnu_theta_quantity.values
+                *self.lambda_theta_peak(peak_table),
+            unit = lnu_theta_quantity.unit
+        )
+
+    def fnu_peak_observerframe(
+        self,
+        peak_table:LambdaPeakTable
+    )->QuantityArray:
+        fnu_sourceframe = models.lnu_into_fnu(
+            lnu = self.lnu_peak(peak_table),
+            distance = self.distance
+        )
+        return models.fnu_sourceframe_into_fnu_observerframe(
+            fnu_sourceframe=fnu_sourceframe,
+            doppler_delta=self.doppler_delta
         )
 
 

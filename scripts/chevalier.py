@@ -10,6 +10,7 @@ from module.chevalier import (
     PlotConfig
 )
 from module.inputs_as_dataclass import PhysicalParameters
+from module.parameter_table import LambdaPeakTable
 
 def parse_args()->argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -42,7 +43,15 @@ def main():
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
     grid = ChevalierGrid.from_yaml(args.input)
-    print(grid.tau_theta)
+    peak_table = LambdaPeakTable.from_csv(args.peak_table)
+    fnu_peak = grid.fnu_peak_observerframe(peak_table)
+    phi_peak = grid.phi_peak(peak_table)
+
+    print("===fnu_peak===")
+    print(fnu_peak.FloatArray_in("mJy"))
+    print("===phi_peak===")
+    print(phi_peak.FloatArray_in("GHz min"))
+
     # grids = inputs.build_chevalier_grid(
     #     a_wind_unit="g cm-1",
     #     phi_unit="GHz min",
