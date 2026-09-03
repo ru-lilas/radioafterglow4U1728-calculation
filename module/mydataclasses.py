@@ -90,6 +90,21 @@ class QuantityData:
     value: float
     unit: str
 
+    @classmethod
+    def from_Quantity(
+        cls,
+        quantity:u.Quantity
+    )->Self:
+        value = float(quantity.value)
+        unit = quantity.unit
+        if unit is None:
+            raise ValueError("エラー:物理量に単位がありません.")
+        else:
+            return cls(
+                value=value,
+                unit=unit.to_string()
+            )
+
     @property
     def quantity(self):
         return u.Quantity(self.value,self.unit)
