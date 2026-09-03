@@ -8,6 +8,7 @@ from module.chevalier import (
     PlotConfig
 )
 from module.inputs_as_dataclass import PhysicalParameters
+from module.observation import LongformatLightcurve
 from module.parameter_table import LambdaPeakTable
 
 def parse_args()->argparse.Namespace:
@@ -29,6 +30,11 @@ def parse_args()->argparse.Namespace:
         required=True
     )
     parser.add_argument(
+        "--obslc",
+        type=Path,
+        required=True
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         required=True
@@ -42,6 +48,9 @@ def main():
 
     grids = ChevalierGrid.from_yaml(args.input)
     peak_table = LambdaPeakTable.from_csv(args.peak_table)
+    df_obs_long = LongformatLightcurve.from_csv(args.obslc)
+    df_obs_nu = df_obs_long.extract_lightcurve(9.0)
+    obs_scat = df_obs_nu.peak
 
     plotconf = PlotConfig.from_yaml(args.plotconfig)
     with PdfPages(outpath) as pdf:
@@ -62,6 +71,18 @@ def main():
             contourconfs=plotconf.contours,
             phi_unit=phi_unit,
             fnu_unit=fnu_unit,
+        )
+        obs_scat.plot_range(
+            ax,
+            style=plotconf.styles.obs_range,
+            phi_unit=phi_unit,
+            fnu_unit=fnu_unit
+        )
+        obs_scat.plot_center(
+            ax,
+            style=plotconf.styles.obs_center,
+            phi_unit=phi_unit,
+            fnu_unit=fnu_unit
         )
         pdf.savefig(fig)
         plt.close(fig)

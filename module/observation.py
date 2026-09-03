@@ -3,6 +3,7 @@ from dataclasses import dataclass,replace
 from typing import Self, cast, Any
 from matplotlib.axes import Axes
 from matplotlib.lines import Line2D
+from matplotlib.patches import Rectangle
 from module import dataframe_processors, dataframe_utils, mystatistics
 from module.mydataclasses import QuantityData,QuantityArray
 from module.types import FloatArray
@@ -40,6 +41,60 @@ class ChevalierScatter:
     def phi_peak_err(self)->QuantityData:
         phi_peak_err = self.t_peak_err.quantity * self.nu.quantity
         return QuantityData.from_Quantity(phi_peak_err)
+
+    def plot_range(
+        self,
+        ax: Axes,
+        style: plot_utils.RectangleStyle,
+        *,
+        phi_unit: str,
+        fnu_unit: str
+    ):
+        phi = self.phi_peak.value_in(phi_unit)
+        phi_err = self.phi_peak_err.value_in(phi_unit)
+        fnu = self.fnu_peak.value_in(fnu_unit)
+        fnu_err = self.fnu_peak_err.value_in(fnu_unit)
+
+        rectangle = Rectangle(
+            xy=(
+                phi - phi_err,
+                fnu - fnu_err,
+            ),
+            width=2.0 * phi_err,
+            height=2.0 * fnu_err,
+            facecolor=style.facecolor,
+            edgecolor=style.edgecolor,
+            linewidth=style.linewidth,
+            alpha=style.alpha,
+            zorder=style.zorder
+        )
+
+        ax.add_patch(rectangle)
+
+        return rectangle
+
+    def plot_center(
+        self,
+        ax: Axes,
+        style: plot_utils.ScatterStyle,
+        *,
+        phi_unit: str,
+        fnu_unit: str
+    ):
+        phi = self.phi_peak.value_in(phi_unit)
+        phi_err = self.phi_peak_err.value_in(phi_unit)
+        fnu = self.fnu_peak.value_in(fnu_unit)
+        fnu_err = self.fnu_peak_err.value_in(fnu_unit)
+
+        return ax.scatter(
+                phi,fnu,
+                marker=style.marker,
+                s=style.markersize,
+                c=style.markerfacecolor,
+                alpha=style.alpha,
+                edgecolors=style.markeredgecolor,
+                linewidths=style.markeredgewidth
+            )
 
 @dataclass
 class LightcurveMetadata:
@@ -294,7 +349,7 @@ class LongformatLightcurve:
         df_long = FileReader.table_from_csv(path)
         metadata = df_long.attrs
 
-        if all(isinstance(key, str) for key in metadata):
+        if not all(isinstance(key, str) for key in metadata):
             raise TypeError("All dictionary keys must be strings.")
         else:
             metadata = cast(dict[str, Any], metadata)

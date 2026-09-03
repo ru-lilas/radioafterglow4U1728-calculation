@@ -266,6 +266,14 @@ class ScatterStyle:
         }
 
 @dataclass(frozen=True, slots=True)
+class RectangleStyle(Style):
+    facecolor: str
+    edgecolor: str
+    linewidth: float = 1.0
+    alpha: float = 0.0
+    zorder: float|None = None
+
+@dataclass(frozen=True, slots=True)
 class ContourLevelConfigure:
     start: float|None
     stop: float|None

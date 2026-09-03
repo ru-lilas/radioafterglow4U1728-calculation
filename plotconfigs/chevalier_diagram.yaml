@@ -4,8 +4,8 @@ layout:
     dpi: 100
   axes:
     x:
-      scale: "linear"
-      limits: [1.0e+01,1.0e+02]
+      scale: "log"
+      limits: [1.0e+00,1.0e+02]
       label:
         prefix: '$\nu t_{\mathrm{peak}}$'
         unit: "GHz min"
@@ -41,3 +41,23 @@ contours:
       start: null
       stop: null
       num: 10
+styles:
+  obs_range:
+    facecolor: "#C8C8CB"
+    edgecolor: "#000000"
+    linewidth: 1.0
+    alpha: 0.8
+    zorder: 1
+  obs_center:
+    marker: "o"
+    markersize: 64.0
+    markerfacecolor : "#000000"
+    markeredgecolor : "#000000"
+    markeredgewidth: 1.0
+    ecolor: "#000000"
+    elinewidth: 1.0
+    capsize: 1.0
+    capthick: 1.0
+    linestyle: "none"
+    alpha: null
+    zorder: 1.0

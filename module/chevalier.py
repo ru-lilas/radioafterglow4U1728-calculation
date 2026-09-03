@@ -22,10 +22,16 @@ class ContourConfigures:
     a_wind: plot_utils.ContourConfigure
     beta_sh: plot_utils.ContourConfigure
 
+@dataclass(frozen=True,slots=True)
+class Styles:
+    obs_center: plot_utils.ScatterStyle
+    obs_range: plot_utils.RectangleStyle
+
 @dataclass(frozen=True, slots=True)
 class PlotConfig(YAMLReadable):
     layout: plot_utils.PlotLayoutConfig
     contours: ContourConfigures
+    styles: Styles
 
 class GridColumns(StrEnum):
     A_WIND = auto()
@@ -215,11 +221,11 @@ class ChevalierGrid:
     )->tuple[QuadContourSet,QuadContourSet]:
         phi_peak = (
             self.phi_peak(peak_table)
-            .FloatArray_in(phi_unit)
+            .to_value_in(phi_unit)
         )
         fnu_peak = (
             self.fnu_peak_observerframe(peak_table)
-            .FloatArray_in(fnu_unit)
+            .to_value_in(fnu_unit)
         )
 
         a_wind_grid,beta_sh_grid = self.parameter_grids
