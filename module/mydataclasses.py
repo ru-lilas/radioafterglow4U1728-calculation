@@ -4,7 +4,22 @@ from pathlib import Path
 import pandas as pd
 from .types import ValueScale,FloatArray
 import astropy.units as u
-from module.utilities.filereaders import YAMLReadable
+from module.utils import FileReader
+from cattrs import Converter
+from typing import Self
+DATACLASS_CONVERTER = Converter()
+
+class YAMLReadable:
+    @classmethod
+    def from_yaml(
+        cls,
+        path:Path
+    )->Self:
+        dict_data = FileReader.yaml_safe(path)
+        return DATACLASS_CONVERTER.structure(
+            dict_data,
+            cls
+        )
 
 @dataclass(frozen=True,slots=True)
 class ValueArray(YAMLReadable):
@@ -23,11 +38,18 @@ class ValueArray(YAMLReadable):
 @dataclass(frozen=True,slots=True)
 class QuantityArrayBase:
     values: ValueArray
-    unit: str|u.UnitBase
+    unit: str
 
     @property
     def quantity(self):
         return u.Quantity(self.values.arr,self.unit)
+
+    @property
+    def quantity_array(self):
+        return QuantityArray(
+            values = self.values.arr,
+            unit = self.unit
+        )
 
     def FloatArray_in(self,unit:str|u.UnitBase)->FloatArray:
         value:FloatArray = np.asarray(self.quantity.to_value(unit),dtype=np.float64)
@@ -36,7 +58,7 @@ class QuantityArrayBase:
 @dataclass(frozen=True,slots=True)
 class QuantityArray:
     values: FloatArray
-    unit: str|u.UnitBase
+    unit: str
 
     @property
     def quantity(self):

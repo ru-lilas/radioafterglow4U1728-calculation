@@ -263,13 +263,13 @@ def extract_index_values(
         "eps_b": config["physical_parameters"]["eps_b"],
         "time_min": (
             config["chi2fitting"]
-            ["obs_sampling"]
+            ["sampling"]
             ["timewindow"]
             ["min"]
         ),
         "time_max": (
             config["chi2fitting"]
-            ["obs_sampling"]
+            ["sampling"]
             ["timewindow"]
             ["max"]
         ),

@@ -11,35 +11,29 @@ EXTENTION_PY := py
 SUFFIX_TMP := _tmp
 INTEGRAL_TABLE := integral_table
 PARAMETER_TABLE := parameter_table
-PEAK_TABLE := peak_table
-CONTOUR_RAW := contour_raw
-CHEVALIER_DIAGRAM := chevalier_diagram
 ESTIMATED_LIGHTCURVE := estimated_lightcurve
 CHI2FIT_PARAMETERS := chi2fit_parameters
-CHEVALIER_SCATTERS := chevalier_scatters
 OBSERVATION_LIGHTCURVE := obslc
-OBSERVATION_PEAK_DATA := observation_peak_data
 CHI2_ESTIMATED_PARAMETERS := chi2_estimated_parameters
-CHI2_ESTIMATED_SUMMARY := chi2_estimated_summary
-CHI2TEST_SUMMARY ?=
-CHI2TEST_TIMEWINDOW := chi2test_timewindow
-SAMPLING := sampling
-FILEPATH_INPUT := $(DATADIR)/$(RUN_DIR)/input.$(EXTENTION_YAML)
 
-RUN_DIR ?=
+RUN_ID ?=
+ifndef RUN_ID
+$(error RUN_IDを指定してください. 例 make RUN_ID=1)
+endif
+RUN_DIR := $(shell printf 'run_%06d' '$(RUN_ID)')
 
 OUTDATADIR := $(DATADIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)
 OUTDIR := $(FIGDIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)
 FIGOUTDIR := $(FIGDIR)/$(SCENARIO_TAG)/$(SAMPLING_TAG)
 PATH_PHYSICAL_PARAMETERS := $(DATADIR)/$(PARAMETER_DIR)/$(PHYSICAL_PARAMETERS)
+FILEPATH_INPUT := $(DATADIR)/$(RUN_DIR)/input.$(EXTENTION_YAML)
 FILEPATH_INTEGRAL_TABLE := $(DATADIR)/$(INTEGRAL_TABLE).csv
-FILEPATH_PARAMETER_TABLE := $(DATADIR)/$(RUN_ID)/.$(EXTENTION_YAML)
+FILEPATH_PARAMETER_TABLE := $(DATADIR)/$(RUN_DIR)/.$(EXTENTION_YAML)
 FILEPATH_CHI2TEST := $(PARAMETER_DIR)/$(CHI2TEST_SUMMARY).$(EXTENTION_CSV)
 FILEPATH_LIST_CHI2ESTIMATED_PARAMETERS ?=
 FILEPATH_OBSLC := $(DATADIR)/$(OBSDIR)/$(OBSERVATION_LIGHTCURVE).$(EXTENTION_CSV)
 FILEPATH_OBSLC_TMP := $(DATADIR)/$(OBSDIR)/$(OBSERVATION_LIGHTCURVE)$(SUFFIX_TMP).$(EXTENTION_CSV)
 FILEPATH_OBSBG := $(DATADIR)/$(OBSDIR)/bg.$(EXTENTION_CSV)
-PARAMETER_TABLE := parameter_table
 
 # all: $(FIGDIR)/$(SAMPLING_DIR)/chi2_colormap.pdf \
 # 	$(FIGDIR)/$(SAMPLING_DIR)/estimated_lightcurve.pdf
@@ -198,10 +192,39 @@ PARAMETER_TABLE := parameter_table
 # 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 # 		$< \
 # 		--output $@
+#
+lc: $(FIGDIR)/$(RUN_DIR)/lc.$(EXTENTION_PDF)
+$(FIGDIR)/$(RUN_DIR)/lc.$(EXTENTION_PDF): \
+	$(DATADIR)/$(RUN_DIR)/lc_est.$(EXTENTION_CSV) \
+	$(FILEPATH_OBSLC) \
+	$(FILEPATH_INPUT) \
+	plotconfigs/estimated_lightcurve.yaml \
+	plot/plot_calculation_lightcurve.py
+	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+		--lc $< \
+		--obslc $(FILEPATH_OBSLC) \
+		--config $(FILEPATH_INPUT) \
+		--plotconfig plotconfigs/estimated_lightcurve.yaml \
+		--output $@
+#
+$(DATADIR)/$(RUN_DIR)/lc_est.$(EXTENTION_CSV): \
+	$(DATADIR)/$(RUN_DIR)/chi2.csv \
+	$(DATADIR)/$(RUN_DIR)/$(PARAMETER_TABLE).$(EXTENTION_CSV) \
+	$(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV) \
+	$(FILEPATH_OBSLC) \
+	$(FILEPATH_INPUT) \
+	scripts/compute_estimated_lightcurve.py
+	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+		--estimated $< \
+		--parameter_table $(DATADIR)/$(RUN_DIR)/$(PARAMETER_TABLE).$(EXTENTION_CSV) \
+		--integral_table $(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV) \
+		--obs_lc $(FILEPATH_OBSLC) \
+		--config $(FILEPATH_INPUT) \
+		--output $@
 
 $(DATADIR)/$(RUN_DIR)/chi2.csv: \
 	$(DATADIR)/$(RUN_DIR)/$(PARAMETER_TABLE).$(EXTENTION_CSV) \
-	$(DATADIR)/$(INTEGRAL_TABLE).csv \
+	$(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV) \
 	$(FILEPATH_OBSLC) \
 	$(FILEPATH_INPUT) \
 	scripts/compute_chi2.py
@@ -261,15 +284,6 @@ $(FILEPATH_OBSLC_TMP): \
 		--output $@
 
 #=== config files ===#
-input/%.yaml:
-	@echo "エラー: インプットファイルがありません $@"
-	@false
 plotconfigs/%.yaml:
 	@echo "エラー: プロットコンフィグがありません $@"
 	@false
-
-# $(DATADIR)/$(SAMPLING_DIR)/sampling.yaml: $(INPUTDIR)/sampling.yaml
-# 	cp $< $@
-#
-# $(PATH_PHYSICAL_PARAMETERS).yaml: $(INPUTDIR)/$(PHYSICAL_PARAMETERS).yaml
-# 	cp $< $@

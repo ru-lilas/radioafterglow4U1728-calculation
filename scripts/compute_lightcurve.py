@@ -27,5 +27,5 @@ def main(
     inputs: compute_lightcurve.Input
 ):
     table = compute_lightcurve.ThermalSynchrotronTable.from_csv(path_table)
-    model = compute_lightcurve.ThermalSynchrotron(table)
+    model = compute_lightcurve.ThermalSynchrotronUtils(table)
     conf = compute_lightcurve.ModelConfigure.from_yaml(path_conf_lc)

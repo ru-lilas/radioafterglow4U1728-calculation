@@ -1,5 +1,5 @@
 from module import dataframe_processors, dataframe_utils
-from module.parameter_table import GeneralInputs
+from module.inputs_as_dataclass import GeneralInputs
 from module.utilities import filereaders as fr
 from pathlib import Path
 import argparse
@@ -52,6 +52,12 @@ def main(args:argparse.Namespace):
         obslc_nu.plot(
             ax,
             style=conf_plot.styles.observation,
+            t_unit=t_unit,
+            fnu_unit=fnu_unit
+        )
+        obslc_nu.plot_persistent(
+            ax,
+            style=conf_plot.styles.persistent,
             t_unit=t_unit,
             fnu_unit=fnu_unit
         )

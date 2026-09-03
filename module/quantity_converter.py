@@ -4,6 +4,7 @@ import astropy.units as u
 import numpy as np
 from astropy.constants import c
 from numpy.typing import NDArray
+from module.mydataclasses import QuantityData,QuantityArray
 from module.types import FloatArray, FloatArrayLike
 
 def flux_into_luminosity(

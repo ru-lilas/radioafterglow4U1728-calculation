@@ -5,8 +5,28 @@
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Self
+import numpy as np
 
-from module.mydataclasses import QuantityArrayBase, QuantityData,QuantityArray
+from module.types import FloatArray
+from module import electron_temperature,synchrotron_scaling_values,quantity_converter
+from module.mydataclasses import (
+    QuantityArray,
+    QuantityArrayBase,
+    QuantityData,
+    YAMLReadable,
+    ValueArray
+)
+
+@dataclass(frozen=True,slots=True)
+class PhysicalParametersBase:
+    a_wind: QuantityArrayBase
+    beta_sh: ValueArray
+    eps_b: float
+    eps_th: float
+    mu: float
+    mu_e: float
+    distance: QuantityData
+
 
 @dataclass(frozen=True)
 class SamplingTimewindow:
@@ -54,9 +74,106 @@ class ModelConfigure:
 @dataclass(frozen=True)
 class Chi2FittingConfigure:
     free_parameters: list
-    model: ModelConfigure
     sampling: SamplingConfigure
+    model: ModelConfigure
 
     @property
     def n_model(self):
         return len(self.free_parameters)
+
+
+@dataclass(frozen=True,slots=True)
+class PhysicalParameters:
+    a_wind: QuantityArray
+    beta_sh: FloatArray
+    eps_b: float
+    eps_th: float
+    mu: float
+    mu_e: float
+    distance: QuantityData
+
+    @classmethod
+    def from_yaml(
+        cls,
+        path:Path
+    )->Self:
+        generalinput = GeneralInputs.from_yaml(path)
+        indata = generalinput.physical_parameters
+        return cls(
+            a_wind = indata.a_wind.quantity_array,
+            beta_sh = indata.beta_sh.arr,
+            eps_b = indata.eps_b,
+            eps_th = indata.eps_th,
+            mu = indata.mu,
+            mu_e = indata.mu_e,
+            distance = indata.distance
+        )
+
+    @property
+    def a_wind_axis(self)->FloatArray:
+        return np.unique(self.a_wind.values)
+
+    @property
+    def beta_sh_axis(self)->FloatArray:
+        return np.unique(self.beta_sh)
+
+    def build_meshgrid(self):
+        a_wind_unit = self.a_wind.unit
+
+        a_wind_value_grid,beta_sh_grid = np.meshgrid(
+            self.a_wind_axis,
+            self.beta_sh_axis,
+            indexing="xy",
+            sparse=True
+        )
+        a_wind_grid = QuantityArray(
+            values = a_wind_value_grid,
+            unit = a_wind_unit
+        )
+        return (a_wind_grid,beta_sh_grid)
+
+    @property
+    def theta(self)->FloatArray:
+        return electron_temperature.calculate_theta_e(
+            eps_th=self.eps_th,
+            mu=self.mu,
+            mu_e=self.mu_e,
+            beta_sh=self.beta_sh
+        )
+
+    @property
+    def phi_theta(self):
+        return synchrotron_scaling_values.calculate_phi_theta(
+            theta = self.theta,
+            eps_b = self.eps_b,
+            a_wind = self.a_wind.quantity
+        )
+
+    @property
+    def tau_theta(self)->FloatArray:
+        return synchrotron_scaling_values.calculate_tau_theta(
+            theta = self.theta,
+            eps_b = self.eps_b,
+            a_wind = self.a_wind.quantity,
+            beta_sh=self.beta_sh,
+            mu=self.mu,
+            mu_e=self.mu_e,
+        )
+
+    @property
+    def lnu_theta(self):
+        return synchrotron_scaling_values.calculate_l_theta(
+            theta = self.theta,
+            eps_b = self.eps_b,
+            a_wind = self.a_wind.quantity,
+            beta_sh=self.beta_sh,
+        )
+
+    @property
+    def doppler_delta(self):
+        return quantity_converter.beta_into_doppler_delta(self.beta_sh)
+
+@dataclass(frozen=True)
+class GeneralInputs(YAMLReadable):
+    physical_parameters: PhysicalParametersBase
+    chi2fitting: Chi2FittingConfigure

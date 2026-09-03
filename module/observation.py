@@ -44,8 +44,8 @@ class LightcurveMetadata:
             cls,
             path:Path
     )->Self:
-        dict_data = fr.read_keyvalue(path)
-        return cls(**dict_data)
+        metadata = FileReader.keyvalue(path)
+        return cls(**metadata)
 
     @property
     def t_bin_width(self)->QuantityData:

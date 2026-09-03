@@ -37,4 +37,9 @@ def build_dfs_nu(
 
     return dfs_nu
 
+def extract_Series_from_idx(
+    df: pd.DataFrame,
+    idx: int
+)->pd.Series:
+    return df.loc[idx]
 

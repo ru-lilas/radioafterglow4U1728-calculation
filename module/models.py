@@ -6,11 +6,11 @@ from pathlib import Path
 from typing import Self
 import astropy.units as u
 from module import quantity_converter
-from module.utilities import filereaders as fr
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass
-from module.types import FloatArray
+from module.mydataclasses import QuantityArray, QuantityData
+from module.types import FloatArray, FloatArrayLike
 
 from numpy.typing import NDArray
 from module import synchrotron_scaling_values
@@ -18,6 +18,7 @@ from module import electron_temperature
 from module import tabular
 from module.utilities import bisection, unit_aliases as unit
 from module import calculate_lnu_th
+from module.utils import FileReader
 
 # @dataclass
 # class ThermalSynchrotronScalingValues:
@@ -175,7 +176,7 @@ class ThermalSynchrotronTable:
             cls,
             path:Path
     )-> Self:
-        df = fr.read_csv(path)
+        df = FileReader.table_from_csv(path)
         return cls(
             xm = df["xm"].to_numpy(dtype=np.float64),
             ln_ip = df["ln_ip"].to_numpy(dtype=np.float64)
@@ -187,7 +188,25 @@ class ThermalSynchrotronTable:
     def interpolate_ip(self,x:FloatArray)->FloatArray:
         return np.exp(self.interpolate_log_ip(x))
 
+@dataclass(slots=True)
 class ThermalSynchrotron:
+    integral_table: ThermalSynchrotronTable
+    xm: FloatArray
+    tau_theta: FloatArrayLike
+
+    @property
+    def lambda_theta(self)->FloatArray:
+        ip = self.integral_table.interpolate_ip(self.xm)
+        optical_depth = ip*self.tau_theta/self.xm
+        f_esc = -np.expm1(-optical_depth)
+        xm2 = self.xm**2
+        return xm2 * f_esc
+
+    @property
+    def lambda_theta_max(self)->float:
+        return float(np.argmax(self.lambda_theta))
+
+class ThermalSynchrotronUtils:
     def __init__(
         self,
         table: ThermalSynchrotronTable,
@@ -235,6 +254,26 @@ class ThermalSynchrotron:
         fnu_obs = self.fnu_src(xm,tau_theta,lnu_theta,distance)
         return doppler_delta**3 * fnu_obs
 
+def lnu_into_fnu(
+    lnu: QuantityArray,
+    distance: QuantityData
+)->QuantityArray:
+    values:FloatArray = lnu.values / (4.0*np.pi*distance.value**2)
+    unit:str = u.Unit(lnu.unit)/u.Unit(distance.unit)**2
+    return QuantityArray(
+        values = values,
+        unit = unit
+    )
+
+def fnu_sourceframe_into_fnu_observerframe(
+    fnu_sourceframe: QuantityArray,
+    doppler_delta: FloatArrayLike
+)->QuantityArray:
+    return QuantityArray(
+        values = fnu_sourceframe.values*doppler_delta**3,
+        unit = fnu_sourceframe.unit
+    )
+
 def calculate_phi(
     t_obs: u.Quantity,
     nu_obs: u.Quantity
@@ -262,3 +301,62 @@ def calculate_xm(
         dtype=np.float64
     )
 
+
+def theta(
+    eps_th:FloatArrayLike,
+    mu: FloatArrayLike,
+    mu_e: FloatArrayLike,
+    beta_sh: FloatArrayLike,
+)->FloatArray:
+    return electron_temperature.calculate_theta_e(
+        eps_th=eps_th,
+        mu=mu,
+        mu_e=mu_e,
+        beta_sh=beta_sh
+    )
+
+def phi_theta(
+    theta:FloatArrayLike,
+    eps_b:FloatArrayLike,
+    a_wind: QuantityArray
+):
+    return synchrotron_scaling_values.calculate_phi_theta(
+        theta = theta,
+        eps_b = eps_b,
+        a_wind = a_wind.quantity
+    )
+
+def tau_theta(
+    theta:FloatArrayLike,
+    eps_b:FloatArrayLike,
+    a_wind: QuantityArray,
+    beta_sh:FloatArrayLike,
+    mu:FloatArrayLike,
+    mu_e:FloatArrayLike
+):
+    return synchrotron_scaling_values.calculate_tau_theta(
+        theta = theta,
+        eps_b = eps_b,
+        a_wind = a_wind.quantity,
+        beta_sh=beta_sh,
+        mu=mu,
+        mu_e=mu_e,
+    )
+
+def lnu_theta(
+    theta:FloatArrayLike,
+    eps_b:FloatArrayLike,
+    a_wind: QuantityArray,
+    beta_sh:FloatArrayLike,
+):
+    return synchrotron_scaling_values.calculate_l_theta(
+        theta = theta,
+        eps_b = eps_b,
+        a_wind =a_wind.quantity,
+        beta_sh=beta_sh,
+    )
+
+def doppler_delta(
+    beta_sh:FloatArrayLike
+):
+    return quantity_converter.beta_into_doppler_delta(beta_sh)
