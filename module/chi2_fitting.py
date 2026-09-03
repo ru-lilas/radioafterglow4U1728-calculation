@@ -26,7 +26,7 @@ class Columns(StrEnum):
 
 def calculate_lightcurve_chi2(
     model: BinnedCalculationLightcurve,
-    observed: observation.Lightcurve
+    observed: observation.ObservedLightcurve
 ):
     t_unit = observed.metadata.t_unit
     fnu_unit = observed.metadata.fnu_unit

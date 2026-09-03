@@ -14,7 +14,7 @@ from module import plot_utils,observation
 def fetch_obslc_nu(
     path:Path,
     nu:float
-)->observation.Lightcurve:
+)->observation.ObservedLightcurve:
     obslc_long = observation.LongformatLightcurve.from_csv(path)
     return obslc_long.extract_lightcurve(nu)
 

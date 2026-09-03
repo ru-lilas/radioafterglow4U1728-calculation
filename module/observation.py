@@ -1,20 +1,14 @@
 from pathlib import Path
 from dataclasses import dataclass,replace
 from typing import Self, cast
-from dacite import from_dict
 from matplotlib.axes import Axes
 from matplotlib.lines import Line2D
-from numpy.typing import NDArray
-from functools import cached_property
-from module import dataframe_processors, dataframe_utils, parameter_table
-from module.models import ThermalSynchrotron, ThermalSynchrotronTable, calculate_phi, calculate_xm
+from module import dataframe_processors, dataframe_utils, mystatistics
 from module.mydataclasses import QuantityData,QuantityArray
 from module.types import FloatArray
 from module.utilities import filereaders as fr
-import astropy.units as u
 import numpy as np
 import pandas as pd
-from module.types import FloatArray
 from enum import StrEnum, auto
 from module.inputs_as_dataclass import SamplingTimewindow
 from module import plot_utils
@@ -29,6 +23,14 @@ class Columns(StrEnum):
     FNU_NET_ERR = auto()
     BG = auto()
     BG_ERR = auto()
+
+@dataclass(frozen=True,slots=True)
+class ChevalierScatter:
+    t_peak: QuantityData
+    t_peak_err: QuantityData
+    fnu_peak: QuantityData
+    fnu_peak_err: QuantityData
+    nu: QuantityData
 
 @dataclass
 class LightcurveMetadata:
@@ -45,9 +47,10 @@ class LightcurveMetadata:
         dict_data = fr.read_keyvalue(path)
         return cls(**dict_data)
 
-    @cached_property
-    def bin_width(self):
-        return u.Quantity(self.t_bin,self.t_unit)
+    @property
+    def t_bin_width(self)->QuantityData:
+        return QuantityData(value=self.t_bin,unit=self.t_unit)
+
 
 @dataclass(frozen=True, slots=True)
 class Binning:
@@ -58,20 +61,16 @@ class Binning:
     t_unit: str
 
 @dataclass
-class Lightcurve:
+class ObservedLightcurve:
     metadata: LightcurveMetadata
+    nu_value: float
     df: pd.DataFrame
 
-    @classmethod
-    def from_csv(
-        cls,
-        path: Path
-    )->Self:
-        df = FileReader.table_from_csv(path)
-        metadata = FileReader.keyvalue(path)
-        return cls(
-            metadata = LightcurveMetadata(**metadata),
-            df = df
+    @property
+    def nu(self)->QuantityData:
+        return QuantityData(
+            value=self.nu_value,
+            unit=self.metadata.nu_unit
         )
 
     @property
@@ -248,6 +247,30 @@ class Lightcurve:
             **style.to_kwargs(),
         )
 
+    @property
+    def peak(self)->ChevalierScatter:
+        metadata = self.metadata
+        t_width = metadata.t_bin_width
+        nu = self.nu
+        fnu_unit = metadata.fnu_unit
+        t_unit = metadata.t_unit
+
+        df_top2 = self.df.nlargest(2,Columns.FNU_NET)
+        fnu_net     = dataframe_utils.extract_column_as_ndarray(df_top2,Columns.FNU_NET)
+        fnu_net_err = dataframe_utils.extract_column_as_ndarray(df_top2,Columns.FNU_NET_ERR)
+        t           = dataframe_utils.extract_column_as_ndarray(df_top2,Columns.T)
+
+        fnu_peak, fnu_peak_err = mystatistics.calculate_muhat(fnu_net,fnu_net_err)
+        t_peak = QuantityData(float(np.mean(t)),unit=t_unit)
+        t_peak_width = np.ptp(t) + t_width.value
+        t_peak_err = QuantityData(t_peak_width / 2.0, unit=t_unit)
+        return ChevalierScatter(
+            t_peak = t_peak,
+            t_peak_err = t_peak_err,
+            fnu_peak = QuantityData(fnu_peak,fnu_unit),
+            fnu_peak_err = QuantityData(fnu_peak_err,fnu_unit),
+            nu=nu
+        )
 
 @dataclass(frozen=True, slots=True)
 class LongformatLightcurve:
@@ -283,8 +306,8 @@ class LongformatLightcurve:
 
     def group_by_frequency(
         self,
-    ) -> dict[float, Lightcurve]:
-        lightcurves: dict[float, Lightcurve] = {}
+    ) -> dict[float, ObservedLightcurve]:
+        lightcurves: dict[float, ObservedLightcurve] = {}
 
         for nu, df_nu in self.df_long.groupby(
             Columns.NU,
@@ -292,13 +315,14 @@ class LongformatLightcurve:
         ):
             nu_value = cast(float,nu)
 
-            lightcurves[nu_value] = Lightcurve(
+            lightcurves[nu_value] = ObservedLightcurve(
                 metadata=self.metadata,
+                nu_value=nu_value,
                 df=df_nu.reset_index(drop=True),
             )
 
         return lightcurves
 
-    def extract_lightcurve(self,nu:float)->Lightcurve:
+    def extract_lightcurve(self,nu:float)->ObservedLightcurve:
         lcs = self.group_by_frequency()
         return lcs[nu]
