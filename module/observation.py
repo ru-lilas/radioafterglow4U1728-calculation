@@ -205,9 +205,9 @@ class ObservedLightcurve:
             values = self.to_FloatArray(Columns.FNU_ERR),
             unit = self.metadata.fnu_unit
         )
-        t = t_quantity.FloatArray_in(t_unit)
-        fnu = fnu_quantity.FloatArray_in(fnu_unit)
-        fnu_err = fnu_err_quantity.FloatArray_in(fnu_unit)
+        t = t_quantity.to_value_in(t_unit)
+        fnu = fnu_quantity.to_value_in(fnu_unit)
+        fnu_err = fnu_err_quantity.to_value_in(fnu_unit)
 
         ax.scatter(
             t,fnu,
@@ -240,8 +240,8 @@ class ObservedLightcurve:
             values = self.to_FloatArray(Columns.T),
             unit = self.metadata.t_unit
         )
-        t = t_quantity.FloatArray_in(t_unit)
-        fnu_per = self.fnu_persistent.FloatArray_in(fnu_unit)
+        t = t_quantity.to_value_in(t_unit)
+        fnu_per = self.fnu_persistent.to_value_in(fnu_unit)
         return ax.plot(
             t,fnu_per,
             **style.to_kwargs(),
