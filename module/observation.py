@@ -32,6 +32,16 @@ class ChevalierScatter:
     fnu_peak_err: QuantityData
     nu: QuantityData
 
+    @property
+    def phi_peak(self)->QuantityData:
+        phi_peak = self.t_peak.quantity*self.nu.quantity
+        return QuantityData.from_Quantity(phi_peak)
+
+    @property
+    def phi_peak_err(self)->QuantityData:
+        phi_peak_err = self.t_peak_err.quantity * self.nu.quantity
+        return QuantityData.from_Quantity(phi_peak_err)
+
 @dataclass
 class LightcurveMetadata:
     t_bin: float
