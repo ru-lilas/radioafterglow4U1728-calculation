@@ -79,9 +79,11 @@ class QuantityArray:
     def quantity(self):
         return u.Quantity(self.values,self.unit)
 
-    def FloatArray_in(self,unit:str)->FloatArray:
-        value:FloatArray = np.asarray(self.quantity.to_value(unit),dtype=np.float64)
-        return value
+    def to_value_in(self,unit:str)->FloatArray:
+        return np.asarray(
+            self.quantity.to_value(unit),
+            dtype=np.float64
+        )
 
 @dataclass(frozen=True,slots=True)
 class QuantityData:
