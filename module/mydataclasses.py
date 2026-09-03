@@ -60,11 +60,26 @@ class QuantityArray:
     values: FloatArray
     unit: str
 
+    @classmethod
+    def from_Quantity(
+        cls,
+        quantity:u.Quantity
+    )->Self:
+        values = np.asarray(quantity.value,dtype=np.float64)
+        unit = quantity.unit
+        if unit is None:
+            raise ValueError("エラー:物理量に単位がありません.")
+        else:
+            return cls(
+                values=values,
+                unit=unit.to_string()
+            )
+
     @property
     def quantity(self):
         return u.Quantity(self.values,self.unit)
 
-    def FloatArray_in(self,unit:str|u.UnitBase)->FloatArray:
+    def FloatArray_in(self,unit:str)->FloatArray:
         value:FloatArray = np.asarray(self.quantity.to_value(unit),dtype=np.float64)
         return value
 
