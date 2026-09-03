@@ -1,12 +1,11 @@
 from pathlib import Path
 from dataclasses import dataclass,replace
-from typing import Self, cast
+from typing import Self, cast, Any
 from matplotlib.axes import Axes
 from matplotlib.lines import Line2D
 from module import dataframe_processors, dataframe_utils, mystatistics
 from module.mydataclasses import QuantityData,QuantityArray
 from module.types import FloatArray
-from module.utilities import filereaders as fr
 import numpy as np
 import pandas as pd
 from enum import StrEnum, auto
@@ -292,14 +291,23 @@ class LongformatLightcurve:
         cls,
         path: Path,
     ) -> Self:
-        metadata = LightcurveMetadata.from_keyvalue(path)
         df_long = FileReader.table_from_csv(path)
+        metadata = df_long.attrs
+
+        if all(isinstance(key, str) for key in metadata):
+            raise TypeError("All dictionary keys must be strings.")
+        else:
+            metadata = cast(dict[str, Any], metadata)
 
         required_columns = {
             Columns.T,
             Columns.FNU,
             Columns.FNU_ERR,
-            Columns.NU
+            Columns.NU,
+            Columns.FNU_NET,
+            Columns.FNU_NET_ERR,
+            Columns.BG,
+            Columns.BG_ERR,
         }
 
         missing_columns = required_columns - set(df_long.columns)
@@ -310,7 +318,7 @@ class LongformatLightcurve:
             )
 
         return cls(
-            metadata=metadata,
+            metadata=LightcurveMetadata(**metadata),
             df_long=df_long,
         )
 
