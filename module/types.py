@@ -10,3 +10,4 @@ type FloatGrid = np.ndarray[
     tuple[int, int],
     np.dtype[np.float64],
 ]
+type BoolGrid = NDArray[np.bool_]

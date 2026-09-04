@@ -84,6 +84,15 @@ def main():
             phi_unit=phi_unit,
             fnu_unit=fnu_unit
         )
+        df = grids.select_parameters_in(
+            obs_scat,
+            peak_table,
+            a_wind_unit="g cm-1",
+            phi_unit=phi_unit,
+            fnu_unit=fnu_unit
+        )
+        print(df)
+
         pdf.savefig(fig)
         plt.close(fig)
 

@@ -6,7 +6,7 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle
 from module import dataframe_processors, dataframe_utils, mystatistics
 from module.mydataclasses import QuantityData,QuantityArray
-from module.types import FloatArray
+from module.types import BoolGrid, FloatArray, FloatGrid
 import numpy as np
 import pandas as pd
 from enum import StrEnum, auto
@@ -95,6 +95,32 @@ class ChevalierScatter:
                 edgecolors=style.markeredgecolor,
                 linewidths=style.markeredgewidth
             )
+
+    def contains(
+        self,
+        phi_grid: FloatGrid,
+        fnu_grid: FloatGrid,
+        *,
+        phi_unit: str,
+        fnu_unit: str
+    )->BoolGrid:
+        phi_center = self.phi_peak.value_in(phi_unit)
+        phi_error = self.phi_peak_err.value_in(phi_unit)
+
+        fnu_center = self.fnu_peak.value_in(fnu_unit)
+        fnu_error = self.fnu_peak_err.value_in(fnu_unit)
+
+        phi_min = phi_center - phi_error
+        phi_max = phi_center + phi_error
+        fnu_min = fnu_center - fnu_error
+        fnu_max = fnu_center + fnu_error
+
+        return (
+            (phi_grid >= phi_min)
+            & (phi_grid <= phi_max)
+            & (fnu_grid >= fnu_min)
+            & (fnu_grid <= fnu_max)
+        )
 
 @dataclass
 class LightcurveMetadata:

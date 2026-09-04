@@ -8,6 +8,7 @@ from typing import Self
 from module import plot_utils
 from module.mydataclasses import QuantityArray, YAMLReadable,QuantityData
 from module import models
+from module.observation import ChevalierScatter
 from module.plot_utils import ContourStyle
 from module.types import FloatArray,FloatGrid
 from module.inputs_as_dataclass import(
@@ -40,9 +41,14 @@ class GridColumns(StrEnum):
     FNU_PEAK = auto()
 
 @dataclass(frozen=True,slots=True)
-class ChevalierGrid:
-    a_wind_grid: QuantityArray
+class ABGrid:
+    a_wind_grid: FloatGrid
     beta_sh_grid: FloatGrid
+
+@dataclass(frozen=True,slots=True)
+class ChevalierGrid:
+    a_wind_arr: QuantityArray
+    beta_sh_arr: FloatGrid
     eps_b: float
     eps_th: float
     mu: float
@@ -50,8 +56,8 @@ class ChevalierGrid:
     distance: QuantityData
 
     def __post_init__(self) -> None:
-        a_wind_shape = self.a_wind_grid.values.shape
-        beta_sh_shape = self.beta_sh_grid.shape
+        a_wind_shape = self.a_wind_arr.values.shape
+        beta_sh_shape = self.beta_sh_arr.shape
 
         if len(a_wind_shape) != 2:
             raise ValueError(
@@ -86,8 +92,8 @@ class ChevalierGrid:
         inputs = PhysicalParameters.from_yaml(path)
         a_wind_grid,beta_sh_grid = inputs.build_meshgrid()
         return cls(
-            a_wind_grid = a_wind_grid,
-            beta_sh_grid = beta_sh_grid,
+            a_wind_arr = a_wind_grid,
+            beta_sh_arr = beta_sh_grid,
             eps_b = inputs.eps_b,
             eps_th = inputs.eps_th,
             mu = inputs.mu,
@@ -101,7 +107,7 @@ class ChevalierGrid:
             eps_th=self.eps_th,
             mu=self.mu,
             mu_e=self.mu_e,
-            beta_sh=self.beta_sh_grid
+            beta_sh=self.beta_sh_arr
         )
 
     @property
@@ -109,7 +115,7 @@ class ChevalierGrid:
         phi_theta = models.phi_theta(
             theta = self.theta,
             eps_b = self.eps_b,
-            a_wind = self.a_wind_grid
+            a_wind = self.a_wind_arr
         )
         if phi_theta.unit is None:
             raise ValueError("phi_thetaの単位がありません.")
@@ -123,8 +129,8 @@ class ChevalierGrid:
         return models.tau_theta(
             theta = self.theta,
             eps_b = self.eps_b,
-            a_wind = self.a_wind_grid,
-            beta_sh = self.beta_sh_grid,
+            a_wind = self.a_wind_arr,
+            beta_sh = self.beta_sh_arr,
             mu = self.mu,
             mu_e = self.mu_e
         )
@@ -134,8 +140,8 @@ class ChevalierGrid:
         lnu = models.lnu_theta(
             theta = self.theta,
             eps_b = self.eps_b,
-            a_wind = self.a_wind_grid,
-            beta_sh = self.beta_sh_grid,
+            a_wind = self.a_wind_arr,
+            beta_sh = self.beta_sh_arr,
         )
         if lnu.unit is None:
             raise ValueError("lnuの単位がありません.")
@@ -147,7 +153,7 @@ class ChevalierGrid:
     @property
     def doppler_delta(self):
         return models.doppler_delta(
-            beta_sh = self.beta_sh_grid
+            beta_sh = self.beta_sh_arr
         )
 
     def lambda_theta_peak(self,peak_table:LambdaPeakTable):
@@ -196,8 +202,8 @@ class ChevalierGrid:
         self
     )->tuple[FloatArray,FloatArray]:
         a_wind_grid, beta_sh_grid = np.broadcast_arrays(
-            self.a_wind_grid.values,
-            self.beta_sh_grid,
+            self.a_wind_arr.values,
+            self.beta_sh_arr,
         )
         return (
             np.asarray(
@@ -271,3 +277,54 @@ class ChevalierGrid:
                 contour_a_wind,
                 contour_beta_sh,
             )
+    
+    def select_parameters_in(
+        self,
+        observation: ChevalierScatter,
+        peak_table: LambdaPeakTable,
+        *,
+        a_wind_unit: str,
+        phi_unit: str,
+        fnu_unit: str,
+    ) -> pd.DataFrame:
+        phi_grid = (
+            self.phi_peak(peak_table)
+            .to_value_in(phi_unit)
+        )
+        fnu_grid = (
+            self.fnu_peak_observerframe(peak_table)
+            .to_value_in(fnu_unit)
+        )
+        parameter_grid = self.parameter_grids
+        abgrid = ABGrid(
+            a_wind_grid=parameter_grid[0],
+            beta_sh_grid=parameter_grid[1]
+        )
+
+        mask = observation.contains(
+            phi_grid,
+            fnu_grid,
+            phi_unit=phi_unit,
+            fnu_unit=fnu_unit,
+        )
+
+        if mask.shape != abgrid.a_wind_grid.shape:
+            raise ValueError(
+                "包含判定マスクとパラメータグリッドの"
+                "shapeが一致しません. "
+                f"mask={mask.shape}, "
+                f"beta_sh={abgrid.a_wind_grid.shape}"
+            )
+
+        selected = pd.DataFrame({
+            "a_wind": abgrid.a_wind_grid[mask],
+            "beta_sh": abgrid.beta_sh_grid[mask],
+            "phi_peak": phi_grid[mask],
+            "fnu_peak": fnu_grid[mask],
+        })
+
+        selected.attrs["a_wind_unit"] = a_wind_unit
+        selected.attrs["phi_unit"] = phi_unit
+        selected.attrs["fnu_unit"] = fnu_unit
+
+        return selected
