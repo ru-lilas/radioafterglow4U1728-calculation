@@ -18,6 +18,11 @@ from module.mydataclasses import (
 )
 
 @dataclass(frozen=True,slots=True)
+class DistanceData(QuantityData):
+    distance_value: float
+    distance_unit: str
+
+@dataclass(frozen=True,slots=True)
 class PhysicalParametersBase:
     a_wind: QuantityArrayBase
     beta_sh: ValueArray
@@ -26,7 +31,6 @@ class PhysicalParametersBase:
     mu: float
     mu_e: float
     distance: QuantityData
-
 
 @dataclass(frozen=True)
 class SamplingTimewindow:

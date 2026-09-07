@@ -5,7 +5,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Self
 
-from module import plot_utils
+from module import dataframe_utils, plot_utils
 from module.mydataclasses import QuantityArray, YAMLReadable,QuantityData
 from module import models
 from module.observation import ChevalierScatter
@@ -17,6 +17,8 @@ from module.inputs_as_dataclass import(
 from module.parameter_table import LambdaPeakTable
 from enum import StrEnum, auto
 from matplotlib.axes import Axes
+
+from module.utils import FileReader
 
 @dataclass(frozen=True,slots=True)
 class ContourConfigures:
@@ -54,6 +56,10 @@ class ParameterNames(StrEnum):
     MU_E = auto()
     DISTANCE_VALUE = auto()
     DISTANCE_UNIT = auto()
+    PHI_UNIT = auto()
+    LNU_UNIT = auto()
+    FNU_UNIT = auto()
+    A_WIND_UNIT = auto()
 
 @dataclass(frozen=True,slots=True)
 class ABGrid:
@@ -104,14 +110,76 @@ class EstimatedParameters:
                 f"{sizes}"
             )
 
+    @classmethod
+    def from_csv(
+        cls,
+        path: Path
+    ):
+        df = FileReader.table_from_csv(path)
+        metadata = df.attrs
+        return cls(
+            a_wind = QuantityArray(
+                values = dataframe_utils.extract_column_as_ndarray(
+                    df,
+                    ParameterNames.A_WIND
+                ),
+                unit = metadata[ParameterNames.A_WIND_UNIT],
+            ),
+            beta_sh = dataframe_utils.extract_column_as_ndarray(
+                df,
+                ParameterNames.BETA_SH
+            ),
+            phi_peak = QuantityArray(
+                values = dataframe_utils.extract_column_as_ndarray(
+                    df,
+                    ParameterNames.PHI_PEAK
+                ),
+                unit = metadata[ParameterNames.PHI_UNIT]
+            ),
+            phi_theta = QuantityArray(
+                values = dataframe_utils.extract_column_as_ndarray(
+                    df,
+                    ParameterNames.PHI_THETA
+                ),
+                unit = metadata[ParameterNames.PHI_UNIT]
+            ),
+            lnu_theta = QuantityArray(
+                values = dataframe_utils.extract_column_as_ndarray(
+                    df,
+                    ParameterNames.LNU_THETA
+                ),
+                unit = metadata[ParameterNames.LNU_UNIT]
+            ),
+            tau_theta = dataframe_utils.extract_column_as_ndarray(
+                    df,
+                    ParameterNames.TAU_THETA
+            ),
+            fnu_peak = QuantityArray(
+                values = dataframe_utils.extract_column_as_ndarray(
+                    df,
+                    ParameterNames.FNU_PEAK
+                ),
+                unit = metadata[ParameterNames.FNU_UNIT]
+            ),
+            eps_b = metadata[ParameterNames.EPS_B],
+            eps_th = metadata[ParameterNames.EPS_TH],
+            mu = metadata[ParameterNames.MU],
+            mu_e = metadata[ParameterNames.MU_E],
+            distance = QuantityData(
+                value = metadata[ParameterNames.DISTANCE_VALUE],
+                unit = metadata[ParameterNames.DISTANCE_UNIT],
+            )
+        )
+
     def to_df(
         self,
         phi_unit,
         fnu_unit,
         lnu_unit
     )->pd.DataFrame:
+        a_wind = self.a_wind
         df = pd.DataFrame({
-            ParameterNames.A_WIND: self.a_wind.values,
+            ParameterNames.A_WIND: a_wind.values,
             ParameterNames.BETA_SH: self.beta_sh,
             ParameterNames.PHI_PEAK: self.phi_peak.to_value_in(phi_unit),
             ParameterNames.FNU_PEAK: self.fnu_peak.to_value_in(fnu_unit),
@@ -125,6 +193,10 @@ class EstimatedParameters:
         df.attrs[ParameterNames.MU_E] = self.mu_e
         df.attrs[ParameterNames.DISTANCE_VALUE] = self.distance.value
         df.attrs[ParameterNames.DISTANCE_UNIT] = self.distance.unit
+        df.attrs[ParameterNames.PHI_UNIT] = phi_unit
+        df.attrs[ParameterNames.FNU_UNIT] = fnu_unit
+        df.attrs[ParameterNames.LNU_UNIT] = lnu_unit
+        df.attrs[ParameterNames.A_WIND_UNIT] = a_wind.unit
         return df
 
 @dataclass(frozen=True,slots=True)
