@@ -5,7 +5,8 @@ from typing import Self, cast, Any, Hashable
 
 from matplotlib.patches import StepPatch
 from module import plot_utils
-from module.models import ThermalSynchrotronUtils, calculate_xm
+from module import models
+from module.models import SynchrotronPhase, ThermalSynchrotronUtils, calculate_xm
 from module.mydataclasses import QuantityArray, QuantityData
 from module.plot_utils import LineStyle
 from module.types import FloatArray
@@ -18,6 +19,7 @@ from enum import StrEnum, auto
 from matplotlib.axes import Axes
 from cattrs import Converter
 from module import inputs_as_dataclass
+from module.chevalier import EstimatedParameters
 
 DATACLASS_CONVERTER = Converter()
 
@@ -143,17 +145,6 @@ class UnitMetadata:
     fnu_unit: str
 
 @dataclass(frozen=True, slots=True)
-class EstimatedParameters:
-    a_wind: QuantityData
-    beta_sh: float
-    eps_b: float
-    eps_th:float
-    mu:float
-    mu_e:float
-    distance: QuantityData
-
-
-@dataclass(frozen=True, slots=True)
 class BinnedPredictedLightcurve:
     t_center:   QuantityArray
     t_left:     QuantityArray
@@ -223,8 +214,8 @@ class BinnedPredictedLightcurve:
     @property
     def bin_edges(self):
         t_unit = self.t_left.unit
-        t_left = self.t_left.FloatArray_in(t_unit)
-        t_right = self.t_right.FloatArray_in(t_unit)
+        t_left = self.t_left.to_value_in(t_unit)
+        t_right = self.t_right.to_value_in(t_unit)
         bin_edges = np.concatenate(
             (
                 t_left,
@@ -239,8 +230,8 @@ class BinnedPredictedLightcurve:
     @property
     def fnu_total(self):
         fnu_unit = self.fnu_transient.unit
-        fnu_trans = self.fnu_transient.FloatArray_in(fnu_unit)
-        fnu_per = self.fnu_persistent.FloatArray_in(fnu_unit)
+        fnu_trans = self.fnu_transient.to_value_in(fnu_unit)
+        fnu_per = self.fnu_persistent.to_value_in(fnu_unit)
         return QuantityArray(
             values = fnu_trans + fnu_per,
             unit = fnu_unit
@@ -248,12 +239,12 @@ class BinnedPredictedLightcurve:
 
     def to_df(self,t_unit:str,fnu_unit:str):
         df = pd.DataFrame({
-            Columns.T_LEFT: self.t_left.FloatArray_in(t_unit),
-            Columns.T_CENTER: self.t_center.FloatArray_in(t_unit),
-            Columns.T_RIGHT: self.t_right.FloatArray_in(t_unit),
-            Columns.FNU_TRANSIENT: self.fnu_transient.FloatArray_in(fnu_unit),
-            Columns.FNU_PERSISTENT: self.fnu_persistent.FloatArray_in(fnu_unit),
-            Columns.FNU_PERSISTENT_ERR: self.fnu_persistent_err.FloatArray_in(fnu_unit),
+            Columns.T_LEFT: self.t_left.to_value_in(t_unit),
+            Columns.T_CENTER: self.t_center.to_value_in(t_unit),
+            Columns.T_RIGHT: self.t_right.to_value_in(t_unit),
+            Columns.FNU_TRANSIENT: self.fnu_transient.to_value_in(fnu_unit),
+            Columns.FNU_PERSISTENT: self.fnu_persistent.to_value_in(fnu_unit),
+            Columns.FNU_PERSISTENT_ERR: self.fnu_persistent_err.to_value_in(fnu_unit),
         })
         df.attrs[Columns.T_UNIT] = t_unit
         df.attrs[Columns.FNU_UNIT] = fnu_unit
@@ -268,13 +259,13 @@ class BinnedPredictedLightcurve:
         t_unit: str,
         fnu_unit: str
     )->StepPatch:
-        fnu_total = self.fnu_total.FloatArray_in(fnu_unit)
-        bin_edges = self.bin_edges.FloatArray_in(t_unit)
+        fnu_total = self.fnu_total.to_value_in(fnu_unit)
+        bin_edges = self.bin_edges.to_value_in(t_unit)
 
         return ax.stairs(
             fnu_total,
             bin_edges,
-            baseline=self.fnu_persistent.FloatArray_in(fnu_unit)[0],
+            baseline=self.fnu_persistent.to_value_in(fnu_unit)[0],
             **style.to_kwargs(),
         )
 
@@ -337,8 +328,8 @@ class BinnedCalculationLightcurve:
         persistent_err: QuantityArray
     )->BinnedPredictedLightcurve:
         fnu_unit = self.units.fnu_unit
-        fnu_per = persistent.FloatArray_in(fnu_unit)
-        fnu_per_err = persistent_err.FloatArray_in(fnu_unit)
+        fnu_per = persistent.to_value_in(fnu_unit)
+        fnu_per_err = persistent_err.to_value_in(fnu_unit)
 
         if not (
             self.t_center.size
@@ -359,9 +350,37 @@ class BinnedCalculationLightcurve:
 
 @dataclass(frozen=True, slots=True)
 class CalculationLightcurve:
-    estimated_params: EstimatedParameters
-    t_observer_frame: QuantityArray
-    fnu_observer_frame: QuantityArray
+    params: EstimatedParameters
+    t: QuantityArray
+    fnu: QuantityArray
+
+    def __post_init__(self)->None:
+        t_arr = self.t.values
+        fnu_grid = self.fnu.values
+
+        if t_arr.ndim != 1:
+            raise ValueError(
+                "tは1次元配列でなければなりません. "
+                f"shape={t_arr.shape}"
+            )
+
+        if fnu_grid.ndim != 2:
+            raise ValueError(
+                "fnuは2次元配列でなければなりません. "
+                f"shape={fnu_grid.shape}"
+            )
+
+        num_times = t_arr.size
+        num_flux_times = fnu_grid.shape[1]
+
+        if num_times != num_flux_times:
+            raise ValueError(
+                "tの要素数とfnuの列数が一致していません. "
+                f"t={t_arr.shape}, "
+                f"fnu={fnu_grid.shape}"
+            )
+
+        return
 
     @staticmethod
     def _make_bin_edges(
@@ -428,14 +447,14 @@ class CalculationLightcurve:
         binning: observation.Binning,
         drop_incomplete_bin: bool = True
     )->BinnedCalculationLightcurve:
-        self.validate_time_coverage(self.t_observer_frame,binning)
+        self.validate_time_coverage(self.t,binning)
 
         t_unit = binning.t_unit
-        fnu_unit = cast(u.UnitBase,self.fnu_observer_frame.unit)
+        fnu_unit = self.fnu.unit
 
         width = binning.bin_width
-        t_model = self.t_observer_frame.FloatArray_in(binning.t_unit)
-        fnu_model = self.fnu_observer_frame.FloatArray_in(fnu_unit)
+        t_model = self.t.to_value_in(binning.t_unit)
+        fnu_model = self.fnu.to_value_in(fnu_unit)
 
         if np.any(np.diff(t_model) <= 0.0):
             raise ValueError(
@@ -522,7 +541,7 @@ class CalculationLightcurve:
         )
 
         return BinnedCalculationLightcurve(
-            estimated_params=self.estimated_params,
+            estimated_params=self.params,
             units = UnitMetadata(
                 t_unit = t_unit,
                 fnu_unit = str(fnu_unit),
@@ -535,65 +554,42 @@ class CalculationLightcurve:
 
 def compute(
     config: inputs_as_dataclass.ModelConfigure,
-    model: ThermalSynchrotronUtils,
-    input: Input,
+    params: EstimatedParameters,
+    integral_table : models.ThermalSynchrotronTable
 )->CalculationLightcurve:
-    xm = calculate_xm(
-        t_obs=config.t_obs,
-        nu_obs=config.nu_obs,
-        phi_theta=input.phi_theta
+    t = config.time.quantity_array
+    nu = QuantityData.from_Quantity(config.nu.quantity)
+    phi = models.SynchrotronPhase.from_time_given_nu(
+        t = t,
+        nu = nu
     )
-    fnu_obs = model.fnu_obs(
-        xm=xm,
-        tau_theta=input.tau_theta,
-        lnu_theta=input.lnu_theta,
-        distance=input.distance,
-        doppler_delta=input.doppler_delta
-    )
-    time_unit = str(config.t_obs.unit)
-    fnu_unit = str(fnu_obs.unit)
-
-    t_value: FloatArray = np.asarray(
-        config.t_obs.to_value(time_unit),
-        dtype=np.float64,
-    )
-    fnu_value: FloatArray = np.asarray(
-        fnu_obs.to_value(fnu_unit),
-        dtype=np.float64,
-    )
-    if t_value[0] > 0.0:
-        t_value = np.concatenate(
-            (
-                np.array([0.0], dtype=np.float64),
-                t_value,
-            )
+    xm = models.DimensionlessFrequency.from_phi(
+        phi = phi,
+        phi_theta = models.SynchrotronPhase(
+            values = params.phi_theta.values,
+            unit = params.phi_theta.unit
         )
-        fnu_value = np.concatenate(
-            (
-                np.array([0.0], dtype=np.float64),
-                fnu_value,
-            )
-        )
+    )
+    lambda_theta = models.DimensionlessLuminosity.from_xm(
+        xm = xm,
+        tau_theta_array = params.tau_theta,
+        integral_table = integral_table
+    )
+    lnu = lambda_theta.to_lnu(
+        lnu_theta = params.lnu_theta
+    )
+    fnu_src = models.SourceframeSpecificFlux.from_lnu(
+        lnu = lnu,
+        distance = params.distance
+    )
+    fnu_obs = fnu_src.to_observerframe(
+        doppler_factor = params.doppler_delta
+    )
     return CalculationLightcurve(
-        estimated_params=EstimatedParameters(
-            a_wind = QuantityData(value=input.values.a_wind,unit=input.units.a_wind),
-            beta_sh = input.values.beta_sh,
-            eps_b= input.values.eps_b,
-            eps_th = input.values.eps_th,
-            mu = input.values.mu,
-            mu_e = input.values.mu_e,
-            distance = QuantityData(value=input.values.distance,unit=input.units.distance)
-        ),
-        t_observer_frame=QuantityArray(
-            values=t_value,
-            unit=time_unit
-        ),
-        fnu_observer_frame=QuantityArray(
-            fnu_value,
-            fnu_unit
-        )
+        params = params,
+        t = t,
+        fnu = fnu_obs
     )
-
 
 
 # def build_inputs(

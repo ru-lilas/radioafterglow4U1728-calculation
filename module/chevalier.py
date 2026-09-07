@@ -60,6 +60,7 @@ class ParameterNames(StrEnum):
     LNU_UNIT = auto()
     FNU_UNIT = auto()
     A_WIND_UNIT = auto()
+    DOPPLER_DELTA = auto()
 
 @dataclass(frozen=True,slots=True)
 class ABGrid:
@@ -75,6 +76,7 @@ class EstimatedParameters:
     phi_theta: QuantityArray
     lnu_theta: QuantityArray
     tau_theta: FloatArray
+    doppler_delta: FloatArray
     eps_b: float
     eps_th: float
     mu: float
@@ -154,6 +156,10 @@ class EstimatedParameters:
                     df,
                     ParameterNames.TAU_THETA
             ),
+            doppler_delta = dataframe_utils.extract_column_as_ndarray(
+                df,
+                ParameterNames.DOPPLER_DELTA
+            ),
             fnu_peak = QuantityArray(
                 values = dataframe_utils.extract_column_as_ndarray(
                     df,
@@ -186,6 +192,7 @@ class EstimatedParameters:
             ParameterNames.PHI_THETA: self.phi_theta.to_value_in(phi_unit),
             ParameterNames.LNU_THETA: self.lnu_theta.to_value_in(lnu_unit),
             ParameterNames.TAU_THETA: self.tau_theta,
+            ParameterNames.DOPPLER_DELTA: self.doppler_delta,
         })
         df.attrs[ParameterNames.EPS_B] = self.eps_b
         df.attrs[ParameterNames.EPS_TH] = self.eps_th
@@ -472,6 +479,7 @@ class ChevalierGrid:
             lnu_theta_q.unit
         )
         tau_theta = self.tau_theta[mask]
+        doppler_delta = models.doppler_delta(abgrid.beta_sh_grid)[mask]
 
         return EstimatedParameters(
             a_wind = QuantityArray(
@@ -493,6 +501,7 @@ class ChevalierGrid:
             eps_b=self.eps_b,
             eps_th=self.eps_th,
             distance=self.distance,
+            doppler_delta=doppler_delta,
             mu=self.mu,
             mu_e=self.mu_e
         )

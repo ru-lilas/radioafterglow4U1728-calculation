@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 from dataclasses import dataclass
 from module.mydataclasses import QuantityArray, QuantityData
-from module.types import FloatArray, FloatArrayLike
+from module.types import FloatArray, FloatArrayLike, FloatGrid
 
 from numpy.typing import NDArray
 from module import synchrotron_scaling_values
@@ -19,6 +19,8 @@ from module import tabular
 from module.utilities import bisection, unit_aliases as unit
 from module import calculate_lnu_th
 from module.utils import FileReader
+
+
 
 # @dataclass
 # class ThermalSynchrotronScalingValues:
@@ -187,6 +189,157 @@ class ThermalSynchrotronTable:
 
     def interpolate_ip(self,x:FloatArray)->FloatArray:
         return np.exp(self.interpolate_log_ip(x))
+
+@dataclass(frozen=True,slots=True)
+class SynchrotronPhase(QuantityArray):
+
+    @classmethod
+    def from_time_given_nu(
+        cls,
+        t: QuantityArray,
+        nu: QuantityData
+    )->Self:
+        phi = t.quantity*nu.quantity
+        return cls.from_Quantity(phi)
+
+    def to_time(
+        self,
+        nu: QuantityData
+    )->QuantityArray:
+        return QuantityArray.from_Quantity(
+            nu*self.quantity
+        )
+
+@dataclass(frozen=True,slots=True)
+class DimensionlessFrequency:
+    values: FloatArray
+
+    @classmethod
+    def from_phi(
+        cls,
+        phi:SynchrotronPhase,
+        phi_theta:SynchrotronPhase
+    )->Self:
+        if phi.values.ndim != 1:
+            raise ValueError(
+                "phiは1次元配列でなければなりません. "
+                f"shape={phi.values.shape}"
+            )
+
+        if phi_theta.values.ndim != 1:
+            raise ValueError(
+                "phi_thetaは1次元配列でなければなりません. "
+                f"shape={phi_theta.values.shape}"
+            )
+        phi_row = phi.quantity[np.newaxis, :]
+        phi_theta_column = phi_theta.quantity[:, np.newaxis]
+        xm = (phi_row/phi_theta_column).to(u.dimensionless_unscaled)
+        return cls(
+            values = np.asarray(
+                xm,
+                dtype=np.float64
+        ))
+
+@dataclass(frozen=True,slots=True)
+class DimensionlessLuminosity:
+    values:FloatGrid
+
+    @classmethod
+    def from_xm(
+        cls,
+        xm: DimensionlessFrequency,
+        tau_theta_array: FloatArray,
+        integral_table: ThermalSynchrotronTable
+    )->Self:
+        xm_grid = xm.values
+        if xm_grid.ndim != 2:
+            raise ValueError(
+                "xmは2次元配列でなければなりません. "
+                f"shape={xm.values.shape}"
+            )
+        if tau_theta_array.ndim != 1:
+            raise ValueError(
+                "tau_thetaは1次元配列でなければなりません. "
+                f"shape={tau_theta_array.shape}"
+            )
+
+        num_models = xm_grid.shape[0]
+
+        if tau_theta_array.size != num_models:
+            raise ValueError(
+                "xmのモデル数とtau_thetaの要素数が"
+                "一致していません. "
+                f"xm={xm_grid.shape}, "
+                f"tau_theta={tau_theta_array.shape}"
+            )
+
+        tau_theta_column = tau_theta_array[:,np.newaxis]
+        ip_grid = integral_table.interpolate_ip(xm_grid)
+        optical_depth = (
+                ip_grid
+                *tau_theta_column
+                /xm.values
+        )
+        escape_fraction = -np.expm1(-optical_depth)
+        xm2 = (xm.values)**2
+        return cls(
+            values = xm2 * escape_fraction
+        )
+
+    def to_lnu(
+        self,
+        lnu_theta:QuantityArray
+    )->QuantityArray:
+        lnu_theta_values = lnu_theta.values
+
+        if lnu_theta_values.ndim != 1:
+            raise ValueError(
+                "lnu_thetaは1次元配列でなければなりません. "
+                f"shape={lnu_theta_values.shape}"
+            )
+
+        if lnu_theta_values.size != self.values.shape[0]:
+            raise ValueError(
+                "無次元光度のモデル数とlnu_thetaの要素数が"
+                "一致していません. "
+                f"luminosity={self.values.shape}, "
+                f"lnu_theta={lnu_theta_values.shape}"
+            )
+
+        lnu_theta_column = lnu_theta_values[:, np.newaxis]
+
+        return QuantityArray(
+            values=self.values * lnu_theta_column,
+            unit=lnu_theta.unit,
+        )
+
+@dataclass(frozen=True,slots=True)
+class ObserverframeSpecificFlux(QuantityArray):
+    pass
+
+@dataclass(frozen=True,slots=True)
+class SourceframeSpecificFlux(QuantityArray):
+    @classmethod
+    def from_lnu(
+        cls,
+        lnu: QuantityArray,
+        distance: QuantityData
+    )->Self:
+        fnu = quantity_converter.lnu_into_fnu(
+            lnu = lnu.quantity,
+            distance = distance.quantity
+        )
+        return cls.from_Quantity(fnu)
+
+    def to_observerframe(
+        self,
+        doppler_factor:FloatArray
+    )->ObserverframeSpecificFlux:
+        doppler_factor_column = doppler_factor[:,np.newaxis]
+        return ObserverframeSpecificFlux(
+            values = doppler_factor_column**3 * self.values,
+            unit = self.unit
+        )
 
 @dataclass(slots=True)
 class ThermalSynchrotron:

@@ -194,7 +194,6 @@ FILEPATH_OBSBG := $(DATADIR)/$(OBSDIR)/bg.$(EXTENTION_CSV)
 # 		$< \
 # 		--output $@
 #
-lc: $(FIGDIR)/$(RUN_DIR)/lc.$(EXTENTION_PDF)
 $(FIGDIR)/$(RUN_DIR)/lc.$(EXTENTION_PDF): \
 	$(DATADIR)/$(RUN_DIR)/lc_est.$(EXTENTION_CSV) \
 	$(FILEPATH_OBSLC) \
@@ -208,19 +207,17 @@ $(FIGDIR)/$(RUN_DIR)/lc.$(EXTENTION_PDF): \
 		--plotconfig plotconfigs/estimated_lightcurve.yaml \
 		--output $@
 #
+lc: $(DATADIR)/$(RUN_DIR)/lc_est.$(EXTENTION_CSV)
+
 $(DATADIR)/$(RUN_DIR)/lc_est.$(EXTENTION_CSV): \
-	$(DATADIR)/$(RUN_DIR)/chi2.csv \
-	$(DATADIR)/$(RUN_DIR)/$(PARAMETER_TABLE).$(EXTENTION_CSV) \
-	$(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV) \
-	$(FILEPATH_OBSLC) \
 	$(FILEPATH_INPUT) \
+	$(DATADIR)/$(RUN_DIR)/estimation.csv \
+	$(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV) \
 	scripts/compute_estimated_lightcurve.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--estimated $< \
-		--parameter_table $(DATADIR)/$(RUN_DIR)/$(PARAMETER_TABLE).$(EXTENTION_CSV) \
+		--input $< \
+		--estimated $(DATADIR)/$(RUN_DIR)/estimation.csv \
 		--integral_table $(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV) \
-		--obs_lc $(FILEPATH_OBSLC) \
-		--config $(FILEPATH_INPUT) \
 		--output $@
 
 $(DATADIR)/$(RUN_DIR)/chi2.csv: \
