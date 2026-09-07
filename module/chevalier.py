@@ -40,10 +40,92 @@ class GridColumns(StrEnum):
     PHI_PEAK = auto()
     FNU_PEAK = auto()
 
+class ParameterNames(StrEnum):
+    A_WIND = auto()
+    BETA_SH = auto()
+    PHI_PEAK = auto()
+    FNU_PEAK = auto()
+    PHI_THETA = auto()
+    LNU_THETA = auto()
+    TAU_THETA = auto()
+    EPS_B = auto()
+    EPS_TH = auto()
+    MU = auto()
+    MU_E = auto()
+    DISTANCE_VALUE = auto()
+    DISTANCE_UNIT = auto()
+
 @dataclass(frozen=True,slots=True)
 class ABGrid:
     a_wind_grid: FloatGrid
     beta_sh_grid: FloatGrid
+
+@dataclass(frozen=True,slots=True)
+class EstimatedParameters:
+    a_wind: QuantityArray
+    beta_sh: FloatArray
+    phi_peak: QuantityArray
+    fnu_peak: QuantityArray
+    phi_theta: QuantityArray
+    lnu_theta: QuantityArray
+    tau_theta: FloatArray
+    eps_b: float
+    eps_th: float
+    mu: float
+    mu_e: float
+    distance: QuantityData
+
+    def __post_init__(self) -> None:
+        arrays = {
+            ParameterNames.A_WIND: self.a_wind.values,
+            ParameterNames.BETA_SH: self.beta_sh,
+            ParameterNames.PHI_PEAK: self.phi_peak.values,
+            ParameterNames.FNU_PEAK: self.fnu_peak.values,
+            ParameterNames.PHI_THETA: self.phi_theta.values,
+            ParameterNames.LNU_THETA: self.lnu_theta.values,
+            ParameterNames.TAU_THETA: self.tau_theta,
+        }
+
+        for name, array in arrays.items():
+            if array.ndim != 1:
+                raise ValueError(
+                    f"{name}は1次元でなければなりません. "
+                    f"shape={array.shape}"
+                )
+
+        sizes = {
+            name: array.size
+            for name, array in arrays.items()
+        }
+
+        if len(set(sizes.values())) != 1:
+            raise ValueError(
+                "推定パラメータの配列長が一致していません. "
+                f"{sizes}"
+            )
+
+    def to_df(
+        self,
+        phi_unit,
+        fnu_unit,
+        lnu_unit
+    )->pd.DataFrame:
+        df = pd.DataFrame({
+            ParameterNames.A_WIND: self.a_wind.values,
+            ParameterNames.BETA_SH: self.beta_sh,
+            ParameterNames.PHI_PEAK: self.phi_peak.to_value_in(phi_unit),
+            ParameterNames.FNU_PEAK: self.fnu_peak.to_value_in(fnu_unit),
+            ParameterNames.PHI_THETA: self.phi_theta.to_value_in(phi_unit),
+            ParameterNames.LNU_THETA: self.lnu_theta.to_value_in(lnu_unit),
+            ParameterNames.TAU_THETA: self.tau_theta,
+        })
+        df.attrs[ParameterNames.EPS_B] = self.eps_b
+        df.attrs[ParameterNames.EPS_TH] = self.eps_th
+        df.attrs[ParameterNames.MU] = self.mu
+        df.attrs[ParameterNames.MU_E] = self.mu_e
+        df.attrs[ParameterNames.DISTANCE_VALUE] = self.distance.value
+        df.attrs[ParameterNames.DISTANCE_UNIT] = self.distance.unit
+        return df
 
 @dataclass(frozen=True,slots=True)
 class ChevalierGrid:
@@ -200,20 +282,14 @@ class ChevalierGrid:
     @property
     def parameter_grids(
         self
-    )->tuple[FloatArray,FloatArray]:
+    )->ABGrid:
         a_wind_grid, beta_sh_grid = np.broadcast_arrays(
             self.a_wind_arr.values,
             self.beta_sh_arr,
         )
-        return (
-            np.asarray(
-                a_wind_grid,
-                dtype=np.float64
-            ),
-            np.asarray(
-                beta_sh_grid,
-                dtype=np.float64
-            ),
+        return ABGrid(
+            a_wind_grid = np.asarray(a_wind_grid,dtype=np.float64),
+            beta_sh_grid = np.asarray(beta_sh_grid,dtype=np.float64),
         )
 
     def plot(
@@ -234,7 +310,9 @@ class ChevalierGrid:
             .to_value_in(fnu_unit)
         )
 
-        a_wind_grid,beta_sh_grid = self.parameter_grids
+        abgrid = self.parameter_grids
+        a_wind_grid = abgrid.a_wind_grid
+        beta_sh_grid = abgrid.beta_sh_grid
 
         if not (
             phi_peak.shape
@@ -283,10 +361,9 @@ class ChevalierGrid:
         observation: ChevalierScatter,
         peak_table: LambdaPeakTable,
         *,
-        a_wind_unit: str,
         phi_unit: str,
         fnu_unit: str,
-    ) -> pd.DataFrame:
+    )->EstimatedParameters:
         phi_grid = (
             self.phi_peak(peak_table)
             .to_value_in(phi_unit)
@@ -295,11 +372,7 @@ class ChevalierGrid:
             self.fnu_peak_observerframe(peak_table)
             .to_value_in(fnu_unit)
         )
-        parameter_grid = self.parameter_grids
-        abgrid = ABGrid(
-            a_wind_grid=parameter_grid[0],
-            beta_sh_grid=parameter_grid[1]
-        )
+        abgrid = self.parameter_grids
 
         mask = observation.contains(
             phi_grid,
@@ -316,15 +389,38 @@ class ChevalierGrid:
                 f"beta_sh={abgrid.a_wind_grid.shape}"
             )
 
-        selected = pd.DataFrame({
-            "a_wind": abgrid.a_wind_grid[mask],
-            "beta_sh": abgrid.beta_sh_grid[mask],
-            "phi_peak": phi_grid[mask],
-            "fnu_peak": fnu_grid[mask],
-        })
+        phi_theta_q = self.phi_theta
+        phi_theta = QuantityArray(
+            phi_theta_q.values[mask],
+            phi_theta_q.unit
+        )
+        lnu_theta_q = self.lnu_theta
+        lnu_theta = QuantityArray(
+            lnu_theta_q.values[mask],
+            lnu_theta_q.unit
+        )
+        tau_theta = self.tau_theta[mask]
 
-        selected.attrs["a_wind_unit"] = a_wind_unit
-        selected.attrs["phi_unit"] = phi_unit
-        selected.attrs["fnu_unit"] = fnu_unit
-
-        return selected
+        return EstimatedParameters(
+            a_wind = QuantityArray(
+                values=abgrid.a_wind_grid[mask],
+                unit=self.a_wind_arr.unit
+            ),
+            beta_sh = abgrid.beta_sh_grid[mask],
+            phi_peak = QuantityArray(
+                values=phi_grid[mask],
+                unit=phi_unit
+            ),
+            fnu_peak = QuantityArray(
+                values=fnu_grid[mask],
+                unit=fnu_unit
+            ),
+            tau_theta = tau_theta,
+            lnu_theta=lnu_theta,
+            phi_theta=phi_theta,
+            eps_b=self.eps_b,
+            eps_th=self.eps_th,
+            distance=self.distance,
+            mu=self.mu,
+            mu_e=self.mu_e
+        )

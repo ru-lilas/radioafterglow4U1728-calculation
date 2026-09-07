@@ -10,6 +10,7 @@ from module.chevalier import (
 from module.inputs_as_dataclass import PhysicalParameters
 from module.observation import LongformatLightcurve
 from module.parameter_table import LambdaPeakTable
+from module.utils import FileWriter
 
 def parse_args()->argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -84,14 +85,17 @@ def main():
             phi_unit=phi_unit,
             fnu_unit=fnu_unit
         )
-        df = grids.select_parameters_in(
+        est_params = grids.select_parameters_in(
             obs_scat,
             peak_table,
-            a_wind_unit="g cm-1",
             phi_unit=phi_unit,
             fnu_unit=fnu_unit
         )
-        print(df)
+        df = est_params.to_df(
+            phi_unit=phi_unit,
+            fnu_unit=fnu_unit,
+            lnu_unit="erg s-1 Hz-1"
+        )
 
         pdf.savefig(fig)
         plt.close(fig)
