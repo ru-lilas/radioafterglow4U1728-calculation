@@ -35,6 +35,7 @@ FILEPATH_LIST_CHI2ESTIMATED_PARAMETERS ?=
 FILEPATH_OBSLC := $(DATADIR)/$(OBSDIR)/obslc.$(EXTENTION_CSV)
 FILEPATH_OBSLC_TMP := $(DATADIR)/$(OBSDIR)/$(OBSERVATION_LIGHTCURVE)$(SUFFIX_TMP).$(EXTENTION_CSV)
 FILEPATH_OBSBG := $(DATADIR)/$(OBSDIR)/bg.$(EXTENTION_CSV)
+FILEPATH_LC_EST := $(DATADIR)/$(RUN_DIR)/lc_est.$(EXTENTION_CSV)
 
 # all: $(FIGDIR)/$(SAMPLING_DIR)/chi2_colormap.pdf \
 # 	$(FIGDIR)/$(SAMPLING_DIR)/estimated_lightcurve.pdf
@@ -207,9 +208,9 @@ $(FIGDIR)/$(RUN_DIR)/lc.$(EXTENTION_PDF): \
 		--plotconfig plotconfigs/estimated_lightcurve.yaml \
 		--output $@
 #
-lc: $(DATADIR)/$(RUN_DIR)/lc_est.$(EXTENTION_CSV)
+lc: $(FILEPATH_LC_EST)
 
-$(DATADIR)/$(RUN_DIR)/lc_est.$(EXTENTION_CSV): \
+$(FILEPATH_LC_EST): \
 	$(FILEPATH_INPUT) \
 	$(DATADIR)/$(RUN_DIR)/estimation.csv \
 	$(FILEPATH_OBSLC) \

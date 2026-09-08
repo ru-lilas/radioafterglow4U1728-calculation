@@ -47,6 +47,9 @@ def parse_args()->argparse.Namespace:
 
 def main():
     args = parse_args()
+    outpath:Path = args.output
+    outpath.parent.mkdir(parents=True,exist_ok=True)
+
     integral_table = ThermalSynchrotronTable.from_csv(args.integral_table)
     estimated_params = EstimatedParameters.from_csv(args.estimated)
     config = GeneralInputs.from_yaml(args.input)
@@ -77,7 +80,16 @@ def main():
     )
     minimum_chi2 = mystatistics.MinumumChiSquared.from_array(chi2_arr)
     lc_best = lc_binned.extract(idx=minimum_chi2.index)
-    print(lc_best)
+    df = lc_best.to_df(
+        t_unit = "min",
+        a_wind_unit= "g cm-1",
+        phi_unit= "GHz min",
+        fnu_unit = fnu_unit,
+        lnu_unit = "erg s-1 Hz-1"
+    )
+    print(df)
+    print(df.attrs)
+    FileWriter.df_to_csv(outpath,df,save_attrs=True)
 
     return
 

@@ -180,6 +180,31 @@ class BestfitParameters:
     mu_e: float
     distance: QuantityData
 
+    def to_dict(
+        self,
+        *,
+        a_wind_unit: str,
+        phi_unit:str,
+        lnu_unit:str,
+        fnu_unit:str
+    )->dict[str,float|str]:
+        return {
+            ParameterNames.A_WIND: self.a_wind.value_in(a_wind_unit),
+            ParameterNames.A_WIND_UNIT: a_wind_unit,
+            ParameterNames.BETA_SH: self.beta_sh,
+            ParameterNames.PHI_PEAK: self.phi_peak.value_in(phi_unit),
+            ParameterNames.PHI_THETA: self.phi_theta.value_in(phi_unit),
+            ParameterNames.LNU_THETA: self.lnu_theta.value_in(lnu_unit),
+            ParameterNames.TAU_THETA: self.tau_theta,
+            ParameterNames.DOPPLER_DELTA: self.doppler_delta,
+            ParameterNames.EPS_B: self.eps_b,
+            ParameterNames.EPS_TH: self.eps_th,
+            ParameterNames.MU: self.mu,
+            ParameterNames.MU_E: self.mu_e,
+            ParameterNames.DISTANCE_VALUE: self.distance.value,
+            ParameterNames.DISTANCE_UNIT: self.distance.unit,
+        }
+
 @dataclass(frozen=True,slots=True)
 class EstimatedParameters:
     a_wind: QuantityArray
@@ -459,13 +484,28 @@ class BinnedBestfitLightcurve:
             unit = fnu_unit
         )
 
-    def to_df(self,t_unit:str,fnu_unit:str):
+    def to_df(
+        self,
+        *,
+        t_unit:str,
+        fnu_unit:str,
+        a_wind_unit:str,
+        phi_unit:str,
+        lnu_unit:str,
+    )->pd.DataFrame:
+        metadata = self.params.to_dict(
+            a_wind_unit=a_wind_unit,
+            phi_unit=phi_unit,
+            lnu_unit=lnu_unit,
+            fnu_unit=fnu_unit
+        )
         df = pd.DataFrame({
             Columns.T_LEFT: self.t_left.to_value_in(t_unit),
             Columns.T_CENTER: self.t_center.to_value_in(t_unit),
             Columns.T_RIGHT: self.t_right.to_value_in(t_unit),
-            Columns.FNU_TRANSIENT: self.fnu_net.to_value_in(fnu_unit),
+            Columns.FNU_NET: self.fnu_net.to_value_in(fnu_unit),
         })
+        df.attrs = {**metadata}
         df.attrs[Columns.T_UNIT] = t_unit
         df.attrs[Columns.FNU_UNIT] = fnu_unit
 
