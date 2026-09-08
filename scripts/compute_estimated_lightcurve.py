@@ -79,7 +79,11 @@ def main():
         error=obslc_nu_selected.fnu_net_err.to_value_in(fnu_unit)
     )
     minimum_chi2 = mystatistics.MinumumChiSquared.from_array(chi2_arr)
-    lc_best = lc_binned.extract(idx=minimum_chi2.index)
+    lc_best = lc_binned.extract(
+        idx=minimum_chi2.index,
+        persistent=obslc_nu_selected.fnu_persistent,
+        persistent_err=obslc_nu_selected.fnu_persistent_err,
+    )
     df = lc_best.to_df(
         t_unit = "min",
         a_wind_unit= "g cm-1",

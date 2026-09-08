@@ -50,16 +50,14 @@ def main():
     lc = BinnedBestfitLightcurve.from_csv(
         args.calclc
     )
-    print(lc)
     conf = GeneralInputs.from_yaml(args.input)
     conf_plot = PlotConfig.from_yaml(args.plotconfig)
     obslc_long = LongformatLightcurve.from_csv(args.obslc)
     obslc_nu = obslc_long.extract_lightcurve(conf.chi2fitting.sampling.nu)
-    #
     with PdfPages(outpath) as pdf:
         fig,ax = plot_utils.create_configured_axes(conf_plot.layout)
         fig.set_layout_engine("constrained")
-    #
+
         t_unit = conf_plot.layout.axes.x.label.unit
         fnu_unit = conf_plot.layout.axes.y.label.unit
         if (t_unit is None) or (fnu_unit is None):
@@ -67,24 +65,24 @@ def main():
                 "unitが設定されていません."
             )
 
-        # lc.plot(
-        #     ax,
-        #     conf_plot.styles.model_binned,
-        #     t_unit=t_unit,
-        #     fnu_unit=fnu_unit
-        # )
+        lc.plot(
+            ax,
+            conf_plot.styles.model_binned,
+            t_unit=t_unit,
+            fnu_unit=fnu_unit
+        )
         obslc_nu.plot(
             ax,
             style=conf_plot.styles.observation,
             t_unit=t_unit,
             fnu_unit=fnu_unit
         )
-    #     obslc_nu.plot_persistent(
-    #         ax,
-    #         style=conf_plot.styles.persistent,
-    #         t_unit=t_unit,
-    #         fnu_unit=fnu_unit
-    #     )
+        obslc_nu.plot_persistent(
+            ax,
+            style=conf_plot.styles.persistent,
+            t_unit=t_unit,
+            fnu_unit=fnu_unit
+        )
         pdf.savefig(fig)
         plt.close(fig)
     #

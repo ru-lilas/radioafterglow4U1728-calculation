@@ -355,7 +355,9 @@ class BinnedBestfitLightcurve:
     t_center:   QuantityArray
     t_left:     QuantityArray
     t_right:    QuantityArray
-    fnu_averaged:  QuantityArray
+    fnu_net:  QuantityArray
+    fnu_persistent: QuantityArray
+    fnu_persistent_err: QuantityArray
 
     @classmethod
     def from_csv(
@@ -391,9 +393,21 @@ class BinnedBestfitLightcurve:
                         ),
                 unit = t_unit
         )
-        fnu_averaged = QuantityArray(
+        fnu_net = QuantityArray(
                 values = dataframe_processors.convert_ndarray(
                             df,LcColumns.FNU_NET
+                        ),
+                unit = fnu_unit
+        )
+        fnu_persistent = QuantityArray(
+                values = dataframe_processors.convert_ndarray(
+                            df,LcColumns.FNU_PERSISTENT
+                        ),
+                unit = fnu_unit
+        )
+        fnu_persistent_err = QuantityArray(
+                values = dataframe_processors.convert_ndarray(
+                            df,LcColumns.FNU_PERSISTENT_ERR
                         ),
                 unit = fnu_unit
         )
@@ -403,7 +417,9 @@ class BinnedBestfitLightcurve:
             t_center=t_center,
             t_left = t_left,
             t_right = t_right,
-            fnu_averaged = fnu_averaged,
+            fnu_net = fnu_net,
+            fnu_persistent = fnu_persistent,
+            fnu_persistent_err = fnu_persistent_err
         )
 
     @property
@@ -422,16 +438,27 @@ class BinnedBestfitLightcurve:
             unit=t_unit
         )
 
+    @property
     def fnu_total(
         self,
-        fnu_persistent: QuantityArray,
-        fnu_persistent_err: QuantityArray
-    ):
-        fnu_unit = self.fnu_averaged.unit
-        fnu_trans = self.fnu_averaged.to_value_in(fnu_unit)
-        fnu_per = fnu_persistent.to_value_in(fnu_unit)
+    )->QuantityArray:
+        fnu_net = self.fnu_net
+        fnu_unit = fnu_net.unit
+        fnu_net_arr = fnu_net.to_value_in(fnu_unit)
+        fnu_per = self.fnu_persistent.to_value_in(fnu_unit)
+        fnu_per_err = self.fnu_persistent_err.to_value_in(fnu_unit)
+
+        if not (
+            self.t_center.values.size
+            == fnu_per.size
+            == fnu_per_err.size
+        ):
+            raise ValueError(
+                "計算光度曲線と定常放射の配列の長さが一致しません."
+            )
+
         return QuantityArray(
-            values = fnu_trans + fnu_per,
+            values = fnu_net_arr + fnu_per,
             unit = fnu_unit
         )
 
@@ -454,7 +481,9 @@ class BinnedBestfitLightcurve:
             LcColumns.T_LEFT: self.t_left.to_value_in(t_unit),
             LcColumns.T_CENTER: self.t_center.to_value_in(t_unit),
             LcColumns.T_RIGHT: self.t_right.to_value_in(t_unit),
-            LcColumns.FNU_NET: self.fnu_averaged.to_value_in(fnu_unit),
+            LcColumns.FNU_NET: self.fnu_net.to_value_in(fnu_unit),
+            LcColumns.FNU_PERSISTENT: self.fnu_persistent.to_value_in(fnu_unit),
+            LcColumns.FNU_PERSISTENT_ERR: self.fnu_persistent_err.to_value_in(fnu_unit),
         })
         df.attrs = {**metadata}
         df.attrs[LcColumns.T_UNIT] = t_unit
@@ -469,18 +498,16 @@ class BinnedBestfitLightcurve:
         ax: Axes,
         style: LineStyle,
         *,
-        fnu_persistent:QuantityArray,
-        fnu_persistent_err:QuantityArray,
         t_unit: str,
         fnu_unit: str
     )->StepPatch:
-        fnu_total = self.fnu_total(fnu_persistent=fnu_persistent,fnu_persistent_err=fnu_persistent_err).to_value_in(fnu_unit)
+        fnu_total = self.fnu_total.to_value_in(fnu_unit)
         bin_edges = self.bin_edges.to_value_in(t_unit)
 
         return ax.stairs(
             fnu_total,
             bin_edges,
-            baseline=fnu_persistent.to_value_in(fnu_unit)[0],
+            baseline=self.fnu_persistent.to_value_in(fnu_unit)[0],
             **style.to_kwargs(),
         )
 
@@ -557,7 +584,9 @@ class BinnedCalculationLightcurve:
 
     def extract(
         self,
-        idx:int
+        idx:int,
+        persistent: QuantityArray,
+        persistent_err: QuantityArray
     )->BinnedBestfitLightcurve:
         params_best = self.estimated_params.extract_bestfit(idx)
         fnu_best = QuantityArray(
@@ -567,7 +596,9 @@ class BinnedCalculationLightcurve:
         return BinnedBestfitLightcurve(
             params = params_best,
             nu=self.nu,
-            fnu_averaged=fnu_best,
+            fnu_net=fnu_best,
+            fnu_persistent=persistent,
+            fnu_persistent_err=persistent_err,
             t_center=self.t_center_quantity,
             t_right=self.t_right_quantity,
             t_left=self.t_left_quantity
