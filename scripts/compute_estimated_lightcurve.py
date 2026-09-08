@@ -68,17 +68,19 @@ def main():
     lc_binned = lc.bin_average(
         binning,
         drop_incomplete_bin=True
-    ).add_persistent_flux(
-        persistent= obslc_nu_selected.fnu_persistent,
-        persistent_err= obslc_nu_selected.fnu_persistent_err
     )
+    fnu_tot_model = lc_binned.fnu_total(
+        persistent=obslc_nu_selected.fnu_persistent,
+        persistent_err=obslc_nu_selected.fnu_persistent_err
+    )
+    fnu_unit = "mJy"
     chi2_arr = CalculateChiSquared.from_grid(
-        model=lc_binned.fnu_total.to_value_in("mJy"),
-        observed=obslc_nu_selected.fnu_total.to_value_in("mJy"),
-        error=obslc_nu_selected.fnu_total_err.to_value_in("mJy"),
+        model = fnu_tot_model.to_value_in(fnu_unit),
+        observed= obslc_nu_selected.fnu_total.to_value_in(fnu_unit),
+        error=obslc_nu_selected.fnu_total_err.to_value_in(fnu_unit)
     )
-    chi2 = mystatistics.MinumumChiSquared.from_array(chi2_arr)
-    print(chi2)
+    minimum_chi2 = mystatistics.MinumumChiSquared.from_array(chi2_arr)
+    print(minimum_chi2)
 
     return
 

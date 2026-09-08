@@ -8,8 +8,9 @@ from module import plot_utils
 from module import models
 from module.models import SynchrotronPhase, ThermalSynchrotronUtils, calculate_xm
 from module.mydataclasses import QuantityArray, QuantityData
+from module.mystatistics import CalculateChiSquared
 from module.plot_utils import LineStyle
-from module.types import FloatArray, FloatGrid
+from module.types import FloatArray, FloatArray1D, FloatGrid
 import astropy.units as u
 import numpy as np
 import pandas as pd
@@ -315,12 +316,13 @@ class BinnedCalculationLightcurve:
             unit = self.units.t_unit
         )
 
-    def add_persistent_flux(
+    def fnu_total(
         self,
         persistent: QuantityArray,
         persistent_err: QuantityArray
-    )->BinnedPredictedLightcurve:
+    )->QuantityArray:
         fnu_unit = self.units.fnu_unit
+        fnu_net = self.fnu.to_value_in(fnu_unit)
         fnu_per = persistent.to_value_in(fnu_unit)
         fnu_per_err = persistent_err.to_value_in(fnu_unit)
 
@@ -332,13 +334,10 @@ class BinnedCalculationLightcurve:
             raise ValueError(
                 "計算光度曲線と定常放射の配列の長さが一致しません."
             )
-        return BinnedPredictedLightcurve(
-            t_center =  self.t_center_quantity,
-            t_left =    self.t_left_quantity,
-            t_right =   self.t_right_quantity,    
-            fnu_transient = self.fnu,
-            fnu_persistent = persistent,
-            fnu_persistent_err = persistent_err
+
+        return QuantityArray(
+            values = fnu_net + fnu_per,
+            unit = fnu_unit
         )
 
 @dataclass(frozen=True, slots=True)
