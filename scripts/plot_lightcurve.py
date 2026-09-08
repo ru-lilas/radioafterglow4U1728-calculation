@@ -64,8 +64,9 @@ def main():
             raise ValueError(
                 "unitが設定されていません."
             )
-
-        lc.plot(
+        metadata_string = conf_plot.make_metadata_strings(lc.params)
+        lc.plot_metadata(fig,", ".join(metadata_string))
+        lc.plot_step(
             ax,
             conf_plot.styles.model_binned,
             t_unit=t_unit,

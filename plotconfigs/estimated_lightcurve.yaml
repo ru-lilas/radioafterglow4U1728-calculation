@@ -113,3 +113,51 @@ layout:
       minor_length: 8.0
       width: 1.0
       pad: 10.0
+metadata:
+  # nu: &metadata_tmp
+  #   show: true
+  #   prefix: '$\nu$'
+  #   fmt: '.1f'
+  #   unit: "GHz"
+  a_wind:
+    show: true
+    prefix: '$A_{\mathrm{w}}$'
+    fmt: '.1e'
+    unit: "g cm-1"
+  beta_sh:
+    show: true
+    prefix: '$\beta_{\mathrm{sh}}$'
+    fmt: '.2f'
+    unit: null
+  eps_b:
+    show: true
+    prefix: '$\varepsilon_{\mathrm{B}}$'
+    fmt: '.1e'
+    unit: null
+  eps_th:
+    show: true
+    prefix: '$\varepsilon_{\mathrm{th}}$'
+    fmt: '.2f'
+    unit: null
+  distance:
+    show: true
+    prefix: '$D$'
+    fmt: '.1f'
+    unit: "kpc"
+  mu:
+    show: true
+    prefix: '$\mu$'
+    fmt: '.1f'
+    unit: null
+  mu_e:
+    show: true
+    prefix: '$\mu_e$'
+    fmt: '.1f'
+    unit: null
+  chi2:
+    show: true
+    prefix: '$\chi^2$'
+    fmt: '.1f'
+    unit: null
+
+

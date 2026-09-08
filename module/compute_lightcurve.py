@@ -1,15 +1,16 @@
 from collections.abc import Mapping
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from typing import Self, cast, Any, Hashable
 
+from matplotlib.figure import Figure
 from matplotlib.patches import StepPatch
 from module import plot_utils
 from module import models,dataframe_utils
 from module.models import SynchrotronPhase, ThermalSynchrotronUtils, calculate_xm
 from module.mydataclasses import QuantityArray, QuantityData
 from module.mystatistics import CalculateChiSquared
-from module.plot_utils import LineStyle
+from module.plot_utils import LineStyle, MetadataConfig
 from module.types import FloatArray, FloatArray1D, FloatGrid
 import astropy.units as u
 import numpy as np
@@ -61,6 +62,7 @@ class ParameterNames(StrEnum):
     FNU_UNIT = auto()
     A_WIND_UNIT = auto()
     DOPPLER_DELTA = auto()
+    CHI2 = auto()
 
 def ensure_string_keys(
     mapping: Mapping[Hashable, Any],
@@ -96,6 +98,7 @@ class BestfitParameters:
     mu: float
     mu_e: float
     distance: QuantityData
+    chi2: float
 
     @classmethod
     def from_dict(
@@ -134,6 +137,7 @@ class BestfitParameters:
             eps_th=metadata[ParameterNames.EPS_TH],
             mu=metadata[ParameterNames.MU],
             mu_e=metadata[ParameterNames.MU_E],
+            chi2=metadata[ParameterNames.CHI2],
             distance=distance
         )
 
@@ -163,6 +167,7 @@ class BestfitParameters:
             ParameterNames.MU_E: self.mu_e,
             ParameterNames.DISTANCE_VALUE: self.distance.value,
             ParameterNames.DISTANCE_UNIT: self.distance.unit,
+            ParameterNames.CHI2: self.chi2,
         }
 
 @dataclass(frozen=True,slots=True)
@@ -306,7 +311,8 @@ class EstimatedParameters:
 
     def extract_bestfit(
         self,
-        idx: int
+        idx: int,
+        chi2: float
     )->BestfitParameters:
         a_wind_arr = self.a_wind
         phi_peak_arr = self.phi_peak
@@ -345,7 +351,8 @@ class EstimatedParameters:
             eps_th = self.eps_th,
             mu = self.mu,
             mu_e = self.mu_e,
-            distance=self.distance
+            distance=self.distance,
+            chi2=chi2
         )
 
 @dataclass(frozen=True, slots=True)
@@ -493,7 +500,7 @@ class BinnedBestfitLightcurve:
 
         return df
 
-    def plot(
+    def plot_step(
         self,
         ax: Axes,
         style: LineStyle,
@@ -509,6 +516,19 @@ class BinnedBestfitLightcurve:
             bin_edges,
             baseline=self.fnu_persistent.to_value_in(fnu_unit)[0],
             **style.to_kwargs(),
+        )
+
+    def plot_metadata(
+        self,
+        fig: Figure,
+        string:str
+    ):
+        nu = self.nu
+        params = self.params
+        a_wind_val = params.a_wind.value
+        a_wind_unit = params.a_wind.unit
+        fig.suptitle(
+            string
         )
 
 @dataclass(frozen=True,slots=True)
@@ -585,10 +605,11 @@ class BinnedCalculationLightcurve:
     def extract(
         self,
         idx:int,
+        chi2:float,
         persistent: QuantityArray,
         persistent_err: QuantityArray
     )->BinnedBestfitLightcurve:
-        params_best = self.estimated_params.extract_bestfit(idx)
+        params_best = self.estimated_params.extract_bestfit(idx,chi2)
         fnu_best = QuantityArray(
             values = self.fnu.values[idx],
             unit = self.fnu.unit
@@ -950,6 +971,7 @@ class LightcurveStyleConfig:
 class PlotConfig:
     layout: plot_utils.PlotLayoutConfig
     styles: LightcurveStyleConfig
+    metadata: dict[str,MetadataConfig]
 
     @classmethod
     def from_yaml(
@@ -961,3 +983,40 @@ class PlotConfig:
             dict_data,
             cls
         )
+
+    def make_metadata_strings(
+        self,
+        params: BestfitParameters,
+    ) -> list[str]:
+
+        config = self.metadata
+        field_names = {field.name for field in fields(params)}
+
+        result: list[str] = []
+
+        for key, metadata_config in config.items():
+            if key not in field_names:
+                raise KeyError(
+                    f"{key!r} is not a field of {type(params).__name__}"
+                )
+
+            if not metadata_config.show:
+                continue
+
+            value = getattr(params, key)
+
+            if isinstance(value,QuantityData):
+                if metadata_config.unit is None:
+                    raise ValueError(
+                        f"物理量の単位が指定されていません {key!r}"
+                    )
+                else:
+                    numeric_value = value.value_in(metadata_config.unit)
+                    str_element = f"{metadata_config.format_value(numeric_value)} {metadata_config.unit}"
+            else:
+                numeric_value = value
+                str_element = f"{metadata_config.format_value(numeric_value)}"
+
+            result.append(str_element)
+
+        return result

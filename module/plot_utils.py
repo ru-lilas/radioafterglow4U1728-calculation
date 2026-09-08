@@ -324,6 +324,19 @@ def build_meshgrid(
     Z = pivot.to_numpy()
     return (X,Y,Z)
 
+@dataclass(frozen=True, slots=True)
+class MetadataConfig:
+    show: bool
+    prefix: str
+    fmt: str
+    unit: str|None
+
+    def format_value(
+        self,
+        value:float
+    )->str:
+        return f"{self.prefix}={value:{self.fmt}}"
+
 @dataclass
 class ColormapConfigure:
     name: str

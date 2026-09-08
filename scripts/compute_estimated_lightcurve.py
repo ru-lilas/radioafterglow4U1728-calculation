@@ -81,6 +81,7 @@ def main():
     minimum_chi2 = mystatistics.MinumumChiSquared.from_array(chi2_arr)
     lc_best = lc_binned.extract(
         idx=minimum_chi2.index,
+        chi2=minimum_chi2.value,
         persistent=obslc_nu_selected.fnu_persistent,
         persistent_err=obslc_nu_selected.fnu_persistent_err,
     )
