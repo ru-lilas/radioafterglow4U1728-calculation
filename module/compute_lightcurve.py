@@ -39,6 +39,8 @@ class Columns(StrEnum):
     FNU_TRANSIENT = auto()
     FNU_PERSISTENT = auto()
     FNU_PERSISTENT_ERR = auto()
+    NU_VALUE = auto()
+    NU_UNIT = auto()
 
 class ParameterNames(StrEnum):
     A_WIND = auto()
@@ -392,6 +394,7 @@ class EstimatedParameters:
 @dataclass(frozen=True, slots=True)
 class BinnedBestfitLightcurve:
     params: BestfitParameters
+    nu: QuantityData
     t_center:   QuantityArray
     t_left:     QuantityArray
     t_right:    QuantityArray
@@ -508,6 +511,8 @@ class BinnedBestfitLightcurve:
         df.attrs = {**metadata}
         df.attrs[Columns.T_UNIT] = t_unit
         df.attrs[Columns.FNU_UNIT] = fnu_unit
+        df.attrs[Columns.NU_VALUE] = self.nu.value
+        df.attrs[Columns.NU_UNIT] = self.nu.unit
 
         return df
 
@@ -534,6 +539,7 @@ class BinnedBestfitLightcurve:
 @dataclass(frozen=True,slots=True)
 class BinnedCalculationLightcurve:
     estimated_params: EstimatedParameters
+    nu: QuantityData
     units: UnitMetadata
     t_center: FloatArray
     t_left: FloatArray
@@ -612,6 +618,7 @@ class BinnedCalculationLightcurve:
         )
         return BinnedBestfitLightcurve(
             params = params_best,
+            nu=self.nu,
             fnu_net=fnu_best,
             t_center=self.t_center_quantity,
             t_right=self.t_right_quantity,
@@ -621,6 +628,7 @@ class BinnedCalculationLightcurve:
 @dataclass(frozen=True, slots=True)
 class CalculationLightcurve:
     params: EstimatedParameters
+    nu: QuantityData
     t: QuantityArray
     fnu: QuantityArray
 
@@ -749,6 +757,7 @@ class CalculationLightcurve:
                 ), axis=1),
                 unit=self.fnu.unit,
             ),
+            nu=self.nu,
         )
 
     def bin_average(
@@ -904,92 +913,12 @@ class CalculationLightcurve:
                 t_unit=t_unit,
                 fnu_unit=str(fnu_unit),
             ),
+            nu = self.nu,
             t_center=t_center,
             t_left=t_left,
             t_right=t_right,
             fnu=fnu_average,
         )
-
-        # # interpolate value of fnu at bin-boundary
-        # fnu_left: FloatArray = np.interp(
-        #     bin_config.t_left,
-        #     t_model,
-        #     fnu_model,
-        # )
-        # fnu_right: FloatArray = np.interp(
-        #     bin_config.t_right,
-        #     t_model,
-        #     fnu_model,
-        # )
-        #
-        # fnu_average_list: list[float] = []
-        #
-        # for i, (left, right) in enumerate(
-        #     zip(
-        #         bin_config.t_left,
-        #         bin_config.t_right,
-        #         strict=True,
-        #     )
-        # ):
-        #     inside = (
-        #         (t_model > left)
-        #         & (t_model < right)
-        #     )
-        #
-        #     # create array for each bin
-        #     t_bin: FloatArray = np.concatenate(
-        #         (
-        #             np.array(
-        #                 [left],
-        #                 dtype=np.float64
-        #             ),
-        #             t_model[inside],
-        #             np.array(
-        #                 [right],
-        #                 dtype=np.float64
-        #             ),
-        #         )
-        #     )
-        #     fnu_bin: FloatArray = np.concatenate(
-        #         (
-        #             np.array(
-        #                 [fnu_left[i]],
-        #                 dtype=np.float64
-        #             ),
-        #             fnu_model[inside],
-        #             np.array(
-        #                 [fnu_right[i]],
-        #                 dtype=np.float64
-        #             ),
-        #         )
-        #     )
-        #
-        #     # integral within bin[i]
-        #     flux_integral = Integrator.trapezoid(
-        #         t_bin,
-        #         fnu_bin
-        #     )
-        #
-        #     fnu_average_list.append(
-        #         flux_integral/ (right - left)
-        #     )
-        #
-        # fnu_average: FloatArray = np.asarray(
-        #     fnu_average_list,
-        #     dtype=np.float64,
-        # )
-        #
-        # return BinnedCalculationLightcurve(
-        #     estimated_params=self.params,
-        #     units = UnitMetadata(
-        #         t_unit = t_unit,
-        #         fnu_unit = str(fnu_unit),
-        #     ),
-        #     t_center= bin_config.t_center,
-        #     t_left = bin_config.t_left,
-        #     t_right = bin_config.t_right,
-        #     fnu_averaged = fnu_average
-        # )
 
 def compute(
     config: inputs_as_dataclass.ModelConfigure,
@@ -1026,6 +955,7 @@ def compute(
     )
     lc = CalculationLightcurve(
         params = params,
+        nu = nu,
         t = t,
         fnu = fnu_obs
     )
