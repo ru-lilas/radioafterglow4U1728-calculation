@@ -6,6 +6,7 @@ from dataclasses import dataclass,asdict
 from module.input_reader import InputReader
 from module.types import FloatArray, FloatGrid,FloatArray1D
 type NDArray64 = NDArray[np.float64]
+from typing import Self
 
 def calculate_chi2(
     x_model:FloatArray|float,
@@ -14,6 +15,22 @@ def calculate_chi2(
 )->float:
     chi_arr = (x_model - x_data)/sigma
     return np.sum(chi_arr**2).item()
+
+@dataclass(frozen=True,slots=True)
+class MinumumChiSquared:
+    index:int
+    value:float
+
+    @classmethod
+    def from_array(
+        cls,
+        chi2_arr:FloatArray1D
+    )->Self:
+        min = chi2_arr.minimum()
+        return cls(
+            index = min[0],
+            value = min[1]
+        )
 
 class CalculateChiSquared:
     @staticmethod

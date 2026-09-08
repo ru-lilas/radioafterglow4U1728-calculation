@@ -7,6 +7,7 @@ import argparse
 from pathlib import Path
 
 from module import compute_lightcurve
+from module import mystatistics
 from module.chevalier import EstimatedParameters
 from module.inputs_as_dataclass import GeneralInputs
 from module.mystatistics import CalculateChiSquared
@@ -76,7 +77,8 @@ def main():
         observed=obslc_nu_selected.fnu_total.to_value_in("mJy"),
         error=obslc_nu_selected.fnu_total_err.to_value_in("mJy"),
     )
-    print(chi2_arr)
+    chi2 = mystatistics.MinumumChiSquared.from_array(chi2_arr)
+    print(chi2)
 
     return
 

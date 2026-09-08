@@ -26,3 +26,10 @@ class FloatArray1D:
             )
 
         object.__setattr__(self, "values", values)
+
+    def minimum(
+        self
+    )->tuple[int,float]:
+        values = self.values
+        idx = int(np.argmin(values))
+        return (idx,float(values[idx]))
