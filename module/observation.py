@@ -183,6 +183,24 @@ class ObservedLightcurve:
         )
 
     @property
+    def fnu_net(self)->QuantityArray:
+        return QuantityArray(
+            values = dataframe_utils.extract_column_as_ndarray(
+                self.df,Columns.FNU_NET
+            ),
+            unit = self.metadata.fnu_unit
+        )
+
+    @property
+    def fnu_net_err(self)->QuantityArray:
+        return QuantityArray(
+            values = dataframe_utils.extract_column_as_ndarray(
+                self.df,Columns.FNU_NET_ERR
+            ),
+            unit = self.metadata.fnu_unit
+        )
+
+    @property
     def fnu_total(self):
         values = dataframe_processors.convert_ndarray(
             df = self.df,
