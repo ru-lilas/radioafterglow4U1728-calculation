@@ -182,6 +182,28 @@ class ObservedLightcurve:
             unit=self.metadata.fnu_unit
         )
 
+    @property
+    def fnu_total(self):
+        values = dataframe_processors.convert_ndarray(
+            df = self.df,
+            column= Columns.FNU,
+        )
+        return QuantityArray(
+            values = values,
+            unit = self.metadata.fnu_unit
+        )
+
+    @property
+    def fnu_total_err(self):
+        values = dataframe_processors.convert_ndarray(
+            df = self.df,
+            column= Columns.FNU_ERR,
+        )
+        return QuantityArray(
+            values = values,
+            unit = self.metadata.fnu_unit
+        )
+
     def time_bin_bounds(
         self,
         timewindow: SamplingTimewindow,

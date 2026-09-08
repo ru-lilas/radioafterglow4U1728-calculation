@@ -4,7 +4,7 @@ import numpy as np
 from scipy import stats
 from dataclasses import dataclass,asdict
 from module.input_reader import InputReader
-from module.types import FloatArray
+from module.types import FloatArray, FloatGrid,FloatArray1D
 type NDArray64 = NDArray[np.float64]
 
 def calculate_chi2(
@@ -14,6 +14,24 @@ def calculate_chi2(
 )->float:
     chi_arr = (x_model - x_data)/sigma
     return np.sum(chi_arr**2).item()
+
+class CalculateChiSquared:
+    @staticmethod
+    def from_grid(
+        model: FloatGrid,
+        observed: FloatArray,
+        error: FloatArray
+    )->FloatArray1D:
+        values:FloatArray = np.atleast_1d(np.sum(
+                np.square(
+                    (model - observed) / error
+                ),
+                axis=1,
+                dtype=np.float64,
+            ))
+        return FloatArray1D(
+            values = values
+        )
 
 def calculate_ndof(
     n_data: int,

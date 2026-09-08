@@ -9,6 +9,7 @@ from pathlib import Path
 from module import compute_lightcurve
 from module.chevalier import EstimatedParameters
 from module.inputs_as_dataclass import GeneralInputs
+from module.mystatistics import CalculateChiSquared
 from module.observation import LongformatLightcurve
 from module.utils import FileWriter
 from module.models import ThermalSynchrotronTable
@@ -66,7 +67,16 @@ def main():
     lc_binned = lc.bin_average(
         binning,
         drop_incomplete_bin=True
+    ).add_persistent_flux(
+        persistent= obslc_nu_selected.fnu_persistent,
+        persistent_err= obslc_nu_selected.fnu_persistent_err
     )
+    chi2_arr = CalculateChiSquared.from_grid(
+        model=lc_binned.fnu_total.to_value_in("mJy"),
+        observed=obslc_nu_selected.fnu_total.to_value_in("mJy"),
+        error=obslc_nu_selected.fnu_total_err.to_value_in("mJy"),
+    )
+    print(chi2_arr)
 
     return
 
