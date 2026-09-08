@@ -36,6 +36,7 @@ FILEPATH_OBSLC := $(DATADIR)/$(OBSDIR)/obslc.$(EXTENTION_CSV)
 FILEPATH_OBSLC_TMP := $(DATADIR)/$(OBSDIR)/$(OBSERVATION_LIGHTCURVE)$(SUFFIX_TMP).$(EXTENTION_CSV)
 FILEPATH_OBSBG := $(DATADIR)/$(OBSDIR)/bg.$(EXTENTION_CSV)
 FILEPATH_LC_EST := $(DATADIR)/$(RUN_DIR)/lc_est.$(EXTENTION_CSV)
+FILEPATH_LC_PDF := $(FIGDIR)/$(RUN_DIR)/lc.$(EXTENTION_PDF)
 
 # all: $(FIGDIR)/$(SAMPLING_DIR)/chi2_colormap.pdf \
 # 	$(FIGDIR)/$(SAMPLING_DIR)/estimated_lightcurve.pdf
@@ -195,16 +196,18 @@ FILEPATH_LC_EST := $(DATADIR)/$(RUN_DIR)/lc_est.$(EXTENTION_CSV)
 # 		$< \
 # 		--output $@
 #
-$(FIGDIR)/$(RUN_DIR)/lc.$(EXTENTION_PDF): \
-	$(DATADIR)/$(RUN_DIR)/lc_est.$(EXTENTION_CSV) \
-	$(FILEPATH_OBSLC) \
+lcfig: $(FILEPATH_LC_PDF)
+
+$(FILEPATH_LC_PDF): \
 	$(FILEPATH_INPUT) \
+	$(FILEPATH_LC_EST) \
+	$(FILEPATH_OBSLC) \
 	plotconfigs/estimated_lightcurve.yaml \
-	plot/plot_calculation_lightcurve.py
+	scripts/plot_lightcurve.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--lc $< \
+		--input $< \
+		--calclc $(FILEPATH_LC_EST) \
 		--obslc $(FILEPATH_OBSLC) \
-		--config $(FILEPATH_INPUT) \
 		--plotconfig plotconfigs/estimated_lightcurve.yaml \
 		--output $@
 #

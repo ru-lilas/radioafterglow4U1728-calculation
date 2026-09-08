@@ -1,11 +1,11 @@
 import argparse
 from pathlib import Path
-from module import plot_utils
 from module.chevalier import (
     ChevalierGrid,
     EstimatedParameters,
 )
 from module.inputs_as_dataclass import PhysicalParameters
+from module.mydataclasses import QuantityData
 from module.observation import LongformatLightcurve
 from module.parameter_table import LambdaPeakTable
 from module.utils import FileReader, FileWriter
@@ -43,7 +43,11 @@ def main():
     grids = ChevalierGrid.from_yaml(args.input)
     peak_table = LambdaPeakTable.from_csv(args.peak_table)
     df_obs_long = LongformatLightcurve.from_csv(args.obslc)
-    df_obs_nu = df_obs_long.extract_lightcurve(9.0)
+    df_obs_nu = df_obs_long.extract_lightcurve(
+        QuantityData(
+            9.0,"GHz"
+        )
+    )
     obs_scat = df_obs_nu.peak
 
     phi_unit = "GHz min"

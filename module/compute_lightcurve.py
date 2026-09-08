@@ -23,7 +23,7 @@ from module import inputs_as_dataclass
 
 DATACLASS_CONVERTER = Converter()
 
-class Columns(StrEnum):
+class LcColumns(StrEnum):
     T_OBSERVER_FRAME = auto()
     NU = auto()
     FNU_OBSERVER_FRAME = auto()
@@ -62,40 +62,6 @@ class ParameterNames(StrEnum):
     A_WIND_UNIT = auto()
     DOPPLER_DELTA = auto()
 
-@dataclass(frozen=True,slots=True)
-class InputValues:
-    idx:int
-    a_wind: float
-    beta_sh:float
-    eps_b:float
-    eps_th:float
-    mu:float
-    mu_e:float
-    distance: float
-    theta: float
-    phi_theta: float
-    lnu_theta: float
-    tau_theta: float
-    doppler_delta: float
-
-@dataclass(frozen=True,slots=True)
-class InputUnits:
-    a_wind: str
-    phi_theta: str
-    lnu_theta: str
-    distance: str
-
-    @classmethod
-    def from_keyvalue(
-            cls,
-            path:Path
-    )->Self:
-        dict_data = FileReader.keyvalue(path)
-        return DATACLASS_CONVERTER.structure(
-            dict_data,
-            cls
-        )
-
 def ensure_string_keys(
     mapping: Mapping[Hashable, Any],
 ) -> dict[str, Any]:
@@ -111,56 +77,6 @@ def ensure_string_keys(
 
     return result
 
-@dataclass(frozen=True,slots=True)
-class Input:
-    values: InputValues
-    units: InputUnits
-
-    @classmethod
-    def from_idx(
-        cls,
-        df:pd.DataFrame,
-        idx: int
-    ):
-        row:pd.Series = DataFrameUtils.extract_row_by_index(df,idx)
-        values_dict = ensure_string_keys(
-            row.to_dict()
-        )
-        units_dict = ensure_string_keys(
-            df.attrs
-        )
-        return cls(
-            values = InputValues(
-                **values_dict,
-                idx=idx
-            ),
-            units = InputUnits(**units_dict)
-        )
-
-    @property
-    def a_wind(self)->u.Quantity:
-        return u.Quantity(self.values.a_wind,self.units.a_wind)
-
-    @property
-    def phi_theta(self)->u.Quantity:
-        return u.Quantity(self.values.phi_theta,self.units.phi_theta)
-
-    @property
-    def lnu_theta(self)->u.Quantity:
-        return u.Quantity(self.values.lnu_theta,self.units.lnu_theta)
-
-    @property
-    def distance(self)->u.Quantity:
-        return u.Quantity(self.values.distance,self.units.distance)
-
-    @property
-    def tau_theta(self)->float:
-        return self.values.tau_theta
-
-    @property
-    def doppler_delta(self)->float:
-        return self.values.doppler_delta
-
 @dataclass(frozen=True, slots=True)
 class UnitMetadata:
     t_unit: str
@@ -171,7 +87,6 @@ class BestfitParameters:
     a_wind: QuantityData
     beta_sh: float
     phi_peak: QuantityData
-    fnu_peak: QuantityData
     phi_theta: QuantityData
     lnu_theta: QuantityData
     tau_theta: float
@@ -181,6 +96,46 @@ class BestfitParameters:
     mu: float
     mu_e: float
     distance: QuantityData
+
+    @classmethod
+    def from_dict(
+        cls,
+        metadata:dict[str,Any]
+    )->Self:
+        a_wind = QuantityData(
+            value = metadata[ParameterNames.A_WIND],
+            unit = metadata[ParameterNames.A_WIND_UNIT]
+        )
+        phi_peak = QuantityData(
+            value = metadata[ParameterNames.PHI_PEAK],
+            unit = metadata[ParameterNames.PHI_UNIT]
+        )
+        phi_theta = QuantityData(
+            value = metadata[ParameterNames.PHI_THETA],
+            unit = metadata[ParameterNames.PHI_UNIT]
+        )
+        lnu_theta = QuantityData(
+            value = metadata[ParameterNames.LNU_THETA],
+            unit = metadata[ParameterNames.LNU_UNIT]
+        )
+        distance = QuantityData(
+            value = metadata[ParameterNames.DISTANCE_VALUE],
+            unit = metadata[ParameterNames.DISTANCE_UNIT]
+        )
+        return cls(
+            a_wind = a_wind,
+            beta_sh = metadata[ParameterNames.BETA_SH],
+            phi_peak=phi_peak,
+            phi_theta=phi_theta,
+            lnu_theta=lnu_theta,
+            tau_theta=metadata[ParameterNames.TAU_THETA],
+            doppler_delta=metadata[ParameterNames.DOPPLER_DELTA],
+            eps_b=metadata[ParameterNames.EPS_B],
+            eps_th=metadata[ParameterNames.EPS_TH],
+            mu=metadata[ParameterNames.MU],
+            mu_e=metadata[ParameterNames.MU_E],
+            distance=distance
+        )
 
     def to_dict(
         self,
@@ -196,7 +151,10 @@ class BestfitParameters:
             ParameterNames.BETA_SH: self.beta_sh,
             ParameterNames.PHI_PEAK: self.phi_peak.value_in(phi_unit),
             ParameterNames.PHI_THETA: self.phi_theta.value_in(phi_unit),
+            ParameterNames.PHI_UNIT: phi_unit,
             ParameterNames.LNU_THETA: self.lnu_theta.value_in(lnu_unit),
+            ParameterNames.LNU_UNIT: lnu_unit,
+            ParameterNames.FNU_UNIT: fnu_unit,
             ParameterNames.TAU_THETA: self.tau_theta,
             ParameterNames.DOPPLER_DELTA: self.doppler_delta,
             ParameterNames.EPS_B: self.eps_b,
@@ -379,7 +337,6 @@ class EstimatedParameters:
             a_wind = a_wind,
             beta_sh = self.beta_sh[idx],
             phi_peak = phi_peak,
-            fnu_peak = fnu_peak,
             phi_theta = phi_theta,
             lnu_theta = lnu_theta,
             tau_theta = self.tau_theta[idx],
@@ -398,65 +355,56 @@ class BinnedBestfitLightcurve:
     t_center:   QuantityArray
     t_left:     QuantityArray
     t_right:    QuantityArray
-    fnu_net:  QuantityArray
+    fnu_averaged:  QuantityArray
 
-    # @classmethod
-    # def from_csv(
-    #     cls,
-    #     path:Path
-    # )->Self:
-    #     df = FileReader.table_from_csv(
-    #         path=path,
-    #     )
-    #     metadata = ensure_string_keys(df.attrs)
-    #     units = DATACLASS_CONVERTER.structure(
-    #         metadata,
-    #         UnitMetadata
-    #     )
-    #     t_center = QuantityArray(
-    #             values = dataframe_processors.convert_ndarray(
-    #                         df,Columns.T_CENTER
-    #                     ),
-    #             unit = units.t_unit
-    #     )
-    #     t_right = QuantityArray(
-    #             values = dataframe_processors.convert_ndarray(
-    #                         df,Columns.T_RIGHT
-    #                     ),
-    #             unit = units.t_unit
-    #     )
-    #     t_left = QuantityArray(
-    #             values = dataframe_processors.convert_ndarray(
-    #                         df,Columns.T_LEFT
-    #                     ),
-    #             unit = units.t_unit
-    #     )
-    #     fnu_transient = QuantityArray(
-    #             values = dataframe_processors.convert_ndarray(
-    #                         df,Columns.FNU_TRANSIENT
-    #                     ),
-    #             unit = units.fnu_unit
-    #     )
-    #     fnu_persistent = QuantityArray(
-    #             values = dataframe_processors.convert_ndarray(
-    #                         df,Columns.FNU_PERSISTENT
-    #                     ),
-    #             unit = units.fnu_unit
-    #     )
-    #     fnu_persistent_err = QuantityArray(
-    #             values = dataframe_processors.convert_ndarray(
-    #                         df,Columns.FNU_PERSISTENT_ERR
-    #                     ),
-    #             unit = units.fnu_unit
-    #     )
-    #     return cls(
-    #         t_center=t_center,
-    #         t_left = t_left,
-    #         t_right = t_right,
-    #         fnu_transient = fnu_transient,
-    #         fnu_persistent = fnu_persistent,
-    #         fnu_persistent_err = fnu_persistent_err
-    #     )
+    @classmethod
+    def from_csv(
+        cls,
+        path:Path
+    )->Self:
+        df = FileReader.table_from_csv(
+            path=path,
+        )
+        metadata = ensure_string_keys(df.attrs)
+        params = BestfitParameters.from_dict(metadata)
+        t_unit = metadata[LcColumns.T_UNIT]
+        fnu_unit = metadata[LcColumns.FNU_UNIT]
+        nu = QuantityData(
+            value = metadata[LcColumns.NU_VALUE],
+            unit = metadata[LcColumns.NU_UNIT]
+        )
+        t_center = QuantityArray(
+                values = dataframe_processors.convert_ndarray(
+                            df,LcColumns.T_CENTER
+                        ),
+                unit = t_unit
+        )
+        t_right = QuantityArray(
+                values = dataframe_processors.convert_ndarray(
+                            df,LcColumns.T_RIGHT
+                        ),
+                unit = t_unit
+        )
+        t_left = QuantityArray(
+                values = dataframe_processors.convert_ndarray(
+                            df,LcColumns.T_LEFT
+                        ),
+                unit = t_unit
+        )
+        fnu_averaged = QuantityArray(
+                values = dataframe_processors.convert_ndarray(
+                            df,LcColumns.FNU_NET
+                        ),
+                unit = fnu_unit
+        )
+        return cls(
+            params=params,
+            nu=nu,
+            t_center=t_center,
+            t_left = t_left,
+            t_right = t_right,
+            fnu_averaged = fnu_averaged,
+        )
 
     @property
     def bin_edges(self):
@@ -479,8 +427,8 @@ class BinnedBestfitLightcurve:
         fnu_persistent: QuantityArray,
         fnu_persistent_err: QuantityArray
     ):
-        fnu_unit = self.fnu_net.unit
-        fnu_trans = self.fnu_net.to_value_in(fnu_unit)
+        fnu_unit = self.fnu_averaged.unit
+        fnu_trans = self.fnu_averaged.to_value_in(fnu_unit)
         fnu_per = fnu_persistent.to_value_in(fnu_unit)
         return QuantityArray(
             values = fnu_trans + fnu_per,
@@ -503,16 +451,16 @@ class BinnedBestfitLightcurve:
             fnu_unit=fnu_unit
         )
         df = pd.DataFrame({
-            Columns.T_LEFT: self.t_left.to_value_in(t_unit),
-            Columns.T_CENTER: self.t_center.to_value_in(t_unit),
-            Columns.T_RIGHT: self.t_right.to_value_in(t_unit),
-            Columns.FNU_NET: self.fnu_net.to_value_in(fnu_unit),
+            LcColumns.T_LEFT: self.t_left.to_value_in(t_unit),
+            LcColumns.T_CENTER: self.t_center.to_value_in(t_unit),
+            LcColumns.T_RIGHT: self.t_right.to_value_in(t_unit),
+            LcColumns.FNU_NET: self.fnu_averaged.to_value_in(fnu_unit),
         })
         df.attrs = {**metadata}
-        df.attrs[Columns.T_UNIT] = t_unit
-        df.attrs[Columns.FNU_UNIT] = fnu_unit
-        df.attrs[Columns.NU_VALUE] = self.nu.value
-        df.attrs[Columns.NU_UNIT] = self.nu.unit
+        df.attrs[LcColumns.T_UNIT] = t_unit
+        df.attrs[LcColumns.FNU_UNIT] = fnu_unit
+        df.attrs[LcColumns.NU_VALUE] = self.nu.value
+        df.attrs[LcColumns.NU_UNIT] = self.nu.unit
 
         return df
 
@@ -619,7 +567,7 @@ class BinnedCalculationLightcurve:
         return BinnedBestfitLightcurve(
             params = params_best,
             nu=self.nu,
-            fnu_net=fnu_best,
+            fnu_averaged=fnu_best,
             t_center=self.t_center_quantity,
             t_right=self.t_right_quantity,
             t_left=self.t_left_quantity
@@ -960,17 +908,6 @@ def compute(
         fnu = fnu_obs
     )
     return lc.with_zero_boundary()
-
-def build_inputs(path:Path):
-    df = FileReader.table_from_csv(path)
-    lc_inputunits = InputUnits.from_keyvalue(path)
-    return [
-        Input(
-            values=InputValues(**record),
-            units=lc_inputunits
-        )
-        for record in df.to_dict("records")
-    ]
 
 @dataclass(frozen=True, slots=True)
 class LightcurveStyleConfig:
