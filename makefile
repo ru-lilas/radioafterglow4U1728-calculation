@@ -212,11 +212,13 @@ lc: $(DATADIR)/$(RUN_DIR)/lc_est.$(EXTENTION_CSV)
 $(DATADIR)/$(RUN_DIR)/lc_est.$(EXTENTION_CSV): \
 	$(FILEPATH_INPUT) \
 	$(DATADIR)/$(RUN_DIR)/estimation.csv \
+	$(FILEPATH_OBSLC) \
 	$(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV) \
 	scripts/compute_estimated_lightcurve.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		--input $< \
 		--estimated $(DATADIR)/$(RUN_DIR)/estimation.csv \
+		--obslc $(FILEPATH_OBSLC) \
 		--integral_table $(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV) \
 		--output $@
 

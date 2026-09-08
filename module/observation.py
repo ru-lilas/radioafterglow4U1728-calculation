@@ -150,7 +150,7 @@ class Binning:
     t_right: FloatArray
     t_unit: str
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class ObservedLightcurve:
     metadata: LightcurveMetadata
     nu_value: float
@@ -422,6 +422,7 @@ class LongformatLightcurve:
 
         return lightcurves
 
-    def extract_lightcurve(self,nu:float)->ObservedLightcurve:
+    def extract_lightcurve(self,nu:QuantityData)->ObservedLightcurve:
+        nu_value = nu.value_in("GHz")
         lcs = self.group_by_frequency()
-        return lcs[nu]
+        return lcs[nu_value]

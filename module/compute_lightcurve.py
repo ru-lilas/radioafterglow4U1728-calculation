@@ -441,6 +441,45 @@ class CalculationLightcurve:
             raise ValueError(
                 "理論光度曲線が最後の観測binを覆っていません."
             )
+    def with_zero_boundary(
+        self
+    )->Self:
+        """
+            配列の左端に時刻ゼロでの境界条件を挿入する
+        """
+        t_values = self.t.values
+        fnu_values = self.fnu.values
+
+        if t_values[0] == 0.0:
+            return self
+
+        if t_values[0] < 0.0:
+            raise ValueError(
+                "計算光度曲線に負の時刻が含まれています."
+                f"t_min={t_values[0]}"
+            )
+
+
+        return type(self)(
+            params=self.params,
+            t=QuantityArray(
+                values=np.concatenate((
+                    np.array([0.0], dtype=np.float64),
+                    t_values,
+                )),
+                unit=self.t.unit,
+            ),
+            fnu=QuantityArray(
+                values=np.concatenate((
+                    np.zeros(
+                        (fnu_values.shape[0], 1),
+                        dtype=np.float64,
+                    ),
+                    fnu_values,
+                ), axis=1),
+                unit=self.fnu.unit,
+            ),
+        )
 
     def bin_average(
         self,
@@ -585,30 +624,13 @@ def compute(
     fnu_obs = fnu_src.to_observerframe(
         doppler_factor = params.doppler_delta
     )
-    return CalculationLightcurve(
+    lc = CalculationLightcurve(
         params = params,
         t = t,
         fnu = fnu_obs
     )
+    return lc.with_zero_boundary()
 
-
-# def build_inputs(
-#     path: Path,
-# ) -> Iterator[tuple[int, Input]]:
-#     df = fr.read_csv(path)
-#     input_units = InputUnits.from_keyvalue(path)
-#
-#     for record in df.to_dict("records"):
-#         idx = int(record["idx"])
-#
-#         yield (
-#             idx,
-#             Input(
-#                 values=InputValues(**record),
-#                 units=input_units,
-#             ),
-#         )
-#
 def build_inputs(path:Path):
     df = FileReader.table_from_csv(path)
     lc_inputunits = InputUnits.from_keyvalue(path)
