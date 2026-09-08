@@ -9,7 +9,7 @@ from module import models
 from module.models import SynchrotronPhase, ThermalSynchrotronUtils, calculate_xm
 from module.mydataclasses import QuantityArray, QuantityData
 from module.plot_utils import LineStyle
-from module.types import FloatArray
+from module.types import FloatArray, FloatGrid
 import astropy.units as u
 import numpy as np
 import pandas as pd
@@ -276,7 +276,7 @@ class BinnedCalculationLightcurve:
     t_center: FloatArray
     t_left: FloatArray
     t_right: FloatArray
-    fnu_averaged: FloatArray
+    fnu: QuantityArray
 
     @property
     def bin_edges(self):
@@ -315,13 +315,6 @@ class BinnedCalculationLightcurve:
             unit = self.units.t_unit
         )
 
-    @property
-    def fnu_averaged_quantity(self)->QuantityArray:
-        return QuantityArray(
-            values = self.fnu_averaged,
-            unit = self.units.fnu_unit
-        )
-
     def add_persistent_flux(
         self,
         persistent: QuantityArray,
@@ -343,7 +336,7 @@ class BinnedCalculationLightcurve:
             t_center =  self.t_center_quantity,
             t_left =    self.t_left_quantity,
             t_right =   self.t_right_quantity,    
-            fnu_transient = self.fnu_averaged_quantity,
+            fnu_transient = self.fnu,
             fnu_persistent = persistent,
             fnu_persistent_err = persistent_err
         )
@@ -483,113 +476,243 @@ class CalculationLightcurve:
 
     def bin_average(
         self,
-        binning: observation.Binning,
+        bin_config: observation.Binning,
         drop_incomplete_bin: bool = True
     )->BinnedCalculationLightcurve:
-        self.validate_time_coverage(self.t,binning)
 
-        t_unit = binning.t_unit
-        fnu_unit = self.fnu.unit
+        ## 計算光度曲線が観測の時間範囲を覆っているかcheck
+        t = self.t
+        fnu = self.fnu
+        self.validate_time_coverage(t,bin_config)
 
-        width = binning.bin_width
-        t_model = self.t.to_value_in(binning.t_unit)
-        fnu_model = self.fnu.to_value_in(fnu_unit)
+        t_unit = bin_config.t_unit
+        fnu_unit = fnu.unit
+
+        width = bin_config.bin_width
+        t_model = t.to_value_in(t_unit)
+        fnu_model = fnu.to_value_in(fnu_unit)
 
         if np.any(np.diff(t_model) <= 0.0):
             raise ValueError(
-                "t_obsは単調増加でなければなりません."
+                "計算データの時刻配列が単調増加でありません."
             )
 
-        num_bin = binning.t_center.size
+
+        t_center = bin_config.t_center
+        t_left = bin_config.t_left
+        t_right = bin_config.t_right
+        num_bins = t_center.size
+
         if not (
-            binning.t_left.size
-            == binning.t_right.size
-            == num_bin
+            t_left.size
+            == t_right.size
+            == num_bins
         ):
             raise ValueError(
                 "観測binの配列長が一致しません."
             )
 
-        # interpolate value of fnu at bin-boundary
-        fnu_left: FloatArray = np.interp(
-            binning.t_left,
-            t_model,
-            fnu_model,
-        )
-        fnu_right: FloatArray = np.interp(
-            binning.t_right,
-            t_model,
-            fnu_model,
+         # 計算時間範囲に完全に含まれるbin
+        covered = (
+            (t_left >= t_model[0])
+            & (t_right <= t_model[-1])
         )
 
-        fnu_average_list: list[float] = []
+        if drop_incomplete_bin:
+            t_center = t_center[covered]
+            t_left = t_left[covered]
+            t_right = t_right[covered]
+
+            if t_center.size == 0:
+                raise ValueError(
+                    "計算時間範囲に完全に含まれるbinがありません."
+                )
+
+        def interpolate_flux(
+            t_evaluate: FloatArray,
+        ) -> FloatGrid:
+            """
+            全モデルについて、指定時刻で線形補間する
+
+            Returns
+            -------
+            shape: (M, len(t_evaluate))
+            """
+            right_index = np.searchsorted(
+                t_model,
+                t_evaluate,
+                side="left",
+            )
+
+            # t_modelの範囲内であることは上で検証済み
+            right_index = np.clip(
+                right_index,
+                1,
+                t_model.size - 1,
+            )
+            left_index = right_index - 1
+
+            t0 = t_model[left_index]
+            t1 = t_model[right_index]
+
+            fraction = (
+                (t_evaluate - t0)
+                / (t1 - t0)
+            )
+
+            fnu0 = fnu_model[:, left_index]
+            fnu1 = fnu_model[:, right_index]
+
+            return (
+                fnu0
+                + (fnu1 - fnu0)
+                * fraction[np.newaxis, :]
+            )
+
+        # shapeはいずれも(M, B)
+        fnu_left = interpolate_flux(t_left)
+        fnu_right = interpolate_flux(t_right)
+
+        fnu_average_by_bin: list[FloatArray] = []
 
         for i, (left, right) in enumerate(
-            zip(
-                binning.t_left,
-                binning.t_right,
-                strict=True,
-            )
+            zip(t_left, t_right, strict=True)
         ):
             inside = (
                 (t_model > left)
                 & (t_model < right)
             )
 
-            # create array for each bin
-            t_bin: FloatArray = np.concatenate(
+            # shape: (K_i,)
+            t_bin = np.concatenate((
+                np.array([left], dtype=np.float64),
+                t_model[inside],
+                np.array([right], dtype=np.float64),
+            ))
+
+            # shape: (M, K_i)
+            fnu_bin = np.concatenate(
                 (
-                    np.array(
-                        [left],
-                        dtype=np.float64
-                    ),
-                    t_model[inside],
-                    np.array(
-                        [right],
-                        dtype=np.float64
-                    ),
-                )
-            )
-            fnu_bin: FloatArray = np.concatenate(
-                (
-                    np.array(
-                        [fnu_left[i]],
-                        dtype=np.float64
-                    ),
-                    fnu_model[inside],
-                    np.array(
-                        [fnu_right[i]],
-                        dtype=np.float64
-                    ),
-                )
+                    fnu_left[:, i:i + 1],
+                    fnu_model[:, inside],
+                    fnu_right[:, i:i + 1],
+                ),
+                axis=1,
             )
 
-            # integral within bin[i]
-            flux_integral = Integrator.trapezoid(
-                t_bin,
-                fnu_bin
+            # 時間軸axis=1について積分
+            # shape: (M,)
+            flux_integral = np.trapezoid(
+                fnu_bin,
+                x=t_bin,
+                axis=1,
             )
 
-            fnu_average_list.append(
-                flux_integral/ (right - left)
+            fnu_average_by_bin.append(
+                flux_integral / (right - left)
             )
 
-        fnu_average: FloatArray = np.asarray(
-            fnu_average_list,
-            dtype=np.float64,
+        # (B個の(M,)配列) -> (M, B)
+        fnu_average = QuantityArray(
+            values = np.stack(
+                fnu_average_by_bin,
+                axis=1,
+            ),
+            unit = fnu_unit
         )
 
         return BinnedCalculationLightcurve(
             estimated_params=self.params,
-            units = UnitMetadata(
-                t_unit = t_unit,
-                fnu_unit = str(fnu_unit),
+            units=UnitMetadata(
+                t_unit=t_unit,
+                fnu_unit=str(fnu_unit),
             ),
-            t_center= binning.t_center,
-            t_left = binning.t_left,
-            t_right = binning.t_right,
-            fnu_averaged = fnu_average
+            t_center=t_center,
+            t_left=t_left,
+            t_right=t_right,
+            fnu=fnu_average,
         )
+
+        # # interpolate value of fnu at bin-boundary
+        # fnu_left: FloatArray = np.interp(
+        #     bin_config.t_left,
+        #     t_model,
+        #     fnu_model,
+        # )
+        # fnu_right: FloatArray = np.interp(
+        #     bin_config.t_right,
+        #     t_model,
+        #     fnu_model,
+        # )
+        #
+        # fnu_average_list: list[float] = []
+        #
+        # for i, (left, right) in enumerate(
+        #     zip(
+        #         bin_config.t_left,
+        #         bin_config.t_right,
+        #         strict=True,
+        #     )
+        # ):
+        #     inside = (
+        #         (t_model > left)
+        #         & (t_model < right)
+        #     )
+        #
+        #     # create array for each bin
+        #     t_bin: FloatArray = np.concatenate(
+        #         (
+        #             np.array(
+        #                 [left],
+        #                 dtype=np.float64
+        #             ),
+        #             t_model[inside],
+        #             np.array(
+        #                 [right],
+        #                 dtype=np.float64
+        #             ),
+        #         )
+        #     )
+        #     fnu_bin: FloatArray = np.concatenate(
+        #         (
+        #             np.array(
+        #                 [fnu_left[i]],
+        #                 dtype=np.float64
+        #             ),
+        #             fnu_model[inside],
+        #             np.array(
+        #                 [fnu_right[i]],
+        #                 dtype=np.float64
+        #             ),
+        #         )
+        #     )
+        #
+        #     # integral within bin[i]
+        #     flux_integral = Integrator.trapezoid(
+        #         t_bin,
+        #         fnu_bin
+        #     )
+        #
+        #     fnu_average_list.append(
+        #         flux_integral/ (right - left)
+        #     )
+        #
+        # fnu_average: FloatArray = np.asarray(
+        #     fnu_average_list,
+        #     dtype=np.float64,
+        # )
+        #
+        # return BinnedCalculationLightcurve(
+        #     estimated_params=self.params,
+        #     units = UnitMetadata(
+        #         t_unit = t_unit,
+        #         fnu_unit = str(fnu_unit),
+        #     ),
+        #     t_center= bin_config.t_center,
+        #     t_left = bin_config.t_left,
+        #     t_right = bin_config.t_right,
+        #     fnu_averaged = fnu_average
+        # )
 
 def compute(
     config: inputs_as_dataclass.ModelConfigure,
