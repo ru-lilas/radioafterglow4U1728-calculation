@@ -76,7 +76,8 @@ def main():
         error=obslc_nu_selected.fnu_net_err.to_value_in(fnu_unit)
     )
     minimum_chi2 = mystatistics.MinumumChiSquared.from_array(chi2_arr)
-    print(minimum_chi2)
+    lc_best = lc_binned.extract(idx=minimum_chi2.index)
+    print(lc_best)
 
     return
 

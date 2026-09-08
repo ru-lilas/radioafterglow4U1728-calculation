@@ -17,7 +17,7 @@ from module.inputs_as_dataclass import(
 from module.parameter_table import LambdaPeakTable
 from enum import StrEnum, auto
 from matplotlib.axes import Axes
-
+from module.compute_lightcurve import EstimatedParameters
 from module.utils import FileReader
 
 @dataclass(frozen=True,slots=True)
@@ -42,169 +42,10 @@ class GridColumns(StrEnum):
     PHI_PEAK = auto()
     FNU_PEAK = auto()
 
-class ParameterNames(StrEnum):
-    A_WIND = auto()
-    BETA_SH = auto()
-    PHI_PEAK = auto()
-    FNU_PEAK = auto()
-    PHI_THETA = auto()
-    LNU_THETA = auto()
-    TAU_THETA = auto()
-    EPS_B = auto()
-    EPS_TH = auto()
-    MU = auto()
-    MU_E = auto()
-    DISTANCE_VALUE = auto()
-    DISTANCE_UNIT = auto()
-    PHI_UNIT = auto()
-    LNU_UNIT = auto()
-    FNU_UNIT = auto()
-    A_WIND_UNIT = auto()
-    DOPPLER_DELTA = auto()
-
 @dataclass(frozen=True,slots=True)
 class ABGrid:
     a_wind_grid: FloatGrid
     beta_sh_grid: FloatGrid
-
-@dataclass(frozen=True,slots=True)
-class EstimatedParameters:
-    a_wind: QuantityArray
-    beta_sh: FloatArray
-    phi_peak: QuantityArray
-    fnu_peak: QuantityArray
-    phi_theta: QuantityArray
-    lnu_theta: QuantityArray
-    tau_theta: FloatArray
-    doppler_delta: FloatArray
-    eps_b: float
-    eps_th: float
-    mu: float
-    mu_e: float
-    distance: QuantityData
-
-    def __post_init__(self) -> None:
-        arrays = {
-            ParameterNames.A_WIND: self.a_wind.values,
-            ParameterNames.BETA_SH: self.beta_sh,
-            ParameterNames.PHI_PEAK: self.phi_peak.values,
-            ParameterNames.FNU_PEAK: self.fnu_peak.values,
-            ParameterNames.PHI_THETA: self.phi_theta.values,
-            ParameterNames.LNU_THETA: self.lnu_theta.values,
-            ParameterNames.TAU_THETA: self.tau_theta,
-        }
-
-        for name, array in arrays.items():
-            if array.ndim != 1:
-                raise ValueError(
-                    f"{name}は1次元でなければなりません. "
-                    f"shape={array.shape}"
-                )
-
-        sizes = {
-            name: array.size
-            for name, array in arrays.items()
-        }
-
-        if len(set(sizes.values())) != 1:
-            raise ValueError(
-                "推定パラメータの配列長が一致していません. "
-                f"{sizes}"
-            )
-
-    @classmethod
-    def from_csv(
-        cls,
-        path: Path
-    ):
-        df = FileReader.table_from_csv(path)
-        metadata = df.attrs
-        return cls(
-            a_wind = QuantityArray(
-                values = dataframe_utils.extract_column_as_ndarray(
-                    df,
-                    ParameterNames.A_WIND
-                ),
-                unit = metadata[ParameterNames.A_WIND_UNIT],
-            ),
-            beta_sh = dataframe_utils.extract_column_as_ndarray(
-                df,
-                ParameterNames.BETA_SH
-            ),
-            phi_peak = QuantityArray(
-                values = dataframe_utils.extract_column_as_ndarray(
-                    df,
-                    ParameterNames.PHI_PEAK
-                ),
-                unit = metadata[ParameterNames.PHI_UNIT]
-            ),
-            phi_theta = QuantityArray(
-                values = dataframe_utils.extract_column_as_ndarray(
-                    df,
-                    ParameterNames.PHI_THETA
-                ),
-                unit = metadata[ParameterNames.PHI_UNIT]
-            ),
-            lnu_theta = QuantityArray(
-                values = dataframe_utils.extract_column_as_ndarray(
-                    df,
-                    ParameterNames.LNU_THETA
-                ),
-                unit = metadata[ParameterNames.LNU_UNIT]
-            ),
-            tau_theta = dataframe_utils.extract_column_as_ndarray(
-                    df,
-                    ParameterNames.TAU_THETA
-            ),
-            doppler_delta = dataframe_utils.extract_column_as_ndarray(
-                df,
-                ParameterNames.DOPPLER_DELTA
-            ),
-            fnu_peak = QuantityArray(
-                values = dataframe_utils.extract_column_as_ndarray(
-                    df,
-                    ParameterNames.FNU_PEAK
-                ),
-                unit = metadata[ParameterNames.FNU_UNIT]
-            ),
-            eps_b = metadata[ParameterNames.EPS_B],
-            eps_th = metadata[ParameterNames.EPS_TH],
-            mu = metadata[ParameterNames.MU],
-            mu_e = metadata[ParameterNames.MU_E],
-            distance = QuantityData(
-                value = metadata[ParameterNames.DISTANCE_VALUE],
-                unit = metadata[ParameterNames.DISTANCE_UNIT],
-            )
-        )
-
-    def to_df(
-        self,
-        phi_unit,
-        fnu_unit,
-        lnu_unit
-    )->pd.DataFrame:
-        a_wind = self.a_wind
-        df = pd.DataFrame({
-            ParameterNames.A_WIND: a_wind.values,
-            ParameterNames.BETA_SH: self.beta_sh,
-            ParameterNames.PHI_PEAK: self.phi_peak.to_value_in(phi_unit),
-            ParameterNames.FNU_PEAK: self.fnu_peak.to_value_in(fnu_unit),
-            ParameterNames.PHI_THETA: self.phi_theta.to_value_in(phi_unit),
-            ParameterNames.LNU_THETA: self.lnu_theta.to_value_in(lnu_unit),
-            ParameterNames.TAU_THETA: self.tau_theta,
-            ParameterNames.DOPPLER_DELTA: self.doppler_delta,
-        })
-        df.attrs[ParameterNames.EPS_B] = self.eps_b
-        df.attrs[ParameterNames.EPS_TH] = self.eps_th
-        df.attrs[ParameterNames.MU] = self.mu
-        df.attrs[ParameterNames.MU_E] = self.mu_e
-        df.attrs[ParameterNames.DISTANCE_VALUE] = self.distance.value
-        df.attrs[ParameterNames.DISTANCE_UNIT] = self.distance.unit
-        df.attrs[ParameterNames.PHI_UNIT] = phi_unit
-        df.attrs[ParameterNames.FNU_UNIT] = fnu_unit
-        df.attrs[ParameterNames.LNU_UNIT] = lnu_unit
-        df.attrs[ParameterNames.A_WIND_UNIT] = a_wind.unit
-        return df
 
 @dataclass(frozen=True,slots=True)
 class ChevalierGrid:
