@@ -27,7 +27,7 @@ OUTDIR := $(FIGDIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)
 FIGOUTDIR := $(FIGDIR)/$(SCENARIO_TAG)/$(SAMPLING_TAG)
 PATH_PHYSICAL_PARAMETERS := $(DATADIR)/$(PARAMETER_DIR)/$(PHYSICAL_PARAMETERS)
 FILEPATH_INPUT := $(DATADIR)/$(RUN_DIR)/input.$(EXTENTION_YAML)
-FILEPATH_INTEGRAL_TABLE := $(DATADIR)/$(INTEGRAL_TABLE).csv
+FILEPATH_INTEGRAL_TABLE := $(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV)
 FILEPATH_PEAK_TABLE := $(DATADIR)/peak_table.$(EXTENTION_CSV)
 FILEPATH_PARAMETER_TABLE := $(DATADIR)/$(RUN_DIR)/.$(EXTENTION_YAML)
 FILEPATH_CHI2TEST := $(PARAMETER_DIR)/$(CHI2TEST_SUMMARY).$(EXTENTION_CSV)
@@ -37,6 +37,8 @@ FILEPATH_OBSLC_TMP := $(DATADIR)/$(OBSDIR)/$(OBSERVATION_LIGHTCURVE)$(SUFFIX_TMP
 FILEPATH_OBSBG := $(DATADIR)/$(OBSDIR)/bg.$(EXTENTION_CSV)
 FILEPATH_LC_EST := $(DATADIR)/$(RUN_DIR)/lc_est.$(EXTENTION_CSV)
 FILEPATH_LC_PDF := $(FIGDIR)/$(RUN_DIR)/lc.$(EXTENTION_PDF)
+FILEPATH_ALLOWING_PARAMETERS := $(DATADIR)/$(RUN_DIR)/allowing_parameters.$(EXTENTION_CSV)
+FILEPATH_MINIMUM_CHI2_MODEL := $(DATADIR)/$(RUN_DIR)/minimum_chi2_model.$(EXTENTION_YAML)
 
 lcfig: $(FILEPATH_LC_PDF)
 
@@ -59,27 +61,27 @@ $(FILEPATH_LC_EST): \
 	$(FILEPATH_INPUT) \
 	$(DATADIR)/$(RUN_DIR)/estimation.csv \
 	$(FILEPATH_OBSLC) \
-	$(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV) \
+	$(FILEPATH_INTEGRAL_TABLE) \
 	scripts/compute_estimated_lightcurve.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		--input $< \
 		--estimated $(DATADIR)/$(RUN_DIR)/estimation.csv \
 		--obslc $(FILEPATH_OBSLC) \
-		--integral_table $(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV) \
+		--integral_table $(FILEPATH_INTEGRAL_TABLE) \
 		--output $@
 
-minimum_chi2: $(DATADIR)/$(RUN_DIR)/minimum_chi2.yaml \
+minimum_chi2: $(FILEPATH_MINIMUM_CHI2_MODEL)
 
-$(DATADIR)/$(RUN_DIR)/minimum_chi2.yaml: \
+$(FILEPATH_MINIMUM_CHI2_MODEL): \
 	$(FILEPATH_INPUT) \
 	$(DATADIR)/$(RUN_DIR)/estimation.csv \
-	$(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV) \
+	$(FILEPATH_INTEGRAL_TABLE) \
 	$(FILEPATH_OBSLC) \
 	scripts/find_minimum_chi2_model.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		--input $< \
 		--allowing $(DATADIR)/$(RUN_DIR)/estimation.csv \
-		--integral_table $(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV) \
+		--integral_table $(FILEPATH_INTEGRAL_TABLE) \
 		--obslc $(FILEPATH_OBSLC) \
 		--output $@
 
@@ -104,7 +106,7 @@ $(DATADIR)/$(RUN_DIR)/$(PARAMETER_TABLE).$(EXTENTION_CSV): \
 		$< \
 		--output $@ \
 
-$(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV): \
+$(FILEPATH_INTEGRAL_TABLE): \
 	$(INPUTDIR)/$(INTEGRAL_TABLE).$(EXTENTION_YAML) \
 		scripts/$(INTEGRAL_TABLE).$(EXTENTION_PY)
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
