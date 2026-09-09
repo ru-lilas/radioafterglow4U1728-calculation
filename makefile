@@ -68,17 +68,19 @@ $(FILEPATH_LC_EST): \
 		--integral_table $(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV) \
 		--output $@
 
-$(DATADIR)/$(RUN_DIR)/chi2.csv: \
-	$(DATADIR)/$(RUN_DIR)/$(PARAMETER_TABLE).$(EXTENTION_CSV) \
+minimum_chi2: $(DATADIR)/$(RUN_DIR)/minimum_chi2.yaml \
+
+$(DATADIR)/$(RUN_DIR)/minimum_chi2.yaml: \
+	$(FILEPATH_INPUT) \
+	$(DATADIR)/$(RUN_DIR)/estimation.csv \
 	$(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV) \
 	$(FILEPATH_OBSLC) \
-	$(FILEPATH_INPUT) \
-	scripts/compute_chi2.py
+	scripts/find_minimum_chi2_model.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--parameter_table $< \
+		--input $< \
+		--allowing $(DATADIR)/$(RUN_DIR)/estimation.csv \
 		--integral_table $(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV) \
-		--obs_lc $(FILEPATH_OBSLC) \
-		--config $(FILEPATH_INPUT) \
+		--obslc $(FILEPATH_OBSLC) \
 		--output $@
 
 est : $(DATADIR)/$(RUN_DIR)/estimation.csv

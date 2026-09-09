@@ -8,7 +8,7 @@ from pathlib import Path
 
 from module import compute_lightcurve
 from module import mystatistics
-from module.chevalier import EstimatedParameters
+from module.chevalier import AllowningParameters
 from module.inputs_as_dataclass import GeneralInputs
 from module.mystatistics import CalculateChiSquared
 from module.observation import LongformatLightcurve
@@ -51,27 +51,31 @@ def main():
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
     integral_table = ThermalSynchrotronTable.from_csv(args.integral_table)
-    estimated_params = EstimatedParameters.from_csv(args.estimated)
+    estimated_params = AllowningParameters.from_csv(args.estimated)
     config = GeneralInputs.from_yaml(args.input)
     config_model = config.chi2fitting.model
     config_sampling = config.chi2fitting.sampling
 
-    lc = compute_lightcurve.compute(
+    # calculate lightcurve for each parameter set
+    lcs = compute_lightcurve.compute(
         config = config_model,
         params = estimated_params,
         integral_table = integral_table,
     )
 
+    # reduction
     nu_sampling = config_sampling.nu
     timewindow = config_sampling.timewindow
     obslc_long = LongformatLightcurve.from_csv(args.obslc)
     obslc_nu = obslc_long.extract_lightcurve(nu_sampling)
     obslc_nu_selected = obslc_nu.select_timewindow(timewindow)
     binning = obslc_nu_selected.time_bin_bounds(timewindow)
-    lc_binned = lc.bin_average(
+    lc_binned = lcs.bin_average(
         binning,
         drop_incomplete_bin=True
     )
+
+    # calculate chi-squared for bin-averaged lightcurves
     fnu_unit = "mJy"
     chi2_arr = CalculateChiSquared.from_grid(
         model = lc_binned.fnu.to_value_in(fnu_unit),
@@ -79,21 +83,25 @@ def main():
         error=obslc_nu_selected.fnu_net_err.to_value_in(fnu_unit)
     )
     minimum_chi2 = mystatistics.MinumumChiSquared.from_array(chi2_arr)
-    lc_best = lc_binned.extract(
+
+    lc_minimumchi2 = lcs.extract_bestfit_lc(
+        idx = minimum_chi2.index,
+        chi2 = minimum_chi2.value
+    )
+    df_ = lc_minimumchi2.to_df()
+    lc_binned_best = lc_binned.extract(
         idx=minimum_chi2.index,
         chi2=minimum_chi2.value,
         persistent=obslc_nu_selected.fnu_persistent,
         persistent_err=obslc_nu_selected.fnu_persistent_err,
     )
-    df = lc_best.to_df(
+    df = lc_binned_best.to_df(
         t_unit = "min",
         a_wind_unit= "g cm-1",
         phi_unit= "GHz min",
         fnu_unit = fnu_unit,
         lnu_unit = "erg s-1 Hz-1"
     )
-    print(df)
-    print(df.attrs)
     FileWriter.df_to_csv(outpath,df,save_attrs=True)
 
     return

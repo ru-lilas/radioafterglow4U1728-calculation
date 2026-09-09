@@ -5,6 +5,7 @@ from scipy import stats
 from dataclasses import dataclass,asdict
 from module.input_reader import InputReader
 from module.types import FloatArray, FloatGrid,FloatArray1D
+from module.utils import FileWriter
 type NDArray64 = NDArray[np.float64]
 from typing import Self
 
@@ -30,6 +31,15 @@ class MinumumChiSquared:
         return cls(
             index = min[0],
             value = min[1]
+        )
+
+    def to_yaml(self,path:Path):
+        return FileWriter.yaml(
+            path = path,
+            data = {
+                "index": self.index,
+                "value": self.value
+            }
         )
 
 class CalculateChiSquared:

@@ -85,6 +85,15 @@ class QuantityArray:
             dtype=np.float64
         )
 
+@dataclass(frozen=True, slots=True)
+class QuantityArray1D(QuantityArray):
+    def __post_init__(self) -> None:
+        if self.values.ndim != 1:
+            raise ValueError(
+                "valuesは1次元配列でなければなりません. "
+                f"shape={self.values.shape}"
+            )
+
 @dataclass(frozen=True,slots=True)
 class QuantityData:
     value: float

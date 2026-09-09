@@ -17,7 +17,7 @@ from module.inputs_as_dataclass import(
 from module.parameter_table import LambdaPeakTable
 from enum import StrEnum, auto
 from matplotlib.axes import Axes
-from module.compute_lightcurve import EstimatedParameters
+from module.compute_lightcurve import AllowningParameters
 from module.utils import FileReader
 
 @dataclass(frozen=True,slots=True)
@@ -283,7 +283,7 @@ class ChevalierGrid:
         *,
         phi_unit: str,
         fnu_unit: str,
-    )->EstimatedParameters:
+    )->AllowningParameters:
         phi_grid = (
             self.phi_peak(peak_table)
             .to_value_in(phi_unit)
@@ -322,7 +322,7 @@ class ChevalierGrid:
         tau_theta = self.tau_theta[mask]
         doppler_delta = models.doppler_delta(abgrid.beta_sh_grid)[mask]
 
-        return EstimatedParameters(
+        return AllowningParameters(
             a_wind = QuantityArray(
                 values=abgrid.a_wind_grid[mask],
                 unit=self.a_wind_arr.unit

@@ -36,6 +36,18 @@ class FileWriter:
 
             df.to_csv(f, index=save_index)
 
+    @staticmethod
+    def yaml(
+        path: Path,       
+        data: dict[str,Any]
+    )->None:
+        yaml = YAML()
+        path.parent.mkdir(parents=True,exist_ok=True)
+
+        with path.open("w", encoding="utf-8") as f:
+            yaml.dump(data, f)
+        return
+
 def parse_value(value: str) -> Any:
     value = value.strip()
 

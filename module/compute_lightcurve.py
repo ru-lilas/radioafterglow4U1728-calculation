@@ -8,7 +8,7 @@ from matplotlib.patches import StepPatch
 from module import plot_utils
 from module import models,dataframe_utils
 from module.models import SynchrotronPhase, ThermalSynchrotronUtils, calculate_xm
-from module.mydataclasses import QuantityArray, QuantityData
+from module.mydataclasses import QuantityArray, QuantityArray1D, QuantityData
 from module.mystatistics import CalculateChiSquared
 from module.plot_utils import LineStyle, MetadataConfig
 from module.types import FloatArray, FloatArray1D, FloatGrid
@@ -25,7 +25,7 @@ from module import inputs_as_dataclass
 DATACLASS_CONVERTER = Converter()
 
 class LcColumns(StrEnum):
-    T_OBSERVER_FRAME = auto()
+    T = auto()
     NU = auto()
     FNU_OBSERVER_FRAME = auto()
     FNU_ERR = auto()
@@ -85,7 +85,7 @@ class UnitMetadata:
     fnu_unit: str
 
 @dataclass(frozen=True, slots=True)
-class BestfitParameters:
+class ChevalierParameters:
     a_wind: QuantityData
     beta_sh: float
     phi_peak: QuantityData
@@ -147,7 +147,6 @@ class BestfitParameters:
         a_wind_unit: str,
         phi_unit:str,
         lnu_unit:str,
-        fnu_unit:str
     )->dict[str,float|str]:
         return {
             ParameterNames.A_WIND: self.a_wind.value_in(a_wind_unit),
@@ -158,7 +157,6 @@ class BestfitParameters:
             ParameterNames.PHI_UNIT: phi_unit,
             ParameterNames.LNU_THETA: self.lnu_theta.value_in(lnu_unit),
             ParameterNames.LNU_UNIT: lnu_unit,
-            ParameterNames.FNU_UNIT: fnu_unit,
             ParameterNames.TAU_THETA: self.tau_theta,
             ParameterNames.DOPPLER_DELTA: self.doppler_delta,
             ParameterNames.EPS_B: self.eps_b,
@@ -171,7 +169,32 @@ class BestfitParameters:
         }
 
 @dataclass(frozen=True,slots=True)
-class EstimatedParameters:
+class LightcurveMetadata:
+    params: ChevalierParameters
+    nu: QuantityData
+
+    @property
+    def as_dict(
+        self,
+    )->dict[str,Any]:
+        params = self.params
+        params_asdict = params.to_dict(
+            a_wind_unit=params.a_wind.unit,
+            phi_unit=params.phi_theta.unit,
+            lnu_unit=params.lnu_theta.unit
+        )
+        nu = self.nu
+        nu_asdict = {
+            LcColumns.NU_VALUE: nu.value,
+            LcColumns.NU_UNIT: nu.unit
+        }
+        return {
+            **params_asdict,
+            **nu_asdict
+        }
+
+@dataclass(frozen=True,slots=True)
+class AllowningParameters:
     a_wind: QuantityArray
     beta_sh: FloatArray
     phi_peak: QuantityArray
@@ -313,7 +336,7 @@ class EstimatedParameters:
         self,
         idx: int,
         chi2: float
-    )->BestfitParameters:
+    )->ChevalierParameters:
         a_wind_arr = self.a_wind
         phi_peak_arr = self.phi_peak
         phi_theta_arr = self.phi_theta
@@ -339,7 +362,7 @@ class EstimatedParameters:
             value = fnu_peak_arr.values[idx],
             unit = fnu_peak_arr.unit
         )
-        return BestfitParameters(
+        return ChevalierParameters(
             a_wind = a_wind,
             beta_sh = self.beta_sh[idx],
             phi_peak = phi_peak,
@@ -357,7 +380,7 @@ class EstimatedParameters:
 
 @dataclass(frozen=True, slots=True)
 class BinnedBestfitLightcurve:
-    params: BestfitParameters
+    params: ChevalierParameters
     nu: QuantityData
     t_center:   QuantityArray
     t_left:     QuantityArray
@@ -375,7 +398,7 @@ class BinnedBestfitLightcurve:
             path=path,
         )
         metadata = ensure_string_keys(df.attrs)
-        params = BestfitParameters.from_dict(metadata)
+        params = ChevalierParameters.from_dict(metadata)
         t_unit = metadata[LcColumns.T_UNIT]
         fnu_unit = metadata[LcColumns.FNU_UNIT]
         nu = QuantityData(
@@ -482,7 +505,6 @@ class BinnedBestfitLightcurve:
             a_wind_unit=a_wind_unit,
             phi_unit=phi_unit,
             lnu_unit=lnu_unit,
-            fnu_unit=fnu_unit
         )
         df = pd.DataFrame({
             LcColumns.T_LEFT: self.t_left.to_value_in(t_unit),
@@ -533,7 +555,7 @@ class BinnedBestfitLightcurve:
 
 @dataclass(frozen=True,slots=True)
 class BinnedCalculationLightcurve:
-    estimated_params: EstimatedParameters
+    estimated_params: AllowningParameters
     nu: QuantityData
     units: UnitMetadata
     t_center: FloatArray
@@ -627,7 +649,27 @@ class BinnedCalculationLightcurve:
 
 @dataclass(frozen=True, slots=True)
 class CalculationLightcurve:
-    params: EstimatedParameters
+    metadata: LightcurveMetadata
+    t: QuantityArray1D
+    fnu: QuantityArray1D
+
+    def to_df(
+        self
+    )->pd.DataFrame:
+        t = self.t
+        fnu = self.fnu
+        df = pd.DataFrame({
+            LcColumns.T: t.values,
+            LcColumns.FNU_NET: fnu.values
+        })
+        df.attrs[LcColumns.T_UNIT] = t.unit
+        df.attrs[LcColumns.FNU_UNIT] = fnu.unit
+        df.attrs.update(self.metadata.as_dict)
+        return df
+
+@dataclass(frozen=True, slots=True)
+class CalculationLightcurves:
+    params: AllowningParameters
     nu: QuantityData
     t: QuantityArray
     fnu: QuantityArray
@@ -920,11 +962,34 @@ class CalculationLightcurve:
             fnu=fnu_average,
         )
 
+    def extract_bestfit_lc(
+        self,
+        idx:int,
+        chi2:float,
+    )->CalculationLightcurve:
+        params = self.params.extract_bestfit(idx=idx,chi2=chi2)
+        t = QuantityArray1D(
+            values = self.t.values,
+            unit = self.t.unit
+        )
+        fnu_best = QuantityArray1D(
+            values = self.fnu.values[idx],
+            unit = self.fnu.unit
+        )
+        return CalculationLightcurve(
+            metadata = LightcurveMetadata(
+                params = params,
+                nu = self.nu
+            ),
+            t = t,
+            fnu = fnu_best
+        )
+
 def compute(
     config: inputs_as_dataclass.ModelConfigure,
-    params: EstimatedParameters,
+    params: AllowningParameters,
     integral_table : models.ThermalSynchrotronTable
-)->CalculationLightcurve:
+)->CalculationLightcurves:
     t = config.time.quantity_array
     nu = QuantityData.from_Quantity(config.nu.quantity)
     phi = models.SynchrotronPhase.from_time_given_nu(
@@ -953,7 +1018,7 @@ def compute(
     fnu_obs = fnu_src.to_observerframe(
         doppler_factor = params.doppler_delta
     )
-    lc = CalculationLightcurve(
+    lc = CalculationLightcurves(
         params = params,
         nu = nu,
         t = t,
@@ -986,7 +1051,7 @@ class PlotConfig:
 
     def make_metadata_strings(
         self,
-        params: BestfitParameters,
+        params: ChevalierParameters,
     ) -> list[str]:
 
         config = self.metadata

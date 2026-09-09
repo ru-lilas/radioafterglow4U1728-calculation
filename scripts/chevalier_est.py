@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 from module.chevalier import (
     ChevalierGrid,
-    EstimatedParameters,
+    AllowningParameters,
 )
 from module.inputs_as_dataclass import PhysicalParameters
 from module.mydataclasses import QuantityData
