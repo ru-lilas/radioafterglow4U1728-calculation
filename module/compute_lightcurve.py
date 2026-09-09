@@ -730,6 +730,7 @@ class CalculationLightcurve:
     def plot(
         self,
         ax:Axes,
+        style:plot_utils.LineStyle,
         *,
         fnu_bg: QuantityData,
         t_unit: str,
@@ -738,7 +739,8 @@ class CalculationLightcurve:
         t = self.t.to_value_in(t_unit)
         fnu_tot = self.fnu_total(fnu_bg=fnu_bg).to_value_in(fnu_unit)
         ax.plot(
-            t,fnu_tot
+            t,fnu_tot,
+            **style.to_kwargs()
         )
 
 @dataclass(frozen=True, slots=True)
@@ -1103,6 +1105,7 @@ def compute(
 @dataclass(frozen=True, slots=True)
 class LightcurveStyleConfig:
     model_binned: plot_utils.LineStyle
+    model: plot_utils.LineStyle
     observation: plot_utils.ScatterStyle
     persistent: plot_utils.LineStyle
 

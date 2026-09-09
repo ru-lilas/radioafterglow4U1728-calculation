@@ -68,6 +68,12 @@ styles:
     linestyle: "-"
     alpha: null
     zorder: 1.0
+  model: 
+    color: "#84919E"
+    linewidth: 2.0
+    linestyle: "--"
+    alpha: null
+    zorder: 1.0
   observation:
     marker: "o"
     markersize: 6.0

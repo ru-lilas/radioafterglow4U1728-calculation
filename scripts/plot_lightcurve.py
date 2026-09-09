@@ -85,6 +85,7 @@ def main():
         )
         lc_raw.plot(
             ax,
+            style=conf_plot.styles.model,
             fnu_bg=fnu_bg,
             t_unit = t_unit,
             fnu_unit = fnu_unit

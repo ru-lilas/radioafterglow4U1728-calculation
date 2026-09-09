@@ -218,23 +218,12 @@ class Style:
         }
 
 @dataclass(frozen=True, slots=True)
-class LineStyle:
+class LineStyle(YAMLReadable):
     color: str = "#000000"
     linewidth: float = 1.0
     linestyle: str = "-"
     alpha: float | None = None
     zorder: float | None = None
-
-    @classmethod
-    def from_yaml(
-        cls,
-        path: Path
-    )->Self:
-        dict_data = FileReader.yaml_safe(path)
-        return from_dict(
-            data_class= cls,
-            data = dict_data
-        )
 
     def to_kwargs(self):
         return {
