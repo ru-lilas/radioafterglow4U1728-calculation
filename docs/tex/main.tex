@@ -1,0 +1,26 @@
+\documentclass{notebook}
+%=========================================================%
+\title{Calculation Manual}
+\author{KUMADA Ryota}
+\date{\today}
+%=========================================================%
+\begin{document}
+\maketitle
+  
+\section{}
+We set \(\epsB = \num{1.0e-2},\epsth = \num{0.40} \),
+and assume ambient gas is composed of fully ionized hydrogen,
+that is, \( \mu = \num{0.5}, \mue = \num{1.0}\).
+
+\section{peak estimation}
+\begin{equation}
+  F_{\nu} = \delta^3\frac{L_{\nu}}{4\pi D^2},
+\end{equation}
+where $\delta$ is a coefficient arising from Doppler effect.
+In our model,
+\begin{equation}
+  \delta \approx \sqrt{\frac{1+\betash}{1-\betash}}
+\end{equation}
+
+
+\end{document}
