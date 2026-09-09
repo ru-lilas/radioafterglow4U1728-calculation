@@ -46,12 +46,14 @@ lcfig: $(FILEPATH_LC_PDF)
 $(FILEPATH_LC_PDF): \
 	$(FILEPATH_INPUT) \
 	$(FILEPATH_LC_EST) \
+	$(FILEPATH_MINIMUM_CHI2_LC) \
 	$(FILEPATH_OBSLC) \
 	plotconfigs/estimated_lightcurve.yaml \
 	scripts/plot_lightcurve.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		--input $< \
 		--calclc $(FILEPATH_LC_EST) \
+		--calclc_raw $(FILEPATH_MINIMUM_CHI2_LC) \
 		--obslc $(FILEPATH_OBSLC) \
 		--plotconfig plotconfigs/estimated_lightcurve.yaml \
 		--output $@
@@ -61,14 +63,16 @@ lc: $(FILEPATH_LC_EST)
 $(FILEPATH_LC_EST): \
 	$(FILEPATH_INPUT) \
 	$(DATADIR)/$(RUN_DIR)/estimation.csv \
-	$(FILEPATH_OBSLC) \
 	$(FILEPATH_INTEGRAL_TABLE) \
-	scripts/compute_estimated_lightcurve.py
+	$(FILEPATH_MINIMUM_CHI2_MODEL) \
+	$(FILEPATH_OBSLC) \
+	scripts/extract_minimum_chi2_binnedlightcurve.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		--input $< \
-		--estimated $(DATADIR)/$(RUN_DIR)/estimation.csv \
-		--obslc $(FILEPATH_OBSLC) \
+		--minchi2 $(FILEPATH_MINIMUM_CHI2_MODEL) \
+		--allowing $(DATADIR)/$(RUN_DIR)/estimation.csv \
 		--integral_table $(FILEPATH_INTEGRAL_TABLE) \
+		--obslc $(FILEPATH_OBSLC) \
 		--output $@
 
 lc_raw: $(FILEPATH_MINIMUM_CHI2_LC)

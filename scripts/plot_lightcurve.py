@@ -1,5 +1,6 @@
 from module import dataframe_processors, dataframe_utils
 from module.inputs_as_dataclass import GeneralInputs
+from module.mydataclasses import QuantityData
 from module.utilities import filereaders as fr
 from pathlib import Path
 import argparse
@@ -10,7 +11,7 @@ import numpy as np
 import pandas as pd
 from module import plot_utils,observation
 from module.observation import LongformatLightcurve
-from module.compute_lightcurve import BinnedBestfitLightcurve,PlotConfig
+from module.compute_lightcurve import BinnedBestfitLightcurve, CalculationLightcurve,PlotConfig
 
 def parse_args()->argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -22,6 +23,11 @@ def parse_args()->argparse.Namespace:
     )
     parser.add_argument(
         "--calclc",
+        type=Path,
+        required=True
+    )
+    parser.add_argument(
+        "--calclc_raw",
         type=Path,
         required=True
     )
@@ -50,6 +56,7 @@ def main():
     lc = BinnedBestfitLightcurve.from_csv(
         args.calclc
     )
+    lc_raw = CalculationLightcurve.from_csv(args.calclc_raw)
     conf = GeneralInputs.from_yaml(args.input)
     conf_plot = PlotConfig.from_yaml(args.plotconfig)
     obslc_long = LongformatLightcurve.from_csv(args.obslc)
@@ -64,6 +71,10 @@ def main():
             raise ValueError(
                 "unitが設定されていません."
             )
+        fnu_bg = QuantityData(
+            value = obslc_nu.fnu_persistent.values[0],
+            unit = fnu_unit
+        )
         metadata_string = conf_plot.make_metadata_strings(lc.params)
         lc.plot_metadata(fig,", ".join(metadata_string))
         lc.plot_step(
@@ -71,6 +82,12 @@ def main():
             conf_plot.styles.model_binned,
             t_unit=t_unit,
             fnu_unit=fnu_unit
+        )
+        lc_raw.plot(
+            ax,
+            fnu_bg=fnu_bg,
+            t_unit = t_unit,
+            fnu_unit = fnu_unit
         )
         obslc_nu.plot(
             ax,

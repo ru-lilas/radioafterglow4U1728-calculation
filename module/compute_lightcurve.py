@@ -654,6 +654,43 @@ class CalculationLightcurve:
     t: QuantityArray1D
     fnu: QuantityArray1D
 
+    @classmethod
+    def from_csv(
+        cls,
+        path:Path
+    )->Self:
+        df = FileReader.table_from_csv(
+            path=path,
+        )
+        metadata = ensure_string_keys(df.attrs)
+        params = ChevalierParameters.from_dict(metadata)
+        t_unit = metadata[LcColumns.T_UNIT]
+        fnu_unit = metadata[LcColumns.FNU_UNIT]
+        nu = QuantityData(
+            value = metadata[LcColumns.NU_VALUE],
+            unit = metadata[LcColumns.NU_UNIT]
+        )
+        fnu_net = QuantityArray1D(
+                values = dataframe_processors.convert_ndarray(
+                            df,LcColumns.FNU_NET
+                        ),
+                unit = fnu_unit
+        )
+        t = QuantityArray1D(
+                values = dataframe_processors.convert_ndarray(
+                            df,LcColumns.T
+                        ),
+                unit = t_unit
+        )
+        return cls(
+            metadata=LightcurveMetadata(
+                params = params,
+                nu = nu
+            ),
+            t = t,
+            fnu=fnu_net
+        )
+
     def to_df(
         self
     )->pd.DataFrame:
@@ -677,6 +714,31 @@ class CalculationLightcurve:
             path=path,
             df=df,
             save_attrs=True
+        )
+
+    def fnu_total(
+        self,
+        fnu_bg:QuantityData
+    )->QuantityArray1D:
+        fnu_net = self.fnu
+        fnu_unit = fnu_net.unit
+        return QuantityArray1D(
+            values = fnu_net.to_value_in(fnu_unit) + fnu_bg.value_in(fnu_unit),
+            unit = fnu_unit
+        )
+
+    def plot(
+        self,
+        ax:Axes,
+        *,
+        fnu_bg: QuantityData,
+        t_unit: str,
+        fnu_unit: str
+    ):
+        t = self.t.to_value_in(t_unit)
+        fnu_tot = self.fnu_total(fnu_bg=fnu_bg).to_value_in(fnu_unit)
+        ax.plot(
+            t,fnu_tot
         )
 
 @dataclass(frozen=True, slots=True)
