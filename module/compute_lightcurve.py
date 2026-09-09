@@ -9,13 +9,13 @@ from module import plot_utils
 from module import models,dataframe_utils
 from module.models import SynchrotronPhase, ThermalSynchrotronUtils, calculate_xm
 from module.mydataclasses import QuantityArray, QuantityArray1D, QuantityData
-from module.mystatistics import CalculateChiSquared
+from module.mystatistics import CalculateChiSquared, MinimumChiSquared
 from module.plot_utils import LineStyle, MetadataConfig
 from module.types import FloatArray, FloatArray1D, FloatGrid
 import astropy.units as u
 import numpy as np
 import pandas as pd
-from module.utils import DataFrameUtils, Integrator,FileReader
+from module.utils import DataFrameUtils, FileWriter, Integrator,FileReader
 from module import dataframe_processors, observation
 from enum import StrEnum, auto
 from matplotlib.axes import Axes
@@ -334,9 +334,10 @@ class AllowningParameters:
 
     def extract_bestfit(
         self,
-        idx: int,
-        chi2: float
+        minchi2:MinimumChiSquared
     )->ChevalierParameters:
+        idx = minchi2.index
+        chi2 = minchi2.value
         a_wind_arr = self.a_wind
         phi_peak_arr = self.phi_peak
         phi_theta_arr = self.phi_theta
@@ -626,12 +627,12 @@ class BinnedCalculationLightcurve:
 
     def extract(
         self,
-        idx:int,
-        chi2:float,
+        minchi2: MinimumChiSquared,
         persistent: QuantityArray,
         persistent_err: QuantityArray
     )->BinnedBestfitLightcurve:
-        params_best = self.estimated_params.extract_bestfit(idx,chi2)
+        params_best = self.estimated_params.extract_bestfit(minchi2)
+        idx = minchi2.index
         fnu_best = QuantityArray(
             values = self.fnu.values[idx],
             unit = self.fnu.unit
@@ -666,6 +667,17 @@ class CalculationLightcurve:
         df.attrs[LcColumns.FNU_UNIT] = fnu.unit
         df.attrs.update(self.metadata.as_dict)
         return df
+
+    def dump(
+        self,
+        path: Path
+    )->None:
+        df = self.to_df()
+        return FileWriter.df_to_csv(
+            path=path,
+            df=df,
+            save_attrs=True
+        )
 
 @dataclass(frozen=True, slots=True)
 class CalculationLightcurves:
@@ -964,10 +976,10 @@ class CalculationLightcurves:
 
     def extract_bestfit_lc(
         self,
-        idx:int,
-        chi2:float,
+        minchi2:MinimumChiSquared
     )->CalculationLightcurve:
-        params = self.params.extract_bestfit(idx=idx,chi2=chi2)
+        params = self.params.extract_bestfit(minchi2)
+        idx = minchi2.index
         t = QuantityArray1D(
             values = self.t.values,
             unit = self.t.unit

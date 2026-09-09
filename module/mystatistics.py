@@ -4,8 +4,9 @@ import numpy as np
 from scipy import stats
 from dataclasses import dataclass,asdict
 from module.input_reader import InputReader
+from module.mydataclasses import YAMLReadable
 from module.types import FloatArray, FloatGrid,FloatArray1D
-from module.utils import FileWriter
+from module.utils import FileReader, FileWriter
 type NDArray64 = NDArray[np.float64]
 from typing import Self
 
@@ -18,7 +19,7 @@ def calculate_chi2(
     return np.sum(chi_arr**2).item()
 
 @dataclass(frozen=True,slots=True)
-class MinumumChiSquared:
+class MinimumChiSquared(YAMLReadable):
     index:int
     value:float
 

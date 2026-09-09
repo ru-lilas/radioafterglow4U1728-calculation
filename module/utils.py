@@ -26,6 +26,7 @@ class FileWriter:
         save_attrs:bool = True,
         save_index:bool = False
     ):
+        path.parent.mkdir(parents=True,exist_ok=True)
         metadata = df.attrs
         with open(path, "w") as f:
             if save_attrs:

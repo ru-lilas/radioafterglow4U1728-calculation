@@ -82,7 +82,7 @@ def main():
         observed= obslc_nu_selected.fnu_net.to_value_in(fnu_unit),
         error=obslc_nu_selected.fnu_net_err.to_value_in(fnu_unit)
     )
-    minimum_chi2 = mystatistics.MinumumChiSquared.from_array(chi2_arr)
+    minimum_chi2 = mystatistics.MinimumChiSquared.from_array(chi2_arr)
 
     lc_minimumchi2 = lcs.extract_bestfit_lc(
         idx = minimum_chi2.index,
