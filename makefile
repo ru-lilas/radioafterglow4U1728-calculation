@@ -38,7 +38,7 @@ FILEPATH_OBSBG := $(DATADIR)/$(OBSDIR)/bg.$(EXTENTION_CSV)
 FILEPATH_LC_EST := $(DATADIR)/$(RUN_DIR)/lc_est.$(EXTENTION_CSV)
 FILEPATH_LC_PDF := $(FIGDIR)/$(RUN_DIR)/lc.$(EXTENTION_PDF)
 FILEPATH_ALLOWING_PARAMETERS := $(DATADIR)/$(RUN_DIR)/allowing_parameters.$(EXTENTION_CSV)
-FILEPATH_MINIMUM_CHI2_MODEL := $(DATADIR)/$(RUN_DIR)/minimum_chi2_model.$(EXTENTION_YAML)
+FILEPATH_CHI2 := $(DATADIR)/$(RUN_DIR)/chi2.$(EXTENTION_CSV)
 FILEPATH_MINIMUM_CHI2_LC := $(DATADIR)/$(RUN_DIR)/minimum_chi2_lc.$(EXTENTION_CSV)
 
 lcfig: $(FILEPATH_LC_PDF)
@@ -64,12 +64,12 @@ $(FILEPATH_LC_EST): \
 	$(FILEPATH_INPUT) \
 	$(DATADIR)/$(RUN_DIR)/estimation.csv \
 	$(FILEPATH_INTEGRAL_TABLE) \
-	$(FILEPATH_MINIMUM_CHI2_MODEL) \
+	$(FILEPATH_CHI2) \
 	$(FILEPATH_OBSLC) \
 	scripts/extract_minimum_chi2_binnedlightcurve.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		--input $< \
-		--minchi2 $(FILEPATH_MINIMUM_CHI2_MODEL) \
+		--minchi2 $(FILEPATH_CHI2) \
 		--allowing $(DATADIR)/$(RUN_DIR)/estimation.csv \
 		--integral_table $(FILEPATH_INTEGRAL_TABLE) \
 		--obslc $(FILEPATH_OBSLC) \
@@ -81,20 +81,20 @@ $(FILEPATH_MINIMUM_CHI2_LC): \
 	$(FILEPATH_INPUT) \
 	$(DATADIR)/$(RUN_DIR)/estimation.csv \
 	$(FILEPATH_INTEGRAL_TABLE) \
-	$(FILEPATH_MINIMUM_CHI2_MODEL) \
+	$(FILEPATH_CHI2) \
 	$(FILEPATH_OBSLC) \
 	scripts/extract_minimum_chi2_lightcurve.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		--input $< \
-		--minchi2 $(FILEPATH_MINIMUM_CHI2_MODEL) \
+		--minchi2 $(FILEPATH_CHI2) \
 		--allowing $(DATADIR)/$(RUN_DIR)/estimation.csv \
 		--integral_table $(FILEPATH_INTEGRAL_TABLE) \
 		--obslc $(FILEPATH_OBSLC) \
 		--output $@
 
-minimum_chi2: $(FILEPATH_MINIMUM_CHI2_MODEL)
+chi2: $(FILEPATH_CHI2)
 
-$(FILEPATH_MINIMUM_CHI2_MODEL): \
+$(FILEPATH_CHI2): \
 	$(FILEPATH_INPUT) \
 	$(DATADIR)/$(RUN_DIR)/estimation.csv \
 	$(FILEPATH_INTEGRAL_TABLE) \

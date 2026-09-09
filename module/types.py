@@ -33,3 +33,7 @@ class FloatArray1D:
         values = self.values
         idx = int(np.argmin(values))
         return (idx,float(values[idx]))
+
+    @property
+    def size(self)->int:
+        return self.values.size

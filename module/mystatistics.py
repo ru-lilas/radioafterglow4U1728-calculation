@@ -1,6 +1,7 @@
 from pathlib import Path
 from numpy.typing import NDArray
 import numpy as np
+import pandas as pd
 from scipy import stats
 from dataclasses import dataclass,asdict
 from module.input_reader import InputReader
@@ -17,6 +18,7 @@ def calculate_chi2(
 )->float:
     chi_arr = (x_model - x_data)/sigma
     return np.sum(chi_arr**2).item()
+
 
 @dataclass(frozen=True,slots=True)
 class MinimumChiSquared(YAMLReadable):
@@ -43,13 +45,39 @@ class MinimumChiSquared(YAMLReadable):
             }
         )
 
+@dataclass(frozen=True,slots=True)
+class ChiSquared(FloatArray1D):
+
+    def to_df(
+        self
+    )->pd.DataFrame:
+        min_chi2 = self.minimum()
+        df = pd.DataFrame({
+            "index": np.arange(self.size),
+            "chi2": self.values
+        })
+        df.attrs["index_min"] = min_chi2[0]
+        df.attrs["minimum_chi2"] = min_chi2[1]
+        return df
+
+    def to_csv(
+        self,
+        path:Path
+    )->None:
+        df = self.to_df()
+        FileWriter.df_to_csv(
+            path=path,
+            df = df,
+            save_attrs=True
+        )
+
 class CalculateChiSquared:
     @staticmethod
     def from_grid(
         model: FloatGrid,
         observed: FloatArray,
         error: FloatArray
-    )->FloatArray1D:
+    )->ChiSquared:
         values:FloatArray = np.atleast_1d(np.sum(
                 np.square(
                     (model - observed) / error
@@ -57,7 +85,7 @@ class CalculateChiSquared:
                 axis=1,
                 dtype=np.float64,
             ))
-        return FloatArray1D(
+        return ChiSquared(
             values = values
         )
 

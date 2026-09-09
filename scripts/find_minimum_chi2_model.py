@@ -76,14 +76,12 @@ def main():
 
     # calculate chi-squared for bin-averaged lightcurves
     fnu_unit = obslc_nu_selected.fnu_net.unit
-    chi2_arr = CalculateChiSquared.from_grid(
+    chi2 = CalculateChiSquared.from_grid(
         model = lc_binned.fnu.to_value_in(fnu_unit),
         observed= obslc_nu_selected.fnu_net.to_value_in(fnu_unit),
         error=obslc_nu_selected.fnu_net_err.to_value_in(fnu_unit)
     )
-    minimum_chi2 = mystatistics.MinimumChiSquared.from_array(chi2_arr)
-
-    minimum_chi2.to_yaml(outpath)
+    chi2.to_csv(outpath)
 
 if __name__ == "__main__":
     main()
