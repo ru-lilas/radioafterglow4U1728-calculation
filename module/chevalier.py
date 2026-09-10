@@ -259,6 +259,10 @@ class ChevalierGrid:
             ),
             **contourconfs.a_wind.style.to_kwargs(),
         )
+        ax.clabel(
+            contour_a_wind,
+            **contourconfs.a_wind.label.to_kwargs(),
+        )
 
         contour_beta_sh = ax.contour(
             phi_peak,
@@ -269,6 +273,10 @@ class ChevalierGrid:
                 .to_nparray(beta_sh_grid)
             ),
             **contourconfs.beta_sh.style.to_kwargs(),
+        )
+        ax.clabel(
+            contour_beta_sh,
+            **contourconfs.beta_sh.label.to_kwargs(),
         )
 
         return (

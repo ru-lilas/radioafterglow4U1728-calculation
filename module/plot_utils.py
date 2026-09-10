@@ -291,9 +291,15 @@ class ContourStyle(Style):
     linestyles: str = "-"
 
 @dataclass(frozen=True,slots=True)
+class ContourLabelStyle(Style):
+    fontsize: int = 10
+    fmt: str = "%.1e"
+
+@dataclass(frozen=True,slots=True)
 class ContourConfigure:
     style: ContourStyle
     levels: ContourLevelConfigure
+    label: ContourLabelStyle
 
 def build_meshgrid(
     df,

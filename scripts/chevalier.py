@@ -8,6 +8,7 @@ from module.chevalier import (
     PlotConfig
 )
 from module.inputs_as_dataclass import PhysicalParameters
+from module.mydataclasses import QuantityData
 from module.observation import LongformatLightcurve
 from module.parameter_table import LambdaPeakTable
 from module.utils import FileWriter
@@ -50,7 +51,12 @@ def main():
     grids = ChevalierGrid.from_yaml(args.input)
     peak_table = LambdaPeakTable.from_csv(args.peak_table)
     df_obs_long = LongformatLightcurve.from_csv(args.obslc)
-    df_obs_nu = df_obs_long.extract_lightcurve(9.0)
+    df_obs_nu = df_obs_long.extract_lightcurve(
+        QuantityData(
+            value=9.0,
+            unit="GHz"
+        )
+    )
     obs_scat = df_obs_nu.peak
 
     plotconf = PlotConfig.from_yaml(args.plotconfig)

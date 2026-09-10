@@ -37,6 +37,7 @@ FILEPATH_OBSLC_TMP := $(DATADIR)/$(OBSDIR)/$(OBSERVATION_LIGHTCURVE)$(SUFFIX_TMP
 FILEPATH_OBSBG := $(DATADIR)/$(OBSDIR)/bg.$(EXTENTION_CSV)
 FILEPATH_LC_EST := $(DATADIR)/$(RUN_DIR)/lc_est.$(EXTENTION_CSV)
 FILEPATH_LC_PDF := $(FIGDIR)/$(RUN_DIR)/lc.$(EXTENTION_PDF)
+FILEPATH_CHEVALIER_PDF := $(FIGDIR)/$(RUN_DIR)/chevalier_diagram.$(EXTENTION_PDF)
 FILEPATH_ALLOWING_PARAMETERS := $(DATADIR)/$(RUN_DIR)/allowing_parameters.$(EXTENTION_CSV)
 FILEPATH_CHI2 := $(DATADIR)/$(RUN_DIR)/chi2.$(EXTENTION_CSV)
 FILEPATH_MINIMUM_CHI2_LC := $(DATADIR)/$(RUN_DIR)/minimum_chi2_lc.$(EXTENTION_CSV)
@@ -51,6 +52,7 @@ param: \
 		--obs_property $(FILEPATH_OBSERVED_BURSTER_PROPERTY)
 
 lcfig: $(FILEPATH_LC_PDF)
+chfig: $(FILEPATH_CHEVALIER_PDF)
 
 $(FILEPATH_LC_PDF): \
 	$(FILEPATH_INPUT) \
@@ -65,6 +67,19 @@ $(FILEPATH_LC_PDF): \
 		--calclc_raw $(FILEPATH_MINIMUM_CHI2_LC) \
 		--obslc $(FILEPATH_OBSLC) \
 		--plotconfig plotconfigs/estimated_lightcurve.yaml \
+		--output $@
+
+$(FILEPATH_CHEVALIER_PDF): \
+	$(FILEPATH_INPUT) \
+	$(FILEPATH_PEAK_TABLE) \
+	$(FILEPATH_OBSLC) \
+	plotconfigs/chevalier_diagram.yaml \
+	scripts/chevalier.py
+	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+		--input $< \
+		--peak_table $(FILEPATH_PEAK_TABLE) \
+		--plotconfig plotconfigs/chevalier_diagram.yaml \
+		--obslc $(FILEPATH_OBSLC) \
 		--output $@
 #
 lc: $(FILEPATH_LC_EST)

@@ -30,9 +30,12 @@ contours:
       colors: "#000000"
       linestyles: "-"
     levels:
-      start: null
-      stop: null
-      num: 10
+      start: 1.0e+05
+      stop: 1.0e+08
+      num: 5
+    label:
+      fontsize: 16
+      fmt: "%.1e"
   beta_sh:
     style:
       colors: "#000000"
@@ -41,6 +44,9 @@ contours:
       start: null
       stop: null
       num: 10
+    label:
+      fontsize: 16
+      fmt: "%.1f"
 styles:
   obs_range:
     facecolor: "#C8C8CB"
