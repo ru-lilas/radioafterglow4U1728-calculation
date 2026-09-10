@@ -7,10 +7,12 @@ from pathlib import Path
 from typing import Self
 import numpy as np
 
+from module.parameter_table import ModelParameterTable
 from module.types import FloatArray
 from module import electron_temperature,synchrotron_scaling_values,quantity_converter
 from module.mydataclasses import (
     QuantityArray,
+    QuantityArray1D,
     QuantityArrayBase,
     QuantityData,
     YAMLReadable,
@@ -21,16 +23,6 @@ from module.mydataclasses import (
 class DistanceData(QuantityData):
     distance_value: float
     distance_unit: str
-
-@dataclass(frozen=True,slots=True)
-class PhysicalParametersBase:
-    a_wind: QuantityArrayBase
-    beta_sh: ValueArray
-    eps_b: float
-    eps_th: float
-    mu: float
-    mu_e: float
-    distance: QuantityData
 
 
 @dataclass(frozen=True)
@@ -88,7 +80,7 @@ class Chi2FittingConfigure:
 
 
 @dataclass(frozen=True,slots=True)
-class PhysicalParameters:
+class ModelParameterGrid:
     a_wind: QuantityArray
     beta_sh: FloatArray
     eps_b: float
@@ -178,6 +170,7 @@ class PhysicalParameters:
     def doppler_delta(self):
         return quantity_converter.beta_into_doppler_delta(self.beta_sh)
 
+
 @dataclass(frozen=True,slots=True)
 class ObservedBursterProperty:
     burster_name: str
@@ -199,8 +192,33 @@ class ObservedBursterProperty:
         e_nuc_max = m_acc*eps_nuc
         return QuantityData.from_Quantity(e_nuc_max)
 
+@dataclass(frozen=True,slots=True)
+class ModelParameters:
+    a_wind: QuantityArrayBase
+    beta_sh: ValueArray
+    eps_b: float
+    eps_th: float
+    mu: float
+    mu_e: float
+    distance: QuantityData
+
+    def build(
+        self
+    )->ModelParameterTable:
+        a_wind = self.a_wind.quantity
+        return ModelParameterTable(
+            a_wind = QuantityArray1D.from_Quantity(a_wind),
+            beta_sh = self.beta_sh.arr,
+            eps_b = self.eps_b,
+            eps_th = self.eps_th,
+            mu = self.mu,
+            mu_e = self.mu_e,
+            distance= self.distance
+        )
+
 @dataclass(frozen=True)
 class GeneralInputs(YAMLReadable):
-    physical_parameters: PhysicalParametersBase
+    physical_parameters: ModelParameters
     chi2fitting: Chi2FittingConfigure
     burster_property: ObservedBursterProperty
+

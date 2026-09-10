@@ -35,7 +35,7 @@ class FileWriter:
             else:
                 pass
 
-            df.to_csv(f, index=save_index)
+            df.to_csv(f, index=save_index,index_label="index")
 
     @staticmethod
     def yaml(

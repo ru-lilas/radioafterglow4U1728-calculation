@@ -4,7 +4,7 @@ from module.chevalier import (
     ChevalierGrid,
     AllowningParameters,
 )
-from module.inputs_as_dataclass import PhysicalParameters
+from module.inputs_as_dataclass import ModelParameterGrid
 from module.mydataclasses import QuantityData
 from module.observation import LongformatLightcurve
 from module.parameter_table import LambdaPeakTable

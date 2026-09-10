@@ -12,7 +12,7 @@ from module.observation import ChevalierScatter
 from module.plot_utils import ContourStyle, MetadataConfig
 from module.types import FloatArray,FloatGrid
 from module.inputs_as_dataclass import(
-    PhysicalParameters
+    ModelParameterGrid
 )
 from module.parameter_table import LambdaPeakTable
 from enum import StrEnum, auto
@@ -92,7 +92,7 @@ class ChevalierGrid:
         cls,
         path:Path
     )->Self:
-        inputs = PhysicalParameters.from_yaml(path)
+        inputs = ModelParameterGrid.from_yaml(path)
         a_wind_grid,beta_sh_grid = inputs.build_meshgrid()
         return cls(
             a_wind_arr = a_wind_grid,

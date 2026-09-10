@@ -7,7 +7,7 @@ from module.chevalier import (
     ChevalierGrid,
     PlotConfig
 )
-from module.inputs_as_dataclass import GeneralInputs, PhysicalParameters
+from module.inputs_as_dataclass import GeneralInputs, ModelParameterTable
 from module.mydataclasses import QuantityData
 from module.observation import LongformatLightcurve
 from module.parameter_table import LambdaPeakTable

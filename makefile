@@ -15,6 +15,7 @@ ESTIMATED_LIGHTCURVE := estimated_lightcurve
 CHI2FIT_PARAMETERS := chi2fit_parameters
 OBSERVATION_LIGHTCURVE := obslc
 CHI2_ESTIMATED_PARAMETERS := chi2_estimated_parameters
+MODEL_PARAMETER_TABLE := model_parameter_table
 
 RUN_ID ?=
 ifndef RUN_ID
@@ -41,6 +42,7 @@ FILEPATH_CHEVALIER_PDF := $(FIGDIR)/$(RUN_DIR)/chevalier_diagram.$(EXTENTION_PDF
 FILEPATH_ALLOWING_PARAMETERS := $(DATADIR)/$(RUN_DIR)/allowing_parameters.$(EXTENTION_CSV)
 FILEPATH_CHI2 := $(DATADIR)/$(RUN_DIR)/chi2.$(EXTENTION_CSV)
 FILEPATH_MINIMUM_CHI2_LC := $(DATADIR)/$(RUN_DIR)/minimum_chi2_lc.$(EXTENTION_CSV)
+FILEPATH_MODEL_PARAMETER_TABLE := $(DATADIR)/$(RUN_DIR)/$(MODEL_PARAMETER_TABLE).$(EXTENTION_CSV)
 
 param: \
 	$(FILEPATH_LC_EST) \
@@ -144,9 +146,11 @@ $(DATADIR)/$(RUN_DIR)/estimation.csv: \
 		--output $@
 
 #=== tabulating ===#
-$(DATADIR)/$(RUN_DIR)/$(PARAMETER_TABLE).$(EXTENTION_CSV): \
+modeltable: $(FILEPATH_MODEL_PARAMETER_TABLE)
+
+$(FILEPATH_MODEL_PARAMETER_TABLE): \
 	$(FILEPATH_INPUT) \
-	scripts/$(PARAMETER_TABLE).py
+	scripts/$(MODEL_PARAMETER_TABLE).py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
 		--output $@ \
