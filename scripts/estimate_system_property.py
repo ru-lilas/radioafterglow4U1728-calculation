@@ -44,11 +44,16 @@ def main():
     obs_property = general_inputs.burster_property
     params = BursterParameters.from_chevalier(est_lc.params)
 
-    m_acc = obs_property.m_acc.value_in("g")
-    e_nuc = obs_property.e_nuc_max.value_in("erg")
+    m_acc = obs_property.m_acc
+    e_nuc = obs_property.e_nuc_max
+    m_ej_min = params.m_swept(nu)
+    e_kin_min = params.e_kin_min(nu)
 
-    print(m_acc)
-    print(e_nuc)
+    print(f"M_acc = {m_acc.quantity.to('g'):.2e}")
+    print(f"M_ej_min = {m_ej_min.quantity.to('g'):.2e}")
+    print(f"E_nuc_max = {e_nuc.quantity.to('erg'):.2e}")
+    print(f"E_kin_min = {e_kin_min.quantity.to('erg'):.2e}")
+
 
 if __name__ == "__main__":
     main()
