@@ -4,10 +4,11 @@ from module.types import FloatArray, FloatPair
 import pandas as pd
 from pathlib import Path
 import warnings
-from typing import Any,cast
+from typing import Any,cast,Hashable
 from ruamel.yaml import YAML
 from dacite import Config
 from cattrs import Converter
+from collections.abc import Mapping
 DATACLASS_CONVERTER = Converter()
 
 class Integrator:
@@ -17,6 +18,21 @@ class Integrator:
         y: FloatArray,
     ) -> float:
         return float(np.trapezoid(y, x))
+
+def ensure_string_keys(
+    mapping: Mapping[Hashable, Any],
+) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+
+    for key, value in mapping.items():
+        if not isinstance(key, str):
+            raise TypeError(
+                f"辞書のキーはstrでなければなりません: {key!r}"
+            )
+
+        result[key] = value
+
+    return result
 
 class FileWriter:
     @staticmethod

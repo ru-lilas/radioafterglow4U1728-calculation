@@ -24,7 +24,7 @@ from module.mydataclasses import (
     YAMLReadable,
     ValueArray
 )
-from module.utils import FileReader
+from module.utils import FileReader, FileWriter
 
 class SynchrotronPeakColumns(StrEnum):
     TAU_THETA = auto()
@@ -45,6 +45,9 @@ class ModelParameterNames(StrEnum):
     TAU_THETA = auto()
     LNU_THETA = auto()
     DOPPLER_DELTA = auto()
+    A_WIND_UNIT = auto()
+    PHI_UNIT = auto()
+    LNU_UNIT = auto()
 
 @dataclass(frozen=True,slots=True)
 class ModelParameterTable:
@@ -122,6 +125,15 @@ class ModelParameterTable:
     def doppler_delta(self):
         return quantity_converter.beta_into_doppler_delta(self.beta_sh)
 
+    @classmethod
+    def from_csv(
+        cls,
+        path:Path
+    ):
+        df = FileReader.table_from_csv(path,idx="index")
+        metadata = df.attrs
+        return
+
     def to_df(
         self,
         *,
@@ -147,6 +159,9 @@ class ModelParameterTable:
         df.attrs[ModelParameterNames.MU_E] = self.mu_e
         df.attrs[ModelParameterNames.DISTANCE_VALUE] = self.distance.value
         df.attrs[ModelParameterNames.DISTANCE_UNIT] = self.distance.unit
+        df.attrs[ModelParameterNames.A_WIND_UNIT] = a_wind_unit
+        df.attrs[ModelParameterNames.PHI_UNIT] = phi_unit
+        df.attrs[ModelParameterNames.LNU_UNIT] = lnu_unit
         return df
 
 @dataclass(frozen=True,slots=True)
