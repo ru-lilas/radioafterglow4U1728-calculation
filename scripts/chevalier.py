@@ -7,7 +7,7 @@ from module.chevalier import (
     ChevalierGrid,
     PlotConfig
 )
-from module.inputs_as_dataclass import PhysicalParameters
+from module.inputs_as_dataclass import GeneralInputs, PhysicalParameters
 from module.mydataclasses import QuantityData
 from module.observation import LongformatLightcurve
 from module.parameter_table import LambdaPeakTable
@@ -48,6 +48,8 @@ def main():
     outpath:Path = args.output
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
+    inputs = GeneralInputs.from_yaml(args.input)
+    params = inputs.physical_parameters
     grids = ChevalierGrid.from_yaml(args.input)
     peak_table = LambdaPeakTable.from_csv(args.peak_table)
     df_obs_long = LongformatLightcurve.from_csv(args.obslc)
@@ -78,6 +80,10 @@ def main():
             contourconfs=plotconf.contours,
             phi_unit=phi_unit,
             fnu_unit=fnu_unit,
+        )
+        grids.plot_metadata(
+            ax,
+            plotconf=plotconf
         )
         obs_scat.plot_range(
             ax,

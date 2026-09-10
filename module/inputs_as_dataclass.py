@@ -32,6 +32,7 @@ class PhysicalParametersBase:
     mu_e: float
     distance: QuantityData
 
+
 @dataclass(frozen=True)
 class SamplingTimewindow:
     min: float

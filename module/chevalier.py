@@ -9,7 +9,7 @@ from module import dataframe_utils, plot_utils
 from module.mydataclasses import QuantityArray, YAMLReadable,QuantityData
 from module import models
 from module.observation import ChevalierScatter
-from module.plot_utils import ContourStyle
+from module.plot_utils import ContourStyle, MetadataConfig
 from module.types import FloatArray,FloatGrid
 from module.inputs_as_dataclass import(
     PhysicalParameters
@@ -35,6 +35,7 @@ class PlotConfig(YAMLReadable):
     layout: plot_utils.PlotLayoutConfig
     contours: ContourConfigures
     styles: Styles
+    metadata: dict[str,MetadataConfig]
 
 class GridColumns(StrEnum):
     A_WIND = auto()
@@ -283,6 +284,26 @@ class ChevalierGrid:
                 contour_a_wind,
                 contour_beta_sh,
             )
+
+    def plot_metadata(
+        self,
+        ax: Axes,
+        plotconf: PlotConfig
+    ):
+        strings = []
+        conf_metadata = plotconf.metadata
+        conf_eps_b = conf_metadata["eps_b"]
+        conf_eps_th = conf_metadata["eps_th"]
+        conf_mu = conf_metadata["mu"]
+        conf_mu_e = conf_metadata["mu_e"]
+        strings.append(conf_eps_b.format_value(self.eps_b))
+        strings.append(conf_eps_th.format_value(self.eps_th))
+        strings.append(conf_mu.format_value(self.mu))
+        strings.append(conf_mu_e.format_value(self.mu_e))
+        ax.set_title(
+            ", ".join(strings),
+            fontsize=16
+        )
     
     def select_parameters_in(
         self,
