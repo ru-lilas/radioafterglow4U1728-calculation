@@ -8,19 +8,59 @@
 \maketitle
   
 \section{}
-We set \(\epsB = \num{1.0e-2},\epsth = \num{0.40} \),
-and assume ambient gas is composed of fully ionized hydrogen,
+\(\epsB = \num{1.0e-2},\epsth = \num{0.40} \) are set,
+and we assume ambient gas is composed of fully ionized hydrogen,
 that is, \( \mu = \num{0.5}, \mue = \num{1.0}\).
 
-\section{peak estimation}
-\begin{equation}
-  F_{\nu} = \delta^3\frac{L_{\nu}}{4\pi D^2},
-\end{equation}
-where $\delta$ is a coefficient arising from Doppler effect.
-In our model,
-\begin{equation}
-  \delta \approx \sqrt{\frac{1+\betash}{1-\betash}}
-\end{equation}
+\section{}
+% \begin{equation}
+%   F_{\nu} = \delta^3\frac{L_{\nu}}{4\pi D^2},
+% \end{equation}
+% where $\delta$ is a coefficient arising from Doppler effect.
+% In our model,
+% \begin{equation}
+%   \delta \approx \sqrt{\frac{1+\betash}{1-\betash}}
+% \end{equation}
+Here, we treated the persistent emission as
+the observed points
+before the onset of Type I X-ray burst,
+and the value of the persistent flux was
+taken by the mean of these observed points.
 
+The peak flux was estimated
+by taking the mean of the two heighest values,
+and the peak time was defined as the midpoint
+between the corresponding points.
+
+\section{Results}
+Figure \ref{fig:chevalier_diagram} shows
+a $F_{\nu,\mathrm{net},\peak}-\nu\tpeak$ diagram,
+where $F_{\nu,\mathrm{net},\peak}$ is
+the net-flux density at \tpeak.
+\begin{figure}
+  \centering
+  \includegraphics[
+    width = 0.9\linewidth
+  ]{figs/chevalier_diagram.pdf}
+  \caption{
+    Net-flux density at \tpeak,
+    $F_{\nu,\mathrm{net},\peak}$,
+    against $\nu\tpeak$.
+    Solid lines represent \(\Awind = \text{const.}\),
+    and dashed ones represent \(\betash = \text{const.}\)
+    Black bullet is a estimated point from the observation
+    (Russell et al. 2024).
+    Shaded region shows the uncertaincy of the black point.
+  }
+  \label{fig:chevalier_diagram}
+\end{figure}
+
+\begin{figure}
+  \centering
+  \includegraphics[
+    width = 0.9\linewidth
+  ]{figs/lc.pdf}
+  \label{fig:lightcurve}
+\end{figure}
 
 \end{document}
