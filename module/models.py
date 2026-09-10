@@ -9,8 +9,8 @@ from module import quantity_converter
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass
-from module.mydataclasses import QuantityArray, QuantityData
-from module.types import FloatArray, FloatArrayLike, FloatGrid
+from module.mydataclasses import QuantityArray, QuantityData, QuantityArray1D
+from module.types import FloatArray, FloatArray1D, FloatArrayLike, FloatGrid
 
 from numpy.typing import NDArray
 from module import synchrotron_scaling_values
@@ -19,8 +19,56 @@ from module import tabular
 from module.utilities import bisection, unit_aliases as unit
 from module import calculate_lnu_th
 from module.utils import FileReader
+from astropy.constants import e,c,m_e,m_p
+from module import f_factor
+import astropy.units as u
+e = u.Quantity(e.esu)
+
+def calculate_beta_sh_crit(
+    eps_th: float,
+    mu:float,
+    mu_e: float,
+)->float:
+    return np.sqrt(
+        ((32.0*mu_e*m_e) / (3.0*eps_th*mu*m_p))
+    )
 
 
+@dataclass(frozen=True,slots=True)
+class TransRelativisticLimit:
+    eps_b: float
+    eps_th: float
+    mu: float
+    mu_e: float
+
+    @property
+    def beta_sh(self)->float:
+        return calculate_beta_sh_crit(
+            eps_th=self.eps_th,
+            mu=self.mu,
+            mu_e=self.mu_e
+        )
+    @property
+    def theta(self)->FloatArray:
+        return electron_temperature.calculate_theta_e(
+            eps_th=self.eps_th,
+            mu=self.mu,
+            mu_e=self.mu_e,
+            beta_sh=self.beta_sh
+        )
+
+    def tau_theta(
+        self,
+        a_wind:QuantityArray1D
+    )->FloatArray:
+        return synchrotron_scaling_values.calculate_tau_theta(
+            theta = self.theta,
+            eps_b = self.eps_b,
+            a_wind = a_wind.quantity,
+            beta_sh=self.beta_sh,
+            mu=self.mu,
+            mu_e=self.mu_e,
+        )
 
 # @dataclass
 # class ThermalSynchrotronScalingValues:

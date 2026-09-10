@@ -9,7 +9,9 @@ from dataclasses import dataclass
 from module.dataframe_processors import convert_ndarray
 from module.types import FloatArray
 from module import (
+    dataframe_utils,
     electron_temperature,
+    models,
     synchrotron_scaling_values,
     quantity_converter)
 import numpy as np
@@ -43,6 +45,8 @@ class ModelParameterNames(StrEnum):
     THETA = auto()
     PHI_THETA = auto()
     TAU_THETA = auto()
+    TAU_THETA_UPPER = auto()
+    IS_TRANS_RELATIVISTIC = auto()
     LNU_THETA = auto()
     DOPPLER_DELTA = auto()
     A_WIND_UNIT = auto()
@@ -112,6 +116,18 @@ class ModelParameterTable:
         )
 
     @property
+    def tau_theta_upperlim(
+        self
+    )->FloatArray:
+        transrela_limit = models.TransRelativisticLimit(
+            eps_b=self.eps_b,
+            eps_th=self.eps_th,
+            mu=self.mu,
+            mu_e = self.mu_e
+        )
+        return transrela_limit.tau_theta(self.a_wind)
+
+    @property
     def lnu_theta(self):
         return QuantityArray1D.from_Quantity(
             synchrotron_scaling_values.calculate_l_theta(
@@ -125,15 +141,6 @@ class ModelParameterTable:
     def doppler_delta(self):
         return quantity_converter.beta_into_doppler_delta(self.beta_sh)
 
-    @classmethod
-    def from_csv(
-        cls,
-        path:Path
-    ):
-        df = FileReader.table_from_csv(path,idx="index")
-        metadata = df.attrs
-        return
-
     def to_df(
         self,
         *,
@@ -144,13 +151,18 @@ class ModelParameterTable:
         a_wind = self.a_wind
         phi_theta = self.phi_theta
         lnu_theta = self.lnu_theta
+        tau_theta = self.tau_theta
+        tau_theta_upperlim = self.tau_theta_upperlim
+        is_transrelativistic = (tau_theta < tau_theta_upperlim)
         df = pd.DataFrame({
             ModelParameterNames.A_WIND: a_wind.to_value_in(a_wind_unit),
             ModelParameterNames.BETA_SH: self.beta_sh,
             ModelParameterNames.THETA: self.theta,
             ModelParameterNames.PHI_THETA: phi_theta.to_value_in(phi_unit),
             ModelParameterNames.LNU_THETA: lnu_theta.to_value_in(lnu_unit),
-            ModelParameterNames.TAU_THETA: self.tau_theta,
+            ModelParameterNames.TAU_THETA: tau_theta,
+            ModelParameterNames.TAU_THETA_UPPER: tau_theta_upperlim,
+            ModelParameterNames.IS_TRANS_RELATIVISTIC: is_transrelativistic,
             ModelParameterNames.DOPPLER_DELTA: self.doppler_delta
         })
         df.attrs[ModelParameterNames.EPS_B] = self.eps_b

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Self
 
 from module import dataframe_utils, plot_utils
-from module.mydataclasses import QuantityArray, YAMLReadable,QuantityData
+from module.mydataclasses import QuantityArray, YAMLReadable,QuantityData,QuantityArray1D
 from module import models
 from module.observation import ChevalierScatter
 from module.plot_utils import ContourStyle, MetadataConfig
@@ -14,7 +14,7 @@ from module.types import FloatArray,FloatGrid
 from module.inputs_as_dataclass import(
     ModelParameterGrid
 )
-from module.parameter_table import LambdaPeakTable
+from module.parameter_table import LambdaPeakTable,ModelParameterNames
 from enum import StrEnum, auto
 from matplotlib.axes import Axes
 from module.compute_lightcurve import AllowningParameters
@@ -86,6 +86,43 @@ class ChevalierGrid:
                 f"a_wind={a_wind_shape}, "
                 f"beta_sh={beta_sh_shape}"
             ) from error
+
+    @classmethod
+    def from_csv(
+        cls,
+        path:Path
+    ):
+        df = FileReader.table_from_csv(path,idx="index")
+        metadata = df.attrs
+        a_wind = QuantityArray1D(
+            values = dataframe_utils.extract_column_as_ndarray(
+                df,
+                ModelParameterNames.A_WIND
+            ),
+            unit = metadata[ModelParameterNames.A_WIND_UNIT]
+        )
+        phi_theta = QuantityArray1D(
+            values = dataframe_utils.extract_column_as_ndarray(
+                df,
+                ModelParameterNames.PHI_THETA
+            ),
+            unit = metadata[ModelParameterNames.PHI_UNIT]
+        )
+        lnu_theta = QuantityArray1D(
+            values = dataframe_utils.extract_column_as_ndarray(
+                df,
+                ModelParameterNames.LNU_THETA
+            ),
+            unit = metadata[ModelParameterNames.LNU_UNIT]
+        )
+        distance = QuantityData(
+            value = metadata[ModelParameterNames.DISTANCE_VALUE],
+            unit = metadata[ModelParameterNames.DISTANCE_UNIT]
+        )
+        beta_sh = dataframe_utils.extract_column_as_ndarray(
+            df,
+            ModelParameterNames.BETA_SH
+        )
 
     @classmethod
     def from_yaml(
