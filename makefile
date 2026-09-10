@@ -40,6 +40,15 @@ FILEPATH_LC_PDF := $(FIGDIR)/$(RUN_DIR)/lc.$(EXTENTION_PDF)
 FILEPATH_ALLOWING_PARAMETERS := $(DATADIR)/$(RUN_DIR)/allowing_parameters.$(EXTENTION_CSV)
 FILEPATH_CHI2 := $(DATADIR)/$(RUN_DIR)/chi2.$(EXTENTION_CSV)
 FILEPATH_MINIMUM_CHI2_LC := $(DATADIR)/$(RUN_DIR)/minimum_chi2_lc.$(EXTENTION_CSV)
+FILEPATH_OBSERVED_BURSTER_PROPERTY := $(INDIR)/burster_property.$(EXTENTION_YAML)
+
+param: \
+	$(FILEPATH_LC_EST) \
+	$(FILEPATH_OBSERVED_BURSTER_PROPERTY) \
+	scripts/estimate_system_property.py
+	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+		--estimated $< \
+		--obs_property $(FILEPATH_OBSERVED_BURSTER_PROPERTY)
 
 lcfig: $(FILEPATH_LC_PDF)
 

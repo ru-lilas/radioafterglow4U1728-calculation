@@ -6,6 +6,7 @@ from astropy.constants import c
 from numpy.typing import NDArray
 from module.mydataclasses import QuantityData,QuantityArray
 from module.types import FloatArray, FloatArrayLike
+from dataclasses import dataclass
 
 def flux_into_luminosity(
     flux:u.Quantity,
@@ -38,3 +39,14 @@ def beta_into_doppler_delta(
     """
     beta_arr = np.asarray(beta,dtype=np.float64)
     return np.sqrt((1.0+beta)/(1.0-beta))
+
+@dataclass(frozen=True,slots=True)
+class VelocityDevidedByLightspeed:
+    value: float
+
+    def to_velocity(
+        self
+    )->QuantityData:
+        v = self.value*c
+        return QuantityData.from_Quantity(v)
+

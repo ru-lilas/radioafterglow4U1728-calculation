@@ -41,3 +41,15 @@ chi2fitting:
       unit: "s"
     fnu_unit: "mJy"
     nu: *nu
+
+burster_property:
+  burster_name: "4U 1728-34"
+  mdot_acc:
+    value: 4.2e+23 
+    unit: "g yr-1"
+  t_acc:
+    value: 3.0
+    unit: "hr"
+  eps_nuc:
+    value: 6.75e+18
+    unit: "erg g-1"

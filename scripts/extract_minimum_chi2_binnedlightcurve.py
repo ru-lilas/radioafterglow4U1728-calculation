@@ -55,7 +55,7 @@ def main():
 
     integral_table = ThermalSynchrotronTable.from_csv(args.integral_table)
     allowing_params = lc.AllowningParameters.from_csv(args.allowing)
-    minchi2 = mystatistics.MinimumChiSquared.from_yaml(args.minchi2)
+    minchi2 = mystatistics.ChiSquared.from_csv(args.minchi2)
 
     allowing_params = lc.AllowningParameters.from_csv(args.allowing)
 
