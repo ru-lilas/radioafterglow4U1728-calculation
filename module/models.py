@@ -5,13 +5,14 @@ from functools import cached_property
 from pathlib import Path
 from typing import Self
 import astropy.units as u
-from module import quantity_converter
+from matplotlib.axes import Axes
+from module import plot_utils, quantity_converter
 import numpy as np
 import pandas as pd
 from dataclasses import dataclass
 from module.mydataclasses import QuantityArray, QuantityData, QuantityArray1D
 from module.types import FloatArray, FloatArray1D, FloatArrayLike, FloatGrid
-
+from scipy import special
 from numpy.typing import NDArray
 from module import synchrotron_scaling_values
 from module import electron_temperature
@@ -19,202 +20,215 @@ from module import tabular
 from module.utilities import bisection, unit_aliases as unit
 from module import calculate_lnu_th
 from module.utils import FileReader
-from astropy.constants import e,c,m_e,m_p
+from astropy.constants import e,c,m_e,m_p,hbar
 from module import f_factor
 import astropy.units as u
 e = u.Quantity(e.esu)
+c = u.Quantity(c)
+m_e = u.Quantity(m_e)
+m_p = u.Quantity(m_p)
+hbar = u.Quantity(hbar)
+mec2 = (m_e*c**2).to("erg")
 
-def calculate_beta_sh_crit(
-    eps_th: float,
-    mu:float,
-    mu_e: float,
-)->float:
-    return np.sqrt(
-        ((32.0*mu_e*m_e) / (3.0*eps_th*mu*m_p))
-    )
+A_CYC = (((4.0*np.pi*mec2)/(3.0*e*c))**2).to("g cm-1")
+T_ELE = (hbar/mec2).to("s")
+PHI = (1*u.Unit("GHz")*1*u.Unit("min")).decompose()
 
+MASS_RATIO_ELE_PRO = (m_e/m_p).decompose()
+
+class MaxwellJuttnerFactor:
+
+    @staticmethod
+    def exact(
+        theta:FloatArray
+    )->FloatArray:
+        return (
+            2.0*theta**2 / special.kv(2,1.0/theta)
+        )
+
+    @staticmethod
+    def hot(
+        theta:FloatArray
+    )->FloatArray:
+        return np.ones_like(theta)
+
+    def plot(
+        self,
+        theta:FloatArray,
+        ax:Axes,
+        style:plot_utils.LineStyle,
+    ):
+        f_exact = self.exact(theta)
+        ax.plot(
+            theta,f_exact,
+            **style.to_kwargs()
+        )
 
 @dataclass(frozen=True,slots=True)
-class TransRelativisticLimit:
-    eps_b: float
-    eps_th: float
+class PhaseParameter(QuantityArray1D):
+
+    @classmethod
+    def from_time_given_nu(
+        cls,
+        t: QuantityArray,
+        nu: QuantityData
+    )->Self:
+        phi = t.quantity*nu.quantity
+        return cls.from_Quantity(phi)
+
+    def to_time(
+        self,
+        nu: QuantityData
+    )->QuantityArray:
+        return QuantityArray.from_Quantity(
+            nu*self.quantity
+        )
+
+
+class DimensionlessElectronTemperature:
+    @staticmethod
+    def gp98(
+        theta0:FloatArray
+    )->FloatArray:
+        """
+            Gammie&Popham(1998)
+        """
+        return np.asarray(
+            (
+                5.0 * theta0
+                - 6.0
+                + np.sqrt(
+                    25.0 * theta0**2
+                    + 180.0 * theta0
+                    + 36.0
+                )
+            )
+            / 30.0,
+            dtype=np.float64,
+        )
+    @staticmethod
+    def hot(
+        theta0:FloatArray
+    )->FloatArray:
+        return theta0 / 3.0
+
+@dataclass(frozen=True,slots=True)
+class MolecularWeight:
     mu: float
     mu_e: float
 
     @property
-    def beta_sh(self)->float:
-        return calculate_beta_sh_crit(
-            eps_th=self.eps_th,
-            mu=self.mu,
-            mu_e=self.mu_e
-        )
-    @property
-    def theta(self)->FloatArray:
-        return electron_temperature.calculate_theta_e(
-            eps_th=self.eps_th,
-            mu=self.mu,
-            mu_e=self.mu_e,
-            beta_sh=self.beta_sh
+    def effective_mass_ratio(self):
+        return float((self.mu_e*MASS_RATIO_ELE_PRO/self.mu).decompose())
+
+@dataclass(frozen=True,slots=True)
+class ElectronTemperatureScaling:
+    values:FloatArray
+
+    @classmethod
+    def from_params(
+        cls,
+        eps_th:float,
+        m_ratio_ep:float,
+        beta_sh:FloatArray
+    )->Self:
+        return cls(
+            values = 9.0*eps_th*beta_sh**2/(32.0*m_ratio_ep)
         )
 
-    def tau_theta(
+    def to_beta(
         self,
-        a_wind:QuantityArray1D
+        eps_th:float,
+        m_ratio_ep:float,
     )->FloatArray:
-        return synchrotron_scaling_values.calculate_tau_theta(
-            theta = self.theta,
-            eps_b = self.eps_b,
-            a_wind = a_wind.quantity,
-            beta_sh=self.beta_sh,
-            mu=self.mu,
-            mu_e=self.mu_e,
+        beta2 = (32.0*m_ratio_ep*self.theta0/(9.0*eps_th))
+        return np.sqrt(beta2)
+
+    def to_theta(
+        self
+    )->FloatArray:
+        return DimensionlessElectronTemperature.hot(self.theta0)
+
+@dataclass(frozen=True,slots=True)
+class NormalizedWindParameter(QuantityArray1D):
+
+    @classmethod
+    def from_a_wind(
+        cls,
+        a_wind:QuantityArray1D,
+        a_norm:QuantityData
+    )->Self:
+        a_wind_q = a_wind.quantity
+        a_norm_q = a_norm.quantity
+        phi_a = np.sqrt((a_wind_q/a_norm_q)).to("GHz min")
+        return cls.from_Quantity(phi_a)
+
+    def to_a_wind(
+        self,
+        a_norm:QuantityData
+    )->QuantityArray1D:
+        return QuantityArray1D.from_Quantity(
+            self.quantity*a_norm.quantity
         )
 
-# @dataclass
-# class ThermalSynchrotronScalingValues:
-#     input:InputParameters
-#     nu_value: NDArray[np.float64]
-#     nu_unit: str
-#     table: tabular.ThermalSynchrotronTable
-#
-#     @cached_property
-#     def nu(self)->u.Quantity:
-#         return u.Quantity(self.nu_value,u.Unit(self.nu_unit))
-#
-#     @cached_property
-#     def t_theta(self):
-#         return synchrotron_scaling_values.calculate_t_theta(
-#             phi_theta=self.input.phi_theta,
-#             nu=self.nu
-#         )
-#
-#     @cached_property
-#     def r_theta(self):
-#         return synchrotron_scaling_values.calculate_r_theta(
-#             beta_sh=self.input.beta_sh,
-#             t_theta=self.t_theta
-#         )
-#
-#     @cached_property
-#     def n_e_theta(self):
-#         return synchrotron_scaling_values.calculate_n_ele_theta(
-#             beta_sh=self.input.beta_sh,
-#             mu=self.input.mu,
-#             mu_e=self.input.mu_e,
-#             a_wind = self.input.a_wind_quantity,
-#             t_theta=self.t_theta
-#         )
-#
-#     @cached_property
-#     def b_mag_theta(self):
-#         return synchrotron_scaling_values.calculate_b_mag_theta(
-#             eps_B=self.input.eps_b,
-#             a_wind=self.input.a_wind_quantity,
-#             t_theta=self.t_theta
-#         )
-#
-#     @cached_property
-#     def j_theta(self):
-#         return synchrotron_scaling_values.calculate_j_theta(self.input.theta,self.n_e_theta,self.b_mag_theta)
-#
-#     @cached_property
-#     def alpha_theta(self):
-#         return synchrotron_scaling_values.calculate_alpha_theta(self.input.theta,self.n_e_theta,self.b_mag_theta)
-#
-#     @cached_property
-#     def tau_theta(self):
-#         return self.input.tau_theta
-#
-#     @cached_property
-#     def xi_est(self):
-#         tau_theta = self.input.tau_theta
-#         def f(xi:NDArray[np.float64]):
-#             return synchrotron_scaling_values.calculate_ln_tau(xi,tau_theta,self.table)
-#         xi_peak = bisection.bisection(f,1.0e-01,1.0e+04)
-#         return np.asarray(xi_peak,dtype=np.float64)
-#
-#     @cached_property
-#     def lnu_est_dimless(self):
-#         lnu_peak_dimless = synchrotron_scaling_values.calculate_lambda_using_table(
-#             tau_theta=self.input.tau_theta,
-#             xm=self.xi_est,
-#             table=self.table
-#         )
-#         return lnu_peak_dimless
-#
-#     @cached_property
-#     def phi_peak(self):
-#         phi_peak = u.Quantity(self.xi_est * self.input.phi_theta)
-#         return phi_peak
-#
-#     @cached_property
-#     def t_peak(self)->u.Quantity:
-#         return u.Quantity(self.phi_peak/self.nu).to(self.t_theta.unit)
-#
-#     @cached_property
-#     def lnu_peak(self):
-#         lnu_peak = u.Quantity(self.l_theta*self.lnu_est_dimless,self.l_theta.unit)
-#         return lnu_peak
-#
-# @dataclass
-# class Frequency:
-#     value_array: np.ndarray
-#     unit: str
-#
-# @dataclass
-# class SynchrotronSpectrum:
-#     inputs: InputParameters
-#     t_value: float
-#     t_unit: str
-#     nu_value: NDArray[np.float64]
-#     nu_unit: str
-#     tabular: tabular.ThermalSynchrotronTable
-#
-#     @cached_property
-#     def scalings(self):
-#         return ThermalSynchrotronScalingValues(
-#             input=self.inputs,
-#             nu_value=self.nu_value,
-#             nu_unit=self.nu_unit,
-#             table=self.tabular
-#         )
-#
-#     @property
-#     def t_quantity(self):
-#         return u.Quantity(self.t_value,u.Unit(self.t_unit))
-#
-#     @property
-#     def phi(self)->u.Quantity:
-#         nu = self.scalings.nu
-#         return nu*self.t_quantity
-#
-#     @property
-#     def xi(self):
-#         xi = np.asarray((self.phi/self.inputs.phi_theta).to_value(unit.dimensionless),dtype=np.float64)
-#         return xi
-#
-#     @property
-#     def ln_tau(self):
-#         return synchrotron_scaling_values.calculate_ln_tau(
-#             xi=self.xi,
-#             tau_theta=self.scalings.tau_theta,
-#             table=self.tabular
-#         )
-#
-#     @property
-#     def lnu_th_dimless(self):
-#         return calculate_lnu_th.dimless_tabular(
-#             x=self.xi,
-#             log_tau=self.ln_tau
-#         )
-#
-#     @property
-#     def lnu_th(self):
-#         q = u.Quantity((self.inputs.l_theta * self.lnu_th_dimless).to(self.scalings.l_theta.unit))
-#         return q
-#
+    def decompose(
+        self
+    )->FloatArray:
+        return np.asarray(
+            self.quantity.to_value(u.dimensionless_unscaled)
+        )
 
-##=== 2026/07/28 追加 ===##
+@dataclass(frozen=True,slots=True)
+class ThemalSynchrotronPhase(PhaseParameter):
+
+    @classmethod
+    def from_params(
+        cls,
+        eps_b:float,
+        theta:FloatArray,
+        phi_a:NormalizedWindParameter,
+    )->Self:
+        return cls.from_Quantity(
+            1.5*theta**2*phi_a.quantity*np.sqrt(eps_b)
+        )
+
+@dataclass(frozen=True,slots=True)
+class OpticalDepthParameter:
+    values:FloatArray
+    @classmethod
+    def from_params(
+        cls,
+        mep: float,
+        eps_b:float,
+        theta:FloatArray,
+        phi_a:NormalizedWindParameter
+    )->Self:
+        phi_a_decomposed = phi_a.decompose()
+        return cls(
+            values = (phi_a_decomposed/27.0)*np.sqrt(2.0*mep/(eps_b*theta**11)*MaxwellJuttnerFactor.exact(theta))
+        )
+
+def calculate_effective_mass_ratio(
+    mu:float,
+    mu_e:float
+)->float:
+    return float((mu_e*MASS_RATIO_ELE_PRO/mu).decompose())
+
+def calculate_lnu_theta(
+    eps_th:float,
+    eps_b:float,
+    mep:float,
+    a:FloatArray
+)->QuantityArray1D:
+    return QuantityArray1D.from_Quantity(
+        192*np.pi**3*eps_b*mep*a**2*mec2/eps_th
+    )
+
+@dataclass(frozen=True,slots=True)
+class TransRelativisticLimit:
+    mep:float
+    eps_th: float
+    eps_b: float
 
 @dataclass(frozen=True,slots=True)
 class ThermalSynchrotronTable:
@@ -239,34 +253,14 @@ class ThermalSynchrotronTable:
         return np.exp(self.interpolate_log_ip(x))
 
 @dataclass(frozen=True,slots=True)
-class SynchrotronPhase(QuantityArray):
-
-    @classmethod
-    def from_time_given_nu(
-        cls,
-        t: QuantityArray,
-        nu: QuantityData
-    )->Self:
-        phi = t.quantity*nu.quantity
-        return cls.from_Quantity(phi)
-
-    def to_time(
-        self,
-        nu: QuantityData
-    )->QuantityArray:
-        return QuantityArray.from_Quantity(
-            nu*self.quantity
-        )
-
-@dataclass(frozen=True,slots=True)
 class DimensionlessFrequency:
     values: FloatArray
 
     @classmethod
     def from_phi(
         cls,
-        phi:SynchrotronPhase,
-        phi_theta:SynchrotronPhase
+        phi:PhaseParameter,
+        phi_theta:PhaseParameter
     )->Self:
         if phi.values.ndim != 1:
             raise ValueError(

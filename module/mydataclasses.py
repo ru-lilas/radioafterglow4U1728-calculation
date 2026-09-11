@@ -6,7 +6,7 @@ from .types import ValueScale,FloatArray
 import astropy.units as u
 from module.utils import FileReader
 from cattrs import Converter
-from typing import Self
+from typing import Any, Self
 DATACLASS_CONVERTER = Converter()
 
 class YAMLReadable:
@@ -63,8 +63,10 @@ class QuantityArray:
     @classmethod
     def from_Quantity(
         cls,
-        quantity:u.Quantity
+        quantity:Any
     )->Self:
+        if not isinstance(quantity,u.Quantity):
+            raise ValueError("エラー:引数がQuantityではありません.")
         values = np.asarray(quantity.value,dtype=np.float64)
         unit = quantity.unit
         if unit is None:

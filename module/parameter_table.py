@@ -53,6 +53,48 @@ class ModelParameterNames(StrEnum):
     PHI_UNIT = auto()
     LNU_UNIT = auto()
 
+class ModelColumnNames(StrEnum):
+    PHI_PEAK = auto()
+    FNU_PEAK = auto()
+
+@dataclass(frozen=True,slots=True)
+class LambdaPeakTable:
+    tau_theta_ref: FloatArray
+    xm_peak_ref: FloatArray
+    lambda_peak_ref: FloatArray
+
+    @classmethod
+    def from_csv(
+            cls,
+            path:Path
+    )->Self:
+        df = FileReader.table_from_csv(path)
+        return cls(
+            tau_theta_ref = convert_ndarray(df,SynchrotronPeakColumns.TAU_THETA),
+            xm_peak_ref = convert_ndarray(df,SynchrotronPeakColumns.XM_PEAK),
+            lambda_peak_ref = convert_ndarray(df,SynchrotronPeakColumns.LAMBDA_PEAK),
+        )
+
+    def interpolated_xm_peak(
+        self,
+        tau_theta:FloatArray
+    )->FloatArray:
+        return np.interp(
+            tau_theta,
+            self.tau_theta_ref,
+            self.xm_peak_ref
+        )
+
+    def interpolated_lambda_peak(
+        self,
+        tau_theta:FloatArray
+    )->FloatArray:
+        return np.interp(
+            tau_theta,
+            self.tau_theta_ref,
+            self.lambda_peak_ref
+        )
+
 @dataclass(frozen=True,slots=True)
 class ModelParameterTable:
     a_wind: QuantityArray1D
@@ -116,18 +158,6 @@ class ModelParameterTable:
         )
 
     @property
-    def tau_theta_upperlim(
-        self
-    )->FloatArray:
-        transrela_limit = models.TransRelativisticLimit(
-            eps_b=self.eps_b,
-            eps_th=self.eps_th,
-            mu=self.mu,
-            mu_e = self.mu_e
-        )
-        return transrela_limit.tau_theta(self.a_wind)
-
-    @property
     def lnu_theta(self):
         return QuantityArray1D.from_Quantity(
             synchrotron_scaling_values.calculate_l_theta(
@@ -141,19 +171,59 @@ class ModelParameterTable:
     def doppler_delta(self):
         return quantity_converter.beta_into_doppler_delta(self.beta_sh)
 
+    def phi_peak(
+        self,
+        peak_table:LambdaPeakTable
+    )->QuantityArray1D:
+        phi_theta = self.phi_theta
+        xm_peak = peak_table.interpolated_lambda_peak(
+            self.tau_theta
+        )
+        return QuantityArray1D(
+            values = phi_theta.values*xm_peak,
+            unit = phi_theta.unit
+        )
+
+    def lnu_peak(
+        self,
+        peak_table:LambdaPeakTable
+    )->QuantityArray1D:
+        lnu_theta = self.lnu_theta
+        lambda_peak = peak_table.interpolated_lambda_peak(
+            self.tau_theta
+        )
+        return QuantityArray1D(
+            values = lnu_theta.values*lambda_peak,
+            unit = lnu_theta.unit
+        )
+
+    def fnu_peak_observerframe(
+        self,
+        peak_table:LambdaPeakTable
+    )->QuantityArray1D:
+        lnu_peak = self.lnu_peak(peak_table).quantity
+        distance = self.distance.quantity
+        doppler_delta = self.doppler_delta 
+        fnu_peak = doppler_delta**3 * lnu_peak / (4.0*np.pi*distance**2)
+        return QuantityArray1D.from_Quantity(
+            quantity = fnu_peak
+        )
+
     def to_df(
         self,
+        peak_table:LambdaPeakTable,
         *,
         a_wind_unit:str = "g cm-1",
         phi_unit:str = "GHz min",
-        lnu_unit:str = "erg s-1 Hz-1"
+        lnu_unit:str = "erg s-1 Hz-1",
+        fnu_unit:str = "mJy",
     )->pd.DataFrame:
         a_wind = self.a_wind
         phi_theta = self.phi_theta
         lnu_theta = self.lnu_theta
         tau_theta = self.tau_theta
-        tau_theta_upperlim = self.tau_theta_upperlim
-        is_transrelativistic = (tau_theta < tau_theta_upperlim)
+        phi_peak = self.phi_peak(peak_table)
+        fnu_peak = self.fnu_peak_observerframe(peak_table)
         df = pd.DataFrame({
             ModelParameterNames.A_WIND: a_wind.to_value_in(a_wind_unit),
             ModelParameterNames.BETA_SH: self.beta_sh,
@@ -161,9 +231,9 @@ class ModelParameterTable:
             ModelParameterNames.PHI_THETA: phi_theta.to_value_in(phi_unit),
             ModelParameterNames.LNU_THETA: lnu_theta.to_value_in(lnu_unit),
             ModelParameterNames.TAU_THETA: tau_theta,
-            ModelParameterNames.TAU_THETA_UPPER: tau_theta_upperlim,
-            ModelParameterNames.IS_TRANS_RELATIVISTIC: is_transrelativistic,
-            ModelParameterNames.DOPPLER_DELTA: self.doppler_delta
+            ModelParameterNames.DOPPLER_DELTA: self.doppler_delta,
+            ModelColumnNames.PHI_PEAK: phi_peak.to_value_in(phi_unit),
+            ModelColumnNames.FNU_PEAK: fnu_peak.to_value_in(fnu_unit)
         })
         df.attrs[ModelParameterNames.EPS_B] = self.eps_b
         df.attrs[ModelParameterNames.EPS_TH] = self.eps_th
@@ -176,40 +246,3 @@ class ModelParameterTable:
         df.attrs[ModelParameterNames.LNU_UNIT] = lnu_unit
         return df
 
-@dataclass(frozen=True,slots=True)
-class LambdaPeakTable:
-    tau_theta_ref: FloatArray
-    xm_peak_ref: FloatArray
-    lambda_peak_ref: FloatArray
-
-    @classmethod
-    def from_csv(
-            cls,
-            path:Path
-    )->Self:
-        df = FileReader.table_from_csv(path)
-        return cls(
-            tau_theta_ref = convert_ndarray(df,SynchrotronPeakColumns.TAU_THETA),
-            xm_peak_ref = convert_ndarray(df,SynchrotronPeakColumns.XM_PEAK),
-            lambda_peak_ref = convert_ndarray(df,SynchrotronPeakColumns.LAMBDA_PEAK),
-        )
-
-    def interpolated_xm_peak(
-        self,
-        tau_theta:FloatArray
-    )->FloatArray:
-        return np.interp(
-            tau_theta,
-            self.tau_theta_ref,
-            self.xm_peak_ref
-        )
-
-    def interpolated_lambda_peak(
-        self,
-        tau_theta:FloatArray
-    )->FloatArray:
-        return np.interp(
-            tau_theta,
-            self.tau_theta_ref,
-            self.lambda_peak_ref
-        )
