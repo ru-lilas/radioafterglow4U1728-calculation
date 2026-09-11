@@ -124,7 +124,7 @@ that is, \( \mu = \num{0.5}, \mue = \num{1.0}\).
   \label{eq:definition_of_phi_theta}
   \phith
   =
-  \frac{3}{2}\Theta^2 a\sqrt{\epsB}
+  \frac{3}{2}\Theta^2 \phiA\sqrt{\epsB}
 \end{equation}
 \begin{equation}
   \label{eq:definition_of_j_nu}
@@ -179,7 +179,7 @@ that is, \( \mu = \num{0.5}, \mue = \num{1.0}\).
   \coloneq
   \alpha_{\nu}R
   =
-  \frac{a}{27}
+  \frac{\phiA}{27}
   \sqrt{
     \frac{
       2\Mep
@@ -205,7 +205,7 @@ that is, \( \mu = \num{0.5}, \mue = \num{1.0}\).
   \epsth^{-1}
   \epsB
   \Mep
-  a^2
+  \phiA^2
   \melecc
 \end{equation}
 
@@ -240,6 +240,36 @@ between the corresponding points.
 
 \section{trans-relativistic limit}
 \(\Theta_0 = 3\)
+\begin{equation}
+  \label{eq:tau_theta_tr}
+  \tauth[\transrela]
+  \approx 
+  \frac{\phiA}{27}
+  \sqrt{
+    \frac{
+      2\Mep
+    }{
+      \epsB
+    }
+  }
+\end{equation}
+\begin{equation}
+  \label{eq:phi_theta_tr}
+  \phith[\transrela]
+  =
+  \frac{3}{2}\phiA\sqrt{\epsB}
+\end{equation}
+\begin{equation}
+  \label{eq:lnu_theta_tr}
+  \lnuth[\transrela]
+  =
+  192\pi^3
+  \epsth^{-1}
+  \epsB
+  \Mep
+  \phiA^2
+  \melecc
+\end{equation}
 
 \section{Results}
 Figure \ref{fig:chevalier_diagram} shows

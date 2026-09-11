@@ -14,8 +14,26 @@
 \NewDocumentCommand\melecc{}{\ensuremath{\mele c^2}}
 \NewDocumentCommand\muep{}{\ensuremath{\mu_{\mathrm{ep}}}}
 \NewDocumentCommand\Mep{}{\ensuremath{\mathcal{M}_{\mathrm{ep}}}}
-\NewDocumentCommand\phith{}{\ensuremath{\phi_{\Theta}}}
+\NewDocumentCommand\phith{o}{
+  \ensuremath{
+    \phi_{\Theta
+      \IfValueT{#1}{,#1}%
+    }
+  }
+}
 \NewDocumentCommand\phiA{}{\ensuremath{\phi_{\symup{A}}}}
-\NewDocumentCommand\tauth{}{\ensuremath{\tau_{\Theta}}}
-\NewDocumentCommand\lnuth{}{\ensuremath{L_{\nu,\Theta}}}
+\NewDocumentCommand{\tauth}{o}{%
+  \ensuremath{%
+    \tau_{\Theta%
+      \IfValueT{#1}{,#1}%
+    }%
+  }%
+}
+\NewDocumentCommand\lnuth{o}{
+  \ensuremath{
+    L_{\nu,\Theta
+      \IfValueT{#1}{,#1}%
+    }
+  }
+}
 \NewDocumentCommand\Thetanorm{}{\ensuremath{\Theta_{\normalization}}}
