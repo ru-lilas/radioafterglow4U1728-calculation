@@ -7,7 +7,7 @@ from matplotlib.figure import Figure
 from matplotlib.patches import StepPatch
 from module import plot_utils
 from module import models,dataframe_utils
-from module.models import SynchrotronPhase, ThermalSynchrotronUtils, calculate_xm
+from module.models import PhaseParameter, ThermalSynchrotronUtils, calculate_xm
 from module.mydataclasses import QuantityArray, QuantityArray1D, QuantityData
 from module.mystatistics import CalculateChiSquared, MinimumChiSquared
 from module.plot_utils import LineStyle, MetadataConfig
@@ -1068,13 +1068,13 @@ def compute(
 )->CalculationLightcurves:
     t = config.time.quantity_array
     nu = QuantityData.from_Quantity(config.nu.quantity)
-    phi = models.SynchrotronPhase.from_time_given_nu(
+    phi = models.PhaseParameter.from_time_given_nu(
         t = t,
         nu = nu
     )
     xm = models.DimensionlessFrequency.from_phi(
         phi = phi,
-        phi_theta = models.SynchrotronPhase(
+        phi_theta = models.PhaseParameter(
             values = params.phi_theta.values,
             unit = params.phi_theta.unit
         )

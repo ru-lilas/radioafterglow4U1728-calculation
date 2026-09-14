@@ -70,26 +70,26 @@ styles:
 metadata:
   eps_b:
     show: true
-    prefix: '$\varepsilon_{\mathrm{B}}$'
+    prefix: '\varepsilon_{\mathrm{B}}'
     fmt: '.1e'
     unit: null
   eps_th:
     show: true
-    prefix: '$\varepsilon_{\mathrm{th}}$'
+    prefix: '\varepsilon_{\mathrm{th}}'
     fmt: '.2f'
     unit: null
   distance:
     show: true
-    prefix: '$D$'
+    prefix: 'D'
     fmt: '.1f'
     unit: "kpc"
   mu:
     show: true
-    prefix: '$\mu$'
+    prefix: '\mu'
     fmt: '.1f'
     unit: null
   mu_e:
     show: true
-    prefix: '$\mu_e$'
+    prefix: '\mu_e'
     fmt: '.1f'
     unit: null

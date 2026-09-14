@@ -22,6 +22,23 @@ from module.types import FloatArray, ValueScale,FloatPair
 PlotScale = Literal["linear","log"]
 AxisDirection = Literal["x","y"]
 
+def format_value(
+    value: float,
+    prefix: str,
+    fmt: str,
+)->str:
+    formatted = f"{value:{fmt}}"
+
+    if fmt.endswith("e"):
+        mantissa,exponent = formatted.split("e")
+        exponent = int(exponent)
+        return (
+            rf"${prefix}"
+            rf"={mantissa}\times10^{{{exponent}}}$"
+        )
+    else:
+        return rf"${prefix}={formatted}$"
+
 @dataclass
 class LabelConfig:
     prefix: str
@@ -330,7 +347,11 @@ class MetadataConfig:
         self,
         value:float
     )->str:
-        return f"{self.prefix}={value:{self.fmt}}"
+        return format_value(
+            value=value,
+            prefix=self.prefix,
+            fmt=self.fmt
+        )
 
 @dataclass
 class ColormapConfigure:
