@@ -47,6 +47,28 @@ contours:
     label:
       fontsize: 16
       fmt: "%.1f"
+  phi_th:
+    style:
+      colors: "#000000"
+      linestyles: "-"
+    levels:
+      start: 1.0e-01
+      stop: 1.0e+01
+      num: 10
+    label:
+      fontsize: 16
+      fmt: "%.1f"
+  theta0:
+    style:
+      colors: "#000000"
+      linestyles: "--"
+    levels:
+      start: 3.0
+      stop: 10.0
+      num: 7.0
+    label:
+      fontsize: 16
+      fmt: "%.1f"
 styles:
   obs_range:
     facecolor: "#C8C8CB"

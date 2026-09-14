@@ -17,12 +17,7 @@ def parse_args()->argparse.Namespace:
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "--input",
-        type=Path,
-        required=True
-    )
-    parser.add_argument(
-        "--peak_table",
+        "--model_table",
         type=Path,
         required=True
     )
@@ -48,19 +43,16 @@ def main():
     outpath:Path = args.output
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
-    inputs = GeneralInputs.from_yaml(args.input)
-    params = inputs.physical_parameters
-    grids = ChevalierGrid.from_yaml(args.input)
-    peak_table = LambdaPeakTable.from_csv(args.peak_table)
-    df_obs_long = LongformatLightcurve.from_csv(args.obslc)
-    df_obs_nu = df_obs_long.extract_lightcurve(
-        QuantityData(
-            value=9.0,
-            unit="GHz"
-        )
-    )
-    obs_scat = df_obs_nu.peak
-
+    grids = ChevalierGrid.from_csv(args.model_table)
+    # df_obs_long = LongformatLightcurve.from_csv(args.obslc)
+    # df_obs_nu = df_obs_long.extract_lightcurve(
+    #     QuantityData(
+    #         value=9.0,
+    #         unit="GHz"
+    #     )
+    # )
+    # obs_scat = df_obs_nu.peak
+    #
     plotconf = PlotConfig.from_yaml(args.plotconfig)
     with PdfPages(outpath) as pdf:
         fig,ax = plot_utils.create_configured_axes(plotconf.layout)
@@ -73,42 +65,48 @@ def main():
             raise ValueError("phi_unitの単位が指定されていません")
         if (fnu_unit is None):
             raise ValueError("fnu_unitの単位が指定されていません")
-
-        grids.plot(
+    #
+        grids.plot_phitheta_contour(
             ax,
-            peak_table=peak_table,
             contourconfs=plotconf.contours,
             phi_unit=phi_unit,
-            fnu_unit=fnu_unit,
-        )
-        grids.plot_metadata(
-            ax,
-            plotconf=plotconf
-        )
-        obs_scat.plot_range(
-            ax,
-            style=plotconf.styles.obs_range,
-            phi_unit=phi_unit,
             fnu_unit=fnu_unit
         )
-        obs_scat.plot_center(
-            ax,
-            style=plotconf.styles.obs_center,
-            phi_unit=phi_unit,
-            fnu_unit=fnu_unit
-        )
-        est_params = grids.select_parameters_in(
-            obs_scat,
-            peak_table,
-            phi_unit=phi_unit,
-            fnu_unit=fnu_unit
-        )
-        df = est_params.to_df(
-            phi_unit=phi_unit,
-            fnu_unit=fnu_unit,
-            lnu_unit="erg s-1 Hz-1"
-        )
-
+    #     grids.plot(
+    #         ax,
+    #         peak_table=peak_table,
+    #         contourconfs=plotconf.contours,
+    #         phi_unit=phi_unit,
+    #         fnu_unit=fnu_unit,
+    #     )
+    #     grids.plot_metadata(
+    #         ax,
+    #         plotconf=plotconf
+    #     )
+    #     obs_scat.plot_range(
+    #         ax,
+    #         style=plotconf.styles.obs_range,
+    #         phi_unit=phi_unit,
+    #         fnu_unit=fnu_unit
+    #     )
+    #     obs_scat.plot_center(
+    #         ax,
+    #         style=plotconf.styles.obs_center,
+    #         phi_unit=phi_unit,
+    #         fnu_unit=fnu_unit
+    #     )
+    #     est_params = grids.select_parameters_in(
+    #         obs_scat,
+    #         peak_table,
+    #         phi_unit=phi_unit,
+    #         fnu_unit=fnu_unit
+    #     )
+    #     df = est_params.to_df(
+    #         phi_unit=phi_unit,
+    #         fnu_unit=fnu_unit,
+    #         lnu_unit="erg s-1 Hz-1"
+    #     )
+    #
         pdf.savefig(fig)
         plt.close(fig)
 

@@ -101,6 +101,37 @@ class QuantityArray1D(QuantityArray):
                 f"shape={self.values.shape}"
             )
 
+@dataclass(frozen=True, slots=True)
+class QuantityGrid(QuantityArray):
+    def __post_init__(self) -> None:
+        if self.values.ndim != 2:
+            raise ValueError(
+                "valuesは2次元配列でなければなりません. "
+                f"shape={self.values.shape}"
+            )
+    @classmethod
+    def from_df(
+        cls,
+        df:pd.DataFrame,
+        column:str,
+        unit:str,
+        index_name:str = "index"
+    )->Self:
+        values = (
+            df.sort_values(index_name)[column]
+            .to_numpy(dtype=np.float64)
+        )
+        n = int(np.sqrt(values.size))
+
+        if n * n != values.size:
+            raise ValueError(
+                f"Cannot reshape {values.size} elements into a square grid."
+            )
+        return cls(
+            values=values.reshape(n,n),
+            unit=unit
+        )
+
 
 @dataclass(frozen=True,slots=True)
 class QuantityData:
