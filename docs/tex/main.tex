@@ -12,9 +12,7 @@
 and we assume ambient gas is composed of fully ionized hydrogen,
 that is, \( \mu = \num{0.5}, \mue = \num{1.0}\).
 \begin{equation}
-  \muep \coloneq \mue/\mupro
-\end{equation}
-\begin{equation}
+  \label{eq:definition_of_electron_proton_effective_mass_ratio}
   \Mep
   \coloneq
   \frac{\mue\mele}{\mu\mpro}
@@ -23,14 +21,17 @@ that is, \( \mu = \num{0.5}, \mue = \num{1.0}\).
   ~\ab(\frac{\mue}{1.0})
   ~\ab(\frac{\mu}{0.5})^{-1}
 \end{equation}
+Shock radius
 \begin{equation}
   R = \betash c t
 \end{equation}
+density of mass in unshocked medium
 \begin{equation}
   \rho_{\wind} 
-  \coloneq \frac{a^2\Acyc}{4\pi R^2} 
-  = \frac{\Acyc}{4\pi}\ab(\frac{a}{\betash c t})^2
+  \coloneq \frac{\phiA^2\Acyc}{4\pi R^2} 
+  = \frac{\Acyc}{4\pi}\ab(\frac{\phi}{\betash c t})^2
 \end{equation}
+, where
 \begin{equation}
   \phiA
   \coloneq 
@@ -39,6 +40,7 @@ that is, \( \mu = \num{0.5}, \mue = \num{1.0}\).
   \qty{2.2e-1}{\GHz\min}
   ~\ab(\frac{\Awind}{\qty{1.0e+07}{\g\per\cm}})^{1/2}
 \end{equation}
+and
 \begin{equation}
   \Acyc
   \coloneq 
@@ -46,30 +48,38 @@ that is, \( \mu = \num{0.5}, \mue = \num{1.0}\).
   =
   \qty{5.672e-14}{\g\per\cm}
 \end{equation}
+number density of electron in unshocked medium
 \begin{equation}
   n_{\wind} 
   \coloneq \frac{\rho_{\wind}}{\mu \mpro} 
   = \frac{\Acyc}{4\pi\mu\mpro}
-  \ab(\frac{a}{\betash c t})^2
+  \ab(\frac{\phiA}{\betash c t})^2
 \end{equation}
+We assume the shock is strong.
+From Rankine-Hugoniot relation,
+the number density of electron in shocked medium
+is given by
 \begin{equation}
   n_{\ele} 
   \coloneq 4\mu_{\ele} n_{\wind}
   =
   \frac{\Acyc}{\pi\mele}
   \Mep
-  \ab(\frac{a}{\betash c t})^2
+  \ab(\frac{\phiA}{\betash c t})^2
 \end{equation}
+We assume that
+the strength of magnetic field has the fllowing condition
 \begin{equation}
   \frac{B^2}{8\pi}
   = \epsB \frac{9}{8}\rho_{\wind}(\betash c)^2
 \end{equation}
+, that is,
 \begin{equation}
   B
   = 
   \frac{3}{2}
   \ab(\epsB \Acyc)^{1/2}
-  \frac{a}{t}
+  \frac{\phiA}{t}
 \end{equation}
 \begin{equation}
   u_{\ele} = a(\Theta)n_{\ele}\Theta \melecc
@@ -146,7 +156,7 @@ that is, \( \mu = \num{0.5}, \mue = \num{1.0}\).
     \Theta
   }
   \melecc
-  \ab(\frac{a}{ct})^3
+  \ab(\frac{\phiA}{ct})^3
   f(\Theta)
 \end{equation}
 \begin{equation}
@@ -170,7 +180,7 @@ that is, \( \mu = \num{0.5}, \mue = \num{1.0}\).
   }{
     \Theta^6\sqrt{\epsB}
   }
-  \ab(\frac{a}{ct})
+  \ab(\frac{\phiA}{ct})
   f(\Theta)
 \end{equation}
 \begin{equation}
