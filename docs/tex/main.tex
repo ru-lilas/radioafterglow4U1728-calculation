@@ -12,6 +12,11 @@
 and we assume ambient gas is composed of fully ionized hydrogen,
 that is, \( \mu = \num{0.5}, \mue = \num{1.0}\).
 \begin{equation}
+  \muep
+  =\coloneq
+  \frac{\mue}{\mu}
+\end{equation}
+\begin{equation}
   \label{eq:definition_of_electron_proton_effective_mass_ratio}
   \Mep
   \coloneq
@@ -35,10 +40,11 @@ density of mass in unshocked medium
 \begin{equation}
   \phiA
   \coloneq 
-  \sqrt{\frac{\Awind}{\Acyc}}
+  \sqrt{\frac{\Awind}{\Asyn}}
   =
-  \qty{2.2e-1}{\GHz\min}
-  ~\ab(\frac{\Awind}{\qty{1.0e+07}{\g\per\cm}})^{1/2}
+  \qty{2.00}{\GHz\min}
+  \thetanorm[-4]{\num{3.0}}
+  ~\ab(\frac{\Awind}{\qty{1.0e+07}{\g\per\cm}})^{\frac{1}{2}}
 \end{equation}
 and
 \begin{equation}
@@ -47,6 +53,16 @@ and
   \ab(\frac{4\pi\melecc}{3ec})^2
   =
   \qty{5.672e-14}{\g\per\cm}
+\end{equation}
+\begin{equation}
+  \Asyn
+  \coloneq 
+  \ab(\frac{4\pi\melecc}{3\Theta^2 ec})^2
+  =
+  \Theta^{-4}\Acyc
+  =
+  \qty{7.00e-16}{\g\per\cm}
+  \thetanorm[-4]{\num{3.0}}
 \end{equation}
 number density of electron in unshocked medium
 \begin{equation}
@@ -134,7 +150,11 @@ the strength of magnetic field has the fllowing condition
   \label{eq:definition_of_phi_theta}
   \phith
   =
-  \frac{3}{2}\Theta^2 \phiA\sqrt{\epsB}
+  \frac{3}{2}\phiA\sqrt{\epsB}
+  =
+  \qty{0.30}{\GHz\min}
+  ~\ab(\frac{\phiA}{\qty{2.0}{\GHz \min}})
+  ~\ab(\frac{\epsB}{\num{1.0e-02}})^{\frac{1}{2}}
 \end{equation}
 \begin{equation}
   \label{eq:definition_of_j_nu}
@@ -153,7 +173,7 @@ the strength of magnetic field has the fllowing condition
   \frac{
     \epsth\sqrt{\epsB}
   }{
-    \Theta
+    \Theta^7
   }
   \melecc
   \ab(\frac{\phiA}{ct})^3
@@ -178,27 +198,34 @@ the strength of magnetic field has the fllowing condition
   \frac{
     \epsth
   }{
-    \Theta^6\sqrt{\epsB}
+    \Theta^8\sqrt{\epsB}
   }
   \ab(\frac{\phiA}{ct})
   f(\Theta)
 \end{equation}
-\begin{equation}
+\begin{empheq}{align}
   \label{eq:definition_of_tau_theta}
   \tauth
-  \coloneq
+  &\coloneq
   \alpha_{\nu}R
   =
-  \frac{\phiA}{27}
+  \frac{2}{81}
+  \frac{\phith}{\epsB}
   \sqrt{
     \frac{
       2\Mep
     }{
-      \epsB\Theta^{11}
+      \Theta^{15}
     }
   }
-  f(\Theta)
-\end{equation}
+  f(\Theta) \\
+  &\approx
+  \num{5.5e+05}
+  ~\ab(\frac{\phiA}{\qty{2.0}{\GHz \min}})
+  ~\ab(\frac{\muep}{\num{2.0}})^{-\frac{1}{2}}
+  \thetanorm[-\frac{15}{2}]{\num{3.0}}
+  \epsbnorm[-\frac{1}{2}]{\num{e-02}}
+\end{empheq}
 \begin{equation}
   \label{eq:definition_of_l_theta}
   \lnuth
@@ -210,13 +237,11 @@ the strength of magnetic field has the fllowing condition
     \alpha_{\Theta}
   }
   =
-  192\pi^3
-  \Theta^6
-  \epsth^{-1}
-  \epsB
+  \frac{256}{3}\pi^3
+  \Theta^{14}
   \Mep
-  \phiA^2
   \melecc
+  \frac{\phith^2}{\epsth}
 \end{equation}
 
 \section{}
@@ -249,20 +274,30 @@ between the corresponding points.
 \end{equation}
 
 \section{trans-relativistic limit}
-\(\Theta_0 = 3\)
+We set a trans-relativistic limit as
+\(\Theta_0 = 3\).
+\begin{equation}
+  \label{eq:beta_sh_tr}
+  \betash[\transrela]
+  =
+  \num{0.170}
+  \muepnorm{\num{2.0}}
+  \epsthnorm[-1]{\num{0.4}}
+  \thetatrnorm{\num{3.0}}
+\end{equation}
+
 \begin{equation}
   \label{eq:tau_theta_tr}
   \tauth[\transrela]
-  \approx 
-  \frac{\phiA}{27}
-  \sqrt{
-    \frac{
-      2\Mep
-    }{
-      \epsB
-    }
-  }
+  =
+  \num{2.3e9}
+  \phiAnorm{\phiAfiducial}
+  \muepnorm[-\frac{1}{2}]{\muepFiducial}
+  \epsbnorm[-\frac{1}{2}]{\epsBFiducial}
+  \thetatrnorm[-\frac{15}{2}]{\ThetaTrFiducial}
 \end{equation}
+The error of hot-limit fomula against
+exact one is smaller than \qty{0.5}{\percent}.
 \begin{equation}
   \label{eq:phi_theta_tr}
   \phith[\transrela]
@@ -273,12 +308,37 @@ between the corresponding points.
   \label{eq:lnu_theta_tr}
   \lnuth[\transrela]
   =
-  192\pi^3
-  \epsth^{-1}
-  \epsB
-  \Mep
-  \phiA^2
-  \melecc
+  \qty{1.91e15}{erg \per\s\per\Hz}
+  \phiAnorm[2]{\phiAfiducial}
+  \muepnorm{\muepFiducial}
+  \epsbnorm{\epsBFiducial}
+  \epsthnorm[-1]{\epsthFiducial}
+  \thetatrnorm[14]{\ThetaTrFiducial}
+\end{equation}
+\section{Optically thin limit in the Thermal Synchrotron}
+\begin{equation}
+  \label{eq:condition_optically_thin}
+  \tauth \gtrsim \num{1.0}
+\end{equation}
+\begin{equation}
+  \label{eq:theta_optically_thin_limit}
+  \Theta 
+  \lesssim
+  \num{20.5}
+  \phiThnorm[\frac{2}{15}]{\phiThFiducial}
+  \epsbnorm[-\frac{2}{15}]{\epsBFiducial}
+  \muepnorm[\frac{1}{15}]{\muepFiducial}
+\end{equation}
+\begin{equation}
+  \label{eq:theta0_optically_thin_limit}
+  \Theta_0
+  \approx
+  \frac{1}{3}\Theta
+  \lesssim
+  \num{6.83}
+  \phiThnorm[\frac{2}{15}]{\phiThFiducial}
+  \epsbnorm[-\frac{2}{15}]{\epsBFiducial}
+  \muepnorm[\frac{1}{15}]{\muepFiducial}
 \end{equation}
 
 \section{Results}

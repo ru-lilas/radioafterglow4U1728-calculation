@@ -14,6 +14,14 @@
 \NewDocumentCommand\melecc{}{\ensuremath{\mele c^2}}
 \NewDocumentCommand\muep{}{\ensuremath{\mu_{\mathrm{ep}}}}
 \NewDocumentCommand\Mep{}{\ensuremath{\mathcal{M}_{\mathrm{ep}}}}
+\NewDocumentCommand\betash{o}{
+  \ensuremath{
+    \beta_{
+      \shock
+      \IfValueT{#1}{,#1}
+    }
+  }
+}
 \NewDocumentCommand\phith{o}{
   \ensuremath{
     \phi_{\Theta
@@ -36,4 +44,90 @@
     }
   }
 }
-\NewDocumentCommand\Thetanorm{}{\ensuremath{\Theta_{\normalization}}}
+\NewDocumentCommand\normgeneral{o m m}{
+  \ensuremath{
+    ~\ab(\frac{#2}{#3})
+      \IfValueT{#1}{^{#1}}%
+  }
+}
+\NewDocumentCommand\muepnorm{o m}{
+  \normgeneral[
+    \IfValueT{#1}{#1}
+  ]{
+    \muep
+  }{
+    #2
+  }
+}
+\NewDocumentCommand\phiAnorm{o m}{
+  \normgeneral[
+    \IfValueT{#1}{#1}
+  ]{
+    \phiA
+  }{
+    #2
+  }
+}
+\NewDocumentCommand\phiThnorm{o m}{
+  \normgeneral[
+    \IfValueT{#1}{#1}
+  ]{
+    \phith
+  }{
+    #2
+  }
+}
+\NewDocumentCommand\epsthnorm{o m}{
+  \normgeneral[
+    \IfValueT{#1}{#1}
+  ]{
+    \epsth
+  }{
+    #2
+  }
+}
+\NewDocumentCommand\epsbnorm{o m}{
+  \normgeneral[
+    \IfValueT{#1}{#1}
+  ]{
+    \epsB
+  }{
+    #2
+  }
+}
+\NewDocumentCommand\thetanorm{o m}{
+  \normgeneral[
+    \IfValueT{#1}{#1}
+  ]{
+    \Theta
+  }{
+    #2
+  }
+}
+\NewDocumentCommand\thetatrnorm{o m}{
+  \normgeneral[
+    \IfValueT{#1}{#1}
+  ]{
+    \Theta_{0,\transrela}
+  }{
+    #2
+  }
+}
+\NewDocumentCommand\muepFiducial{}{
+  \num{2.0}
+}
+\NewDocumentCommand\phiAfiducial{}{
+  \qty{2.0}{\GHz \min}
+}
+\NewDocumentCommand\phiThFiducial{}{
+  \unit{\GHz \min}
+}
+\NewDocumentCommand\epsBFiducial{}{
+  \num{e-2}
+}
+\NewDocumentCommand\epsthFiducial{}{
+  \num{e-2}
+}
+\NewDocumentCommand\ThetaTrFiducial{}{
+  \num{3.0}
+}
