@@ -34,28 +34,30 @@ class SynchrotronPeakColumns(StrEnum):
     LAMBDA_PEAK = auto()
 
 class ModelParameterNames(StrEnum):
-    A_WIND = auto()
-    BETA_SH = auto()
+    PHI_TH = auto()
+    THETA0 = auto()
     EPS_B = auto()
     EPS_TH = auto()
-    MU = auto()
-    MU_E = auto()
+    MU_E_MU = auto()
     DISTANCE_VALUE = auto()
     DISTANCE_UNIT = auto()
-    THETA = auto()
-    PHI_THETA = auto()
-    TAU_THETA = auto()
-    TAU_THETA_UPPER = auto()
-    IS_TRANS_RELATIVISTIC = auto()
-    LNU_THETA = auto()
-    DOPPLER_DELTA = auto()
     A_WIND_UNIT = auto()
     PHI_UNIT = auto()
     LNU_UNIT = auto()
+    FNU_UNIT = auto()
 
 class ModelColumnNames(StrEnum):
     PHI_PEAK = auto()
     FNU_PEAK = auto()
+    THETA = auto()
+    THETA_THIN = auto()
+    IS_SSA_THICK = auto()
+    A_SYN = auto()
+    PHI_A = auto()
+    PHI_THETA = auto()
+    TAU_THETA = auto()
+    LNU_THETA = auto()
+    DOPPLER_DELTA = auto()
 
 @dataclass(frozen=True,slots=True)
 class LambdaPeakTable:
@@ -96,76 +98,81 @@ class LambdaPeakTable:
         )
 
 @dataclass(frozen=True,slots=True)
+class ParameterGrid:
+    phi_th:models.ThermalSynchrotronPhase
+    theta0:models.ElectronTemperatureScaling
+
+    @classmethod
+    def from_arrays(
+        cls,
+        phi_th:QuantityArray,
+        theta0:FloatArray
+    )->Self:
+        phith_val = phi_th.values
+        phi_unit = phi_th.unit
+        phith_axis = np.unique(phith_val)
+
+        theta0_axis = np.unique(theta0)
+        phith_value_grid,theta0_grid = np.meshgrid(
+            phith_axis,
+            theta0_axis,
+            indexing="xy",
+            sparse=False
+        )
+        phith_grid = models.ThermalSynchrotronPhase(
+            values=phith_value_grid,
+            unit=phi_unit
+        )
+        return cls(
+            phi_th=phith_grid,
+            theta0=models.ElectronTemperatureScaling(theta0_grid)
+        )
+
+@dataclass(frozen=True,slots=True)
 class ModelParameterTable:
-    a_wind: QuantityArray1D
-    beta_sh: FloatArray
+    grid: ParameterGrid
     eps_b: float
     eps_th: float
-    mu: float
-    mu_e: float
+    mep: float
     distance: QuantityData
 
     @property
-    def a_wind_axis(self)->FloatArray:
-        return np.unique(self.a_wind.values)
-
-    @property
-    def beta_sh_axis(self)->FloatArray:
-        return np.unique(self.beta_sh)
-
-    def build_meshgrid(self):
-        a_wind_unit = self.a_wind.unit
-
-        a_wind_value_grid,beta_sh_grid = np.meshgrid(
-            self.a_wind_axis,
-            self.beta_sh_axis,
-            indexing="xy",
-            sparse=True
-        )
-        a_wind_grid = QuantityArray(
-            values = a_wind_value_grid,
-            unit = a_wind_unit
-        )
-        return (a_wind_grid,beta_sh_grid)
-
-    @property
-    def theta(self)->FloatArray:
-        return electron_temperature.calculate_theta_e(
+    def beta_sh(self):
+        return self.grid.theta0.to_beta(
             eps_th=self.eps_th,
-            mu=self.mu,
-            mu_e=self.mu_e,
-            beta_sh=self.beta_sh
+            mep=self.mep
         )
 
     @property
-    def phi_theta(self):
-        return QuantityArray1D.from_Quantity(
-            synchrotron_scaling_values.calculate_phi_theta(
-                theta = self.theta,
-                eps_b = self.eps_b,
-                a_wind = self.a_wind.quantity
-        ))
+    def theta(self):
+        return self.grid.theta0.to_theta()
 
     @property
-    def tau_theta(self)->FloatArray:
-        return synchrotron_scaling_values.calculate_tau_theta(
-            theta = self.theta,
-            eps_b = self.eps_b,
-            a_wind = self.a_wind.quantity,
-            beta_sh=self.beta_sh,
-            mu=self.mu,
-            mu_e=self.mu_e,
+    def theta_thin(self):
+        return models.ElectronTemperatureOpticallyThinLimit.from_params(
+            mep=self.mep,
+            eps_b=self.eps_b,
+            phi_th=self.grid.phi_th
+        )
+
+    @property
+    def tau_theta(self)->models.OpticalDepthParameter:
+        return models.OpticalDepthParameter.from_params_exact(
+            mep=self.mep,
+            eps_b=self.eps_b,
+            theta=self.theta,
+            phi_th=self.grid.phi_th
         )
 
     @property
     def lnu_theta(self):
-        return QuantityArray1D.from_Quantity(
-            synchrotron_scaling_values.calculate_l_theta(
-                theta = self.theta,
-                eps_b = self.eps_b,
-                a_wind = self.a_wind.quantity,
-                beta_sh=self.beta_sh,
-        ))
+        return models.ThermalSynchrotronLuminosity.from_params(
+            mep=self.mep,
+            eps_b=self.eps_b,
+            theta=self.theta,
+            eps_th=self.eps_th,
+            phi_th=self.grid.phi_th
+        )
 
     @property
     def doppler_delta(self):
@@ -174,12 +181,12 @@ class ModelParameterTable:
     def phi_peak(
         self,
         peak_table:LambdaPeakTable
-    )->QuantityArray1D:
-        phi_theta = self.phi_theta
+    )->QuantityArray:
+        phi_theta = self.grid.phi_th
         xm_peak = peak_table.interpolated_lambda_peak(
-            self.tau_theta
+            self.tau_theta.values
         )
-        return QuantityArray1D(
+        return QuantityArray(
             values = phi_theta.values*xm_peak,
             unit = phi_theta.unit
         )
@@ -187,12 +194,12 @@ class ModelParameterTable:
     def lnu_peak(
         self,
         peak_table:LambdaPeakTable
-    )->QuantityArray1D:
+    )->QuantityArray:
         lnu_theta = self.lnu_theta
         lambda_peak = peak_table.interpolated_lambda_peak(
-            self.tau_theta
+            self.tau_theta.values
         )
-        return QuantityArray1D(
+        return QuantityArray(
             values = lnu_theta.values*lambda_peak,
             unit = lnu_theta.unit
         )
@@ -200,12 +207,12 @@ class ModelParameterTable:
     def fnu_peak_observerframe(
         self,
         peak_table:LambdaPeakTable
-    )->QuantityArray1D:
+    )->QuantityArray:
         lnu_peak = self.lnu_peak(peak_table).quantity
         distance = self.distance.quantity
         doppler_delta = self.doppler_delta 
         fnu_peak = doppler_delta**3 * lnu_peak / (4.0*np.pi*distance**2)
-        return QuantityArray1D.from_Quantity(
+        return QuantityArray.from_Quantity(
             quantity = fnu_peak
         )
 
@@ -218,31 +225,31 @@ class ModelParameterTable:
         lnu_unit:str = "erg s-1 Hz-1",
         fnu_unit:str = "mJy",
     )->pd.DataFrame:
-        a_wind = self.a_wind
-        phi_theta = self.phi_theta
-        lnu_theta = self.lnu_theta
-        tau_theta = self.tau_theta
+        grid = self.grid
+        theta_val = self.theta.values
+        theta_thin_val = self.theta_thin.values
         phi_peak = self.phi_peak(peak_table)
         fnu_peak = self.fnu_peak_observerframe(peak_table)
         df = pd.DataFrame({
-            ModelParameterNames.A_WIND: a_wind.to_value_in(a_wind_unit),
-            ModelParameterNames.BETA_SH: self.beta_sh,
-            ModelParameterNames.THETA: self.theta,
-            ModelParameterNames.PHI_THETA: phi_theta.to_value_in(phi_unit),
-            ModelParameterNames.LNU_THETA: lnu_theta.to_value_in(lnu_unit),
-            ModelParameterNames.TAU_THETA: tau_theta,
-            ModelParameterNames.DOPPLER_DELTA: self.doppler_delta,
-            ModelColumnNames.PHI_PEAK: phi_peak.to_value_in(phi_unit),
-            ModelColumnNames.FNU_PEAK: fnu_peak.to_value_in(fnu_unit)
+            ModelParameterNames.PHI_TH: grid.phi_th.to_value_in(phi_unit).ravel(),
+            ModelParameterNames.THETA0: grid.theta0.values.ravel(),
+            ModelColumnNames.THETA: theta_val.ravel(),
+            ModelColumnNames.THETA_THIN: theta_thin_val.ravel(),
+            ModelColumnNames.IS_SSA_THICK: (theta_val < theta_thin_val).ravel(),
+            ModelColumnNames.TAU_THETA: self.tau_theta.values.ravel(),
+            ModelColumnNames.LNU_THETA: self.lnu_theta.to_value_in(lnu_unit).ravel(),
+            ModelColumnNames.DOPPLER_DELTA: self.doppler_delta.ravel(),
+            ModelColumnNames.PHI_PEAK: phi_peak.to_value_in(phi_unit).ravel(),
+            ModelColumnNames.FNU_PEAK: fnu_peak.to_value_in(fnu_unit).ravel()
         })
         df.attrs[ModelParameterNames.EPS_B] = self.eps_b
         df.attrs[ModelParameterNames.EPS_TH] = self.eps_th
-        df.attrs[ModelParameterNames.MU] = self.mu
-        df.attrs[ModelParameterNames.MU_E] = self.mu_e
+        df.attrs[ModelParameterNames.MU_E_MU] = models.MolecularWeightRatio.from_mep(self.mep)
         df.attrs[ModelParameterNames.DISTANCE_VALUE] = self.distance.value
         df.attrs[ModelParameterNames.DISTANCE_UNIT] = self.distance.unit
         df.attrs[ModelParameterNames.A_WIND_UNIT] = a_wind_unit
         df.attrs[ModelParameterNames.PHI_UNIT] = phi_unit
         df.attrs[ModelParameterNames.LNU_UNIT] = lnu_unit
+        df.attrs[ModelParameterNames.FNU_UNIT] = fnu_unit
         return df
 

@@ -1,16 +1,16 @@
-physical_parameters:
-  a_wind:
+model_parameters:
+  phi_th:
     values:
-      start: 4.0
-      stop: 8.0
+      start: 0.0
+      stop: 2.0
       num: 256
       scale: "log"
-    unit: "g cm-1"
-  beta_sh:
-    start: -1.0
-    stop: -0.3
+    unit: "GHz min"
+  theta0:
+    start: 3.0
+    stop: 8.0
     num: 256
-    scale: "log"
+    scale: "linear"
   eps_th: 0.4
   eps_b: 1.0e-02
   mu: 0.5

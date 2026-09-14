@@ -36,36 +36,45 @@ PHI = (1*u.Unit("GHz")*1*u.Unit("min")).decompose()
 
 MASS_RATIO_ELE_PRO = (m_e/m_p).decompose()
 
+log10_2 = np.log10(2.0)
+log10_3 = np.log10(3.0)
+
+@dataclass(frozen=True,slots=True)
+class ElectronTemperature:
+    values:FloatArray
+
 class MaxwellJuttnerFactor:
 
     @staticmethod
     def exact(
-        theta:FloatArray
+        theta:ElectronTemperature
     )->FloatArray:
+        theta_val = theta.values
         return (
-            2.0*theta**2 / special.kv(2,1.0/theta)
+            2.0*theta_val**2 / special.kv(2,1.0/theta_val)
         )
 
     @staticmethod
     def hot(
-        theta:FloatArray
+        theta:ElectronTemperature
     )->FloatArray:
-        return np.ones_like(theta)
+        theta_val = theta.values
+        return np.ones_like(theta_val)
 
     def plot(
         self,
-        theta:FloatArray,
+        theta:ElectronTemperature,
         ax:Axes,
         style:plot_utils.LineStyle,
     ):
         f_exact = self.exact(theta)
         ax.plot(
-            theta,f_exact,
+            theta.values,f_exact,
             **style.to_kwargs()
         )
 
 @dataclass(frozen=True,slots=True)
-class PhaseParameter(QuantityArray1D):
+class PhaseParameter(QuantityArray):
 
     @classmethod
     def from_time_given_nu(
@@ -84,6 +93,12 @@ class PhaseParameter(QuantityArray1D):
             nu*self.quantity
         )
 
+    def decompose(
+        self
+    )->FloatArray:
+        return np.asarray(
+            self.to_value_in("")
+        )
 
 class DimensionlessElectronTemperature:
     @staticmethod
@@ -113,13 +128,18 @@ class DimensionlessElectronTemperature:
         return theta0 / 3.0
 
 @dataclass(frozen=True,slots=True)
-class MolecularWeight:
-    mu: float
-    mu_e: float
+class EffectiveElectronProtonMassRatio: 
+    value:float
 
-    @property
-    def effective_mass_ratio(self):
-        return float((self.mu_e*MASS_RATIO_ELE_PRO/self.mu).decompose())
+    @classmethod
+    def from_muep(
+        cls,
+        muep:float
+    )->Self:
+        return cls(
+            value=float((muep*MASS_RATIO_ELE_PRO).decompose())
+        )
+
 
 @dataclass(frozen=True,slots=True)
 class ElectronTemperatureScaling:
@@ -129,84 +149,172 @@ class ElectronTemperatureScaling:
     def from_params(
         cls,
         eps_th:float,
-        m_ratio_ep:float,
+        mep:float,
         beta_sh:FloatArray
     )->Self:
         return cls(
-            values = 9.0*eps_th*beta_sh**2/(32.0*m_ratio_ep)
+            values = 9.0*eps_th*beta_sh**2/(32.0*mep)
         )
 
     def to_beta(
         self,
         eps_th:float,
-        m_ratio_ep:float,
+        mep:float,
     )->FloatArray:
-        beta2 = (32.0*m_ratio_ep*self.theta0/(9.0*eps_th))
+        beta2 = (32.0*mep*self.values/(9.0*eps_th))
         return np.sqrt(beta2)
 
     def to_theta(
         self
-    )->FloatArray:
-        return DimensionlessElectronTemperature.hot(self.theta0)
+    )->ElectronTemperature:
+        return ElectronTemperature(
+                values = DimensionlessElectronTemperature.hot(self.values)
+        )
+
+#=== A_wind ===#
+class WindParameterNormalization:
+    @staticmethod
+    def cyclotron()->QuantityData:
+        return QuantityData.from_Quantity(A_CYC)
+
+    @staticmethod
+    def synchrotron(
+        theta:FloatArray
+    )->QuantityArray:
+        return QuantityArray.from_Quantity(
+            A_CYC/theta**4
+        )
 
 @dataclass(frozen=True,slots=True)
-class NormalizedWindParameter(QuantityArray1D):
+class NormalizedWindParameter(PhaseParameter):
 
     @classmethod
     def from_a_wind(
         cls,
-        a_wind:QuantityArray1D,
-        a_norm:QuantityData
+        a_wind:QuantityArray,
+        a_norm:QuantityArray
     )->Self:
         a_wind_q = a_wind.quantity
         a_norm_q = a_norm.quantity
-        phi_a = np.sqrt((a_wind_q/a_norm_q)).to("GHz min")
+        phi_a = np.sqrt((a_wind_q/a_norm_q))
         return cls.from_Quantity(phi_a)
 
     def to_a_wind(
         self,
-        a_norm:QuantityData
-    )->QuantityArray1D:
-        return QuantityArray1D.from_Quantity(
-            self.quantity*a_norm.quantity
+    )->QuantityArray:
+        return QuantityArray.from_Quantity(
+            self.phi_a.quantity*self.a_norm.quantity
         )
 
-    def decompose(
-        self
-    )->FloatArray:
-        return np.asarray(
-            self.quantity.to_value(u.dimensionless_unscaled)
-        )
 
+#=== phi_theta ===#
 @dataclass(frozen=True,slots=True)
-class ThemalSynchrotronPhase(PhaseParameter):
+class ThermalSynchrotronPhase(PhaseParameter):
 
     @classmethod
-    def from_params(
+    def from_phiA_syn(
         cls,
         eps_b:float,
-        theta:FloatArray,
         phi_a:NormalizedWindParameter,
     )->Self:
         return cls.from_Quantity(
-            1.5*theta**2*phi_a.quantity*np.sqrt(eps_b)
+            1.5*phi_a.quantity*np.sqrt(eps_b)
         )
+
+    def to_phiA(
+        self,
+        eps_b:float,
+    )->NormalizedWindParameter:
+        return NormalizedWindParameter.from_Quantity(
+            2.0*self.quantity/(3.0*np.sqrt(eps_b))
+        )
+
+@dataclass(frozen=True,slots=True)
+class ElectronTemperatureOpticallyThinLimit(ElectronTemperature):
+    @classmethod
+    def from_params(
+        cls,
+        mep:float,
+        eps_b:float,
+        phi_th:ThermalSynchrotronPhase
+    )->Self:
+        phith_val = phi_th.decompose()
+        log10_phith = np.log10(phith_val)
+        log10_mep = np.log10(mep)
+        log10_epsb = np.log10(eps_b)
+        log10_theta = np.asarray((
+            2.0*log10_phith \
+            -8.0*log10_3 \
+            +3.0*log10_2 \
+            -2.0*log10_epsb \
+            +log10_mep
+        )/15.0)
+        return cls(10**log10_theta)
 
 @dataclass(frozen=True,slots=True)
 class OpticalDepthParameter:
     values:FloatArray
     @classmethod
+    def from_params_exact(
+        cls,
+        mep: float,
+        eps_b:float,
+        theta:ElectronTemperature,
+        phi_th:ThermalSynchrotronPhase,
+        hot:bool=False
+    )->Self:
+        phi_th_val = phi_th.decompose()
+        f_factor = MaxwellJuttnerFactor.exact(theta) if not hot else MaxwellJuttnerFactor.hot(theta)
+        return cls(
+            values = (phi_th_val/27.0)*np.sqrt(2.0*mep/(eps_b*theta.values**15)*f_factor)
+        )
+
+@dataclass(frozen=True,slots=True)
+class ThermalSynchrotronLuminosity(QuantityArray):
+    @classmethod
     def from_params(
         cls,
         mep: float,
         eps_b:float,
-        theta:FloatArray,
-        phi_a:NormalizedWindParameter
+        eps_th:float,
+        theta:ElectronTemperature,
+        phi_th:ThermalSynchrotronPhase
     )->Self:
-        phi_a_decomposed = phi_a.decompose()
-        return cls(
-            values = (phi_a_decomposed/27.0)*np.sqrt(2.0*mep/(eps_b*theta**11)*MaxwellJuttnerFactor.exact(theta))
+        phith_val = phi_th.decompose()
+        quantities = (
+            256*np.pi**3
+            *theta.values**14
+            *mep
+            *mec2
+            *phith_val**2
+            /(3.0*eps_th)
         )
+        return cls.from_Quantity(quantities)
+
+
+@dataclass(frozen=True,slots=True)
+class MolecularWeightRatio:
+    value: float
+
+    @classmethod
+    def from_params(
+        cls,
+        mu:float,
+        mu_e:float
+    )->Self:
+        return cls(mu_e/mu)
+
+    @classmethod
+    def from_mep(
+        cls,
+        mep:float
+    )->float:
+        return float((mep/MASS_RATIO_ELE_PRO).decompose())
+
+    def to_mep(
+        self
+    )->float:
+        return float((self.value*MASS_RATIO_ELE_PRO).decompose())
 
 def calculate_effective_mass_ratio(
     mu:float,
@@ -219,8 +327,8 @@ def calculate_lnu_theta(
     eps_b:float,
     mep:float,
     a:FloatArray
-)->QuantityArray1D:
-    return QuantityArray1D.from_Quantity(
+)->QuantityArray:
+    return QuantityArray.from_Quantity(
         192*np.pi**3*eps_b*mep*a**2*mec2/eps_th
     )
 

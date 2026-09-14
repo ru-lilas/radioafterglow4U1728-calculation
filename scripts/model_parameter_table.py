@@ -30,8 +30,11 @@ def main():
 
     general_inputs = GeneralInputs.from_yaml(args.input)
     peak_table = LambdaPeakTable.from_csv(args.peak_table)
-    model_params = general_inputs.physical_parameters
+    model_params = general_inputs.model_parameters
     model_table = model_params.build()
+
+    print(model_table.grid.theta0.values.shape)
+    print(model_table.theta.values.shape)
 
     df = model_table.to_df(peak_table)
     FileWriter.df_to_csv(

@@ -35,6 +35,12 @@ class ValueArray(YAMLReadable):
         else:
             return np.logspace(start=self.start,stop=self.stop,num=self.num,dtype=np.float64)
 
+    def to_floatarray(self)->FloatArray:
+        if (self.scale == "linear"):
+            return np.linspace(start=self.start,stop=self.stop,num=self.num,dtype=np.float64)
+        else:
+            return np.logspace(start=self.start,stop=self.stop,num=self.num,dtype=np.float64)
+
 @dataclass(frozen=True,slots=True)
 class QuantityArrayBase:
     values: ValueArray
@@ -44,9 +50,8 @@ class QuantityArrayBase:
     def quantity(self):
         return u.Quantity(self.values.arr,self.unit)
 
-    @property
-    def quantity_array(self):
-        return QuantityArray(
+    def to_QuantityArray1D(self):
+        return QuantityArray1D(
             values = self.values.arr,
             unit = self.unit
         )
@@ -95,6 +100,7 @@ class QuantityArray1D(QuantityArray):
                 "valuesは1次元配列でなければなりません. "
                 f"shape={self.values.shape}"
             )
+
 
 @dataclass(frozen=True,slots=True)
 class QuantityData:
