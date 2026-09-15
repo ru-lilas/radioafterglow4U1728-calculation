@@ -66,7 +66,7 @@ class MaxwellJuttnerFactor:
         style:plot_utils.LineStyle,
     ):
         f_exact = self.exact(theta)
-        ax.plot(
+        return ax.plot(
             theta.values,f_exact,
             **style.to_kwargs()
         )
@@ -241,6 +241,7 @@ class WindParameter(QuantityArray):
             4.0*a_syn.quantity*phi_val**2/(9.0*eps_b)
         )
 
+
 @dataclass(frozen=True,slots=True)
 class ElectronTemperatureOpticallyThinLimit(ElectronTemperature):
     @classmethod
@@ -267,6 +268,25 @@ class ElectronTemperatureOpticallyThinLimit(ElectronTemperature):
         print(10**log10_theta)
         return cls(10**log10_theta)
 
+class SelfAbsorptionOpticallyThinLimit:
+    @staticmethod
+    def theta0(
+        eps_b:float,
+        eps_th:float,
+        phith:ThermalSynchrotronPhase,
+        mep:float
+    )->ElectronTemperatureOpticallyThinLimit:
+        phi = phith.decompose()
+        return ElectronTemperatureOpticallyThinLimit(
+            (
+            (np.pi*phi/eps_b)**2
+                *2.0**5
+                *3.0**7
+                *eps_th
+                *mep
+        )**(1/15.0)
+    )
+
 @dataclass(frozen=True,slots=True)
 class OpticalDepthParameter:
     values:FloatArray
@@ -275,14 +295,22 @@ class OpticalDepthParameter:
         cls,
         mep: float,
         eps_b:float,
+        eps_th:float,
         theta:ElectronTemperature,
+        theta0:ElectronTemperatureScaling,
         phi_th:ThermalSynchrotronPhase,
         hot:bool=False
     )->Self:
-        phi_th_val = phi_th.decompose()
+        phi = phi_th.decompose()
         f_factor = MaxwellJuttnerFactor.exact(theta) if not hot else MaxwellJuttnerFactor.hot(theta)
         return cls(
-            values = (phi_th_val/27.0)*np.sqrt(2.0*mep/(eps_b*theta.values**15)*f_factor)
+            values = (
+                (np.pi*phi/(eps_b*theta.values**7))
+                *np.sqrt(
+                    32.0*eps_th*mep
+                    / (3.0**7*theta0.values)
+                )*f_factor
+            )
         )
 
 @dataclass(frozen=True,slots=True)
@@ -291,19 +319,19 @@ class ThermalSynchrotronLuminosity(QuantityArray):
     def from_params(
         cls,
         mep: float,
-        eps_b:float,
         eps_th:float,
         theta:ElectronTemperature,
+        theta0:ElectronTemperatureScaling,
         phi_th:ThermalSynchrotronPhase
     )->Self:
         phith_val = phi_th.decompose()
         quantities = (
-            256*np.pi**3
-            *theta.values**14
-            *mep
-            *mec2
-            *phith_val**2
-            /(3.0*eps_th)
+            2.0**7*np.pi**2 / (9.0*eps_th)
+            * mep
+            * phith_val**2
+            * theta0.values
+            * theta.values
+            * mec2
         )
         return cls.from_Quantity(quantities)
 
@@ -347,6 +375,18 @@ def calculate_lnu_theta(
     return QuantityArray.from_Quantity(
         192*np.pi**3*eps_b*mep*a**2*mec2/eps_th
     )
+
+@dataclass(frozen=True,slots=True)
+class ShockRadius(QuantityArray):
+
+    @classmethod
+    def beta_sh(
+        cls,
+        beta_sh:FloatArray,
+        t:QuantityArray,
+    ):
+        return
+
 
 @dataclass(frozen=True,slots=True)
 class TransRelativisticLimit:

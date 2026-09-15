@@ -17,7 +17,7 @@ from module.mydataclasses import (
     BoolGrid
 )
 from module.observation import ChevalierScatter
-from module.plot_utils import AxesConfig, AxisConfig, ColormapConfigure, ColormapPlot, ContourStyle, MetadataConfig
+from module.plot_utils import AxesConfig, AxesRange, AxisConfig, ColormapConfigure, ColormapPlot, ContourStyle, MetadataConfig
 from module.types import FloatArray, FloatPair
 from module.parameter_table import ModelParameterNames,ModelColumnNames
 from enum import StrEnum, auto
@@ -101,7 +101,7 @@ class ChevalierGrid:
     beta_sh: QuantityGrid
     a_syn: QuantityGrid
     a_wind: QuantityGrid
-    is_ssa_thick: BoolGrid
+    is_ssa_thin: BoolGrid
     
     @classmethod
     def from_csv(
@@ -118,6 +118,10 @@ class ChevalierGrid:
         n_false = df["is_ssa_thick"].eq(False).sum()
         false_rows = df.loc[df["is_ssa_thick"].eq(False)]
         print(false_rows)
+        is_ssa_thick = BoolGrid.from_df(
+            df=df,
+            column=ModelColumnNames.IS_SSA_THICK
+        )
 
         return cls(
             metadata = metadata,
@@ -171,10 +175,7 @@ class ChevalierGrid:
                 unit=a_wind_unit,
                 column=ModelColumnNames.A_WIND
             ),
-            is_ssa_thick = BoolGrid.from_df(
-                df=df,
-                column=ModelColumnNames.IS_SSA_THICK
-            )
+            is_ssa_thin = ~is_ssa_thick,
         )
 
     @staticmethod
@@ -187,15 +188,6 @@ class ChevalierGrid:
         else:
             raise ValueError("描画範囲が設定されていないため, 値を取得できません")
 
-    def grid_masked(
-        self,
-        grid_val:FloatArray
-    )->FloatArray:
-        return np.ma.masked_where(
-            ~self.is_ssa_thick.values.reshape(grid_val.shape),
-            grid_val,
-        )
-
     def plot_main_contour(
         self,
         ax:Axes,
@@ -203,8 +195,7 @@ class ChevalierGrid:
         *,
         phi_unit: str,
         fnu_unit: str,
-        phi_range: FloatPair,
-        fnu_range: FloatPair
+        plotranges: AxesRange
     )->tuple[QuadContourSet,QuadContourSet]:
         phi_peak = FloatGrid(self.phi_peak.to_value_in(phi_unit))
         fnu_peak = FloatGrid(self.fnu_peak.to_value_in(fnu_unit))
@@ -215,10 +206,10 @@ class ChevalierGrid:
         beta_sh_grid = FloatGrid(self.beta_sh.to_value_in(beta_unit))
 
         out_plot_range = BoolGrid(
-            (phi_peak.values <= phi_range[0] )
-            | (phi_peak.values >= phi_range[1])
-            | (fnu_peak.values <= fnu_range[0])
-            | (fnu_peak.values >= fnu_range[1])
+            (phi_peak.values <= plotranges.x.min )
+            | (phi_peak.values >= plotranges.x.max )
+            | (fnu_peak.values <= plotranges.y.min )
+            | (fnu_peak.values >= plotranges.y.max )
         )
 
         phi_masked = phi_peak.masking(out_plot_range)
@@ -276,24 +267,6 @@ class ChevalierGrid:
                 contour_beta_sh,
             )
 
-    def plot_colormap(
-        self,
-        z:QuantityGrid,
-        ax: Axes,
-        style: ColormapConfigure,
-        *,
-        phi_unit: str,
-        fnu_unit: str,
-    )->QuadMesh:
-        z_unit = style.colorbar.label.unit
-        return ax.pcolormesh(
-            self.phi_peak.to_value_in(phi_unit),
-            self.fnu_peak.to_value_in(fnu_unit),
-            z.to_value_in(z_unit),
-            shading=style.shading,
-            cmap=style.cmap,
-            norm=style.norm.type,
-        )
     def plot_colormaps(
         self,
         fig:Figure,
@@ -303,19 +276,20 @@ class ChevalierGrid:
         phi_unit: str,
         fnu_unit: str,
     )->None:
-        phi_peak_val:FloatArray = self.phi_peak.to_value_in(phi_unit)
-        fnu_peak_val:FloatArray = self.fnu_peak.to_value_in(fnu_unit)
+        mask = self.is_ssa_thin
+        phi = self.phi_peak.to_FloatGrid(phi_unit)
+        fnu = self.fnu_peak.to_FloatGrid(fnu_unit)
 
         for ax, cmplot in zip(axes.flat, cmplots):
             style=cmplot.style
             cb = style.colorbar
             label = cb.label
-            z_val = cmplot.quantity.to_value_in(label.unit)
-            z_masked = self.grid_masked(z_val)
+            z_val = FloatGrid(cmplot.quantity.to_value_in(label.unit))
+            z_plot = z_val.masking(mask)
             mesh = ax.pcolormesh(
-                phi_peak_val,
-                fnu_peak_val,
-                z_masked,
+                phi.values,
+                fnu.values,
+                z_plot.values,
                 shading=style.shading,
                 norm=style.norm.type,
                 cmap=style.cmap
@@ -334,16 +308,15 @@ class ChevalierGrid:
                 fontsize=label.fontsize
             )
 
-    @staticmethod
-    def show_colorbar(
-        mesh,
-        fig:Figure,
-        ax: Axes,
-        style: ColormapConfigure
+    def to_colormap(
+        self,
+        phi_unit: str,
+        fnu_unit: str,
+        cmplots: list[ColormapPlot],
     ):
-        label = style.colorbar.label.text
-        cbar = fig.colorbar(mesh, ax=ax)
-        cbar.set_label(f"{label}")
+        return
+
+
     # def plot_metadata(
     #     self,
     #     ax: Axes,
@@ -434,3 +407,45 @@ class ChevalierGrid:
     #         mu=self.mu,
     #         mu_e=self.mu_e
     #     )
+
+
+@dataclass(frozen=True,slots=True)
+class ChevalierColormap:
+    phi: FloatGrid
+    fnu: FloatGrid
+    ssa_mask: BoolGrid
+    cmplots:list[ColormapPlot]
+
+    def plot_colormaps(
+        self,
+        fig:Figure,
+        axes,
+    )->None:
+
+        for ax, cmplot in zip(axes.flat, self.cmplots):
+            style=cmplot.style
+            cb = style.colorbar
+            label = cb.label
+            z_val = FloatGrid(cmplot.quantity.to_value_in(label.unit))
+            z_plot = z_val.masking(self.ssa_mask)
+            mesh = ax.pcolormesh(
+                self.phi.values,
+                self.fnu.values,
+                z_plot.values,
+                shading=style.shading,
+                norm=style.norm.type,
+                cmap=style.cmap
+            )
+            cbar = fig.colorbar(
+                mesh,
+                ax=ax,
+                pad=cb.pad,
+                fraction=cb.fraction,
+            )
+            cbar.ax.tick_params(
+                labelsize=cb.tick_labelsize
+            )
+            cbar.set_label(
+                label.text,
+                fontsize=label.fontsize
+            )

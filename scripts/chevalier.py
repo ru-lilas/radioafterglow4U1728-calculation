@@ -54,6 +54,7 @@ def main():
     # obs_scat = df_obs_nu.peak
     #
     plotconf = PlotConfig.from_yaml(args.plotconfig)
+    ranges = plotconf.layout.axes.range()
     with PdfPages(outpath) as pdf:
         fig,ax = plot_utils.create_configured_axes(plotconf.layout)
         fig.set_layout_engine("constrained")
@@ -71,8 +72,7 @@ def main():
             confs=plotconf.contours,
             phi_unit=phi_unit,
             fnu_unit=fnu_unit,
-            phi_range=grids.plot_range(plotconf.layout.axes.x),
-            fnu_range=grids.plot_range(plotconf.layout.axes.y),
+            plotranges=ranges
         )
     #     grids.plot(
     #         ax,

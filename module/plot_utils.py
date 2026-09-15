@@ -66,12 +66,36 @@ class SubplotConfig:
     hide_shared_labels: bool = True
 
 @dataclass(frozen=True,slots=True)
+class AxisRange:
+    min: float
+    max: float
+
+@dataclass(frozen=True,slots=True)
+class AxesRange:
+    x: AxisRange
+    y: AxisRange
+
+@dataclass(frozen=True,slots=True)
 class AxisConfig:
     scale: ValueScale
     limits: FloatPair|None
     label: LabelConfigure
     major_ticks: tuple[float, ...] | None = None
     minor_ticks: tuple[float, ...] | None = None
+
+    def range(
+        self
+    )->AxisRange:
+        lim = self.limits
+        if lim is not None:
+            return AxisRange(
+                min=lim[0],
+                max=lim[1]
+            )
+        else:
+            raise ValueError(
+                "描画範囲が設定されていないため, 値を取得できません."
+            )
 
 @dataclass(frozen=True, slots=True)
 class TickStyle:
@@ -87,6 +111,14 @@ class AxesConfig:
     x: AxisConfig
     y: AxisConfig
     ticks: TickStyle
+
+    def range(
+        self
+    )->AxesRange:
+        return AxesRange(
+            x=self.x.range(),
+            y=self.y.range()
+        )
 
 @dataclass(frozen=True, slots=True)
 class FigureConfig:

@@ -168,11 +168,13 @@ class ModelParameterTable:
 
     @property
     def theta_thin(self):
-        return models.ElectronTemperatureOpticallyThinLimit.from_params(
-            mep=self.mep,
+        theta0 = models.SelfAbsorptionOpticallyThinLimit.theta0(
             eps_b=self.eps_b,
-            phi_th=self.grid.phi_th
+            eps_th=self.eps_th,
+            phith=self.grid.phi_th,
+            mep=self.mep
         )
+        return theta0
 
     def tau_theta(
         self,
@@ -181,7 +183,9 @@ class ModelParameterTable:
         return models.OpticalDepthParameter.from_params_exact(
             mep=self.mep,
             eps_b=self.eps_b,
+            eps_th=self.eps_th,
             theta=theta,
+            theta0=self.grid.theta0,
             phi_th=self.grid.phi_th
         )
 
@@ -191,8 +195,8 @@ class ModelParameterTable:
     )->models.ThermalSynchrotronLuminosity:
         return models.ThermalSynchrotronLuminosity.from_params(
             mep=self.mep,
-            eps_b=self.eps_b,
             theta=theta,
+            theta0=self.grid.theta0,
             eps_th=self.eps_th,
             phi_th=self.grid.phi_th
         )
@@ -289,7 +293,7 @@ class ModelParameterTable:
             ModelParameterNames.THETA0: grid.theta0.values.ravel(),
             ModelColumnNames.THETA: theta.values.ravel(),
             ModelColumnNames.THETA_THIN: theta_thin_val.ravel(),
-            ModelColumnNames.IS_SSA_THICK: (theta.values < theta_thin_val).ravel(),
+            ModelColumnNames.IS_SSA_THICK: (grid.theta0.values < theta_thin_val).ravel(),
             ModelColumnNames.TAU_THETA: tau_th.values.ravel(),
             ModelColumnNames.LNU_THETA: lnu_th.to_value_in(lnu_unit).ravel(),
             ModelColumnNames.DOPPLER_DELTA: doppler_delta.ravel(),

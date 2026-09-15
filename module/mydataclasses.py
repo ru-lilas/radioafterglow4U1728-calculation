@@ -103,37 +103,6 @@ class QuantityArray1D(QuantityArray):
             )
 
 @dataclass(frozen=True, slots=True)
-class QuantityGrid(QuantityArray):
-    def __post_init__(self) -> None:
-        if self.values.ndim != 2:
-            raise ValueError(
-                "valuesは2次元配列でなければなりません. "
-                f"shape={self.values.shape}"
-            )
-    @classmethod
-    def from_df(
-        cls,
-        df:pd.DataFrame,
-        column:str,
-        unit:str,
-        index_name:str = "index"
-    )->Self:
-        values = (
-            df.sort_values(index_name)[column]
-            .to_numpy(dtype=np.float64)
-        )
-        n = int(np.sqrt(values.size))
-
-        if n * n != values.size:
-            raise ValueError(
-                f"Cannot reshape {values.size} elements into a square grid."
-            )
-        return cls(
-            values=values.reshape(n,n),
-            unit=unit
-        )
-
-@dataclass(frozen=True, slots=True)
 class BoolGrid:
     values: NDArray[np.bool_]
     def __post_init__(self) -> None:
@@ -162,6 +131,14 @@ class BoolGrid:
         return cls(
             values=values.reshape(n,n),
         )
+
+    def inverted(self)->Self:
+        return type(self)(
+            values=np.logical_not(self.values),
+        )
+
+    def __invert__(self)->Self:
+        return self.inverted()
 
 @dataclass(frozen=True, slots=True)
 class FloatGrid:
@@ -199,6 +176,44 @@ class FloatGrid:
                     val,
                 )
             )
+
+@dataclass(frozen=True, slots=True)
+class QuantityGrid(QuantityArray):
+    def __post_init__(self) -> None:
+        if self.values.ndim != 2:
+            raise ValueError(
+                "valuesは2次元配列でなければなりません. "
+                f"shape={self.values.shape}"
+            )
+    @classmethod
+    def from_df(
+        cls,
+        df:pd.DataFrame,
+        column:str,
+        unit:str,
+        index_name:str = "index"
+    )->Self:
+        values = (
+            df.sort_values(index_name)[column]
+            .to_numpy(dtype=np.float64)
+        )
+        n = int(np.sqrt(values.size))
+
+        if n * n != values.size:
+            raise ValueError(
+                f"Cannot reshape {values.size} elements into a square grid."
+            )
+        return cls(
+            values=values.reshape(n,n),
+            unit=unit
+        )
+
+    def to_FloatGrid(
+        self,
+        unit:str
+    )->FloatGrid:
+        return FloatGrid(self.to_value_in(unit))
+
 
 
 
