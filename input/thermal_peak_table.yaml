@@ -1,7 +1,7 @@
 ln_tau_th:
   start_log10: -2.0
   stop_log10: 20.0
-  num: 8192
+  num: 16384
 ln_xm:
   start_log10: -2.0
   stop_log10: 4.0

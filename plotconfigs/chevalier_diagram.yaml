@@ -5,7 +5,7 @@ layout:
   axes:
     x:
       scale: "log"
-      limits: [1.0e-01,1.0e+02]
+      limits: [1.0e+00,1.0e+02]
       label:
         prefix: '$\nu t_{\mathrm{peak}}$'
         unit: "GHz min"

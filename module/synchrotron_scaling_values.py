@@ -3,7 +3,6 @@
 import astropy.units as u
 import numpy as np
 from numpy.typing import NDArray
-from module.tabular import ThermalSynchrotronTable
 from module.types import FloatArray, FloatArrayLike
 from module.utilities import unit_aliases as unit
 from astropy.constants import e,c,m_e,m_p
@@ -164,22 +163,22 @@ def calculate_l_theta(
     theta_arr = np.asarray(theta,dtype=np.float64)
     return (81.0*beta_sh_arr**2*theta_arr**5*eps_b_arr*a_wind*e**2/(8.0*m_e))
 
-def calculate_ln_tau(
-    xi:NDArray[np.float64],
-    tau_theta:NDArray[np.float64],
-    table:ThermalSynchrotronTable
-)->NDArray[np.float64]:
-    log_ip_xi = table.calculate_log_ip(xi)
-    return np.log(tau_theta) - np.log(xi) + log_ip_xi
-
-def calculate_lambda_using_table(
-    xm:NDArray[np.float64],
-    tau_theta:NDArray[np.float64],
-    table:ThermalSynchrotronTable
-)->NDArray[np.float64]:
-    log_ip_xi = table.calculate_log_ip(xm)
-    ip_xi = np.exp(log_ip_xi)
-    tauip = ip_xi*tau_theta
-    f_esc = -np.expm1(-tauip/xm)
-    xm2 = xm**2
-    return xm2 * f_esc
+# def calculate_ln_tau(
+#     xi:NDArray[np.float64],
+#     tau_theta:NDArray[np.float64],
+#     table:ThermalSynchrotronTable
+# )->NDArray[np.float64]:
+#     log_ip_xi = table.calculate_log_ip(xi)
+#     return np.log(tau_theta) - np.log(xi) + log_ip_xi
+#
+# def calculate_lambda_using_table(
+#     xm:NDArray[np.float64],
+#     tau_theta:NDArray[np.float64],
+#     table:ThermalSynchrotronTable
+# )->NDArray[np.float64]:
+#     log_ip_xi = table.calculate_log_ip(xm)
+#     ip_xi = np.exp(log_ip_xi)
+#     tauip = ip_xi*tau_theta
+#     f_esc = -np.expm1(-tauip/xm)
+#     xm2 = xm**2
+#     return xm2 * f_esc

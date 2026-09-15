@@ -16,9 +16,7 @@ from scipy import special
 from numpy.typing import NDArray
 from module import synchrotron_scaling_values
 from module import electron_temperature
-from module import tabular
 from module.utilities import bisection, unit_aliases as unit
-from module import calculate_lnu_th
 from module.utils import FileReader
 from astropy.constants import e,c,m_e,m_p,hbar
 from module import f_factor
