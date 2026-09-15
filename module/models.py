@@ -261,6 +261,10 @@ class ElectronTemperatureOpticallyThinLimit(ElectronTemperature):
             -2.0*log10_epsb \
             +log10_mep
         )/15.0)
+        theta_lin15_2 = 2.0*phith_val*np.sqrt(2.0*mep) / (81.0*eps_b)
+        theta_lin = theta_lin15_2**(2.0/15.0)
+        print(theta_lin)
+        print(10**log10_theta)
         return cls(10**log10_theta)
 
 @dataclass(frozen=True,slots=True)

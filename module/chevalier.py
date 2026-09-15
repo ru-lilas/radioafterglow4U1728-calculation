@@ -5,11 +5,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Hashable, Self
 
+from numpy.typing import NDArray
+import numpy as np
+
 from module import plot_utils
 from module.mydataclasses import (
     YAMLReadable,
     QuantityData,
-    QuantityGrid
+    QuantityGrid,
+    BoolGrid
 )
 from module.observation import ChevalierScatter
 from module.plot_utils import ColormapConfigure, ColormapPlot, ContourStyle, MetadataConfig
@@ -96,6 +100,7 @@ class ChevalierGrid:
     beta_sh: QuantityGrid
     a_syn: QuantityGrid
     a_wind: QuantityGrid
+    is_ssa_thick: BoolGrid
     
     @classmethod
     def from_csv(
@@ -108,6 +113,10 @@ class ChevalierGrid:
         fnu_unit = metadata.fnu_unit
         lnu_unit = metadata.lnu_unit
         a_wind_unit = metadata.a_wind_unit
+
+        n_false = df["is_ssa_thick"].eq(False).sum()
+        false_rows = df.loc[df["is_ssa_thick"].eq(False)]
+        print(false_rows)
 
         return cls(
             metadata = metadata,
@@ -160,6 +169,10 @@ class ChevalierGrid:
                 df=df,
                 unit=a_wind_unit,
                 column=ModelColumnNames.A_WIND
+            ),
+            is_ssa_thick = BoolGrid.from_df(
+                df=df,
+                column=ModelColumnNames.IS_SSA_THICK
             )
         )
 
@@ -276,10 +289,15 @@ class ChevalierGrid:
             style=cmplot.style
             cb = style.colorbar
             label = cb.label
+            z_val = cmplot.quantity.to_value_in(label.unit)
+            z_masked = np.ma.masked_where(
+                ~self.is_ssa_thick.values.reshape(z_val.shape),
+                z_val,
+            )
             mesh = ax.pcolormesh(
                 phi_peak_val,
                 fnu_peak_val,
-                cmplot.quantity.to_value_in(label.unit),
+                z_masked,
                 shading=style.shading,
                 norm=style.norm.type,
                 cmap=style.cmap

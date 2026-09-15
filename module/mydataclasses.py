@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 import numpy as np
 from pathlib import Path
+from numpy.typing import NDArray
 import pandas as pd
 from .types import ValueScale,FloatArray
 import astropy.units as u
@@ -130,6 +131,36 @@ class QuantityGrid(QuantityArray):
         return cls(
             values=values.reshape(n,n),
             unit=unit
+        )
+
+@dataclass(frozen=True, slots=True)
+class BoolGrid:
+    values: NDArray[np.bool_]
+    def __post_init__(self) -> None:
+        if self.values.ndim != 2:
+            raise ValueError(
+                "valuesは2次元配列でなければなりません. "
+                f"shape={self.values.shape}"
+            )
+    @classmethod
+    def from_df(
+        cls,
+        df:pd.DataFrame,
+        column:str,
+        index_name:str = "index"
+    )->Self:
+        values = (
+            df.sort_values(index_name)[column]
+            .to_numpy(dtype=np.bool_)
+        )
+        n = int(np.sqrt(values.size))
+
+        if n * n != values.size:
+            raise ValueError(
+                f"Cannot reshape {values.size} elements into a square grid."
+            )
+        return cls(
+            values=values.reshape(n,n),
         )
 
 
