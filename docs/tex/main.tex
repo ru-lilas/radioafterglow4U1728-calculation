@@ -243,6 +243,15 @@ the strength of magnetic field has the fllowing condition
   \melecc
   \frac{\phith^2}{\epsth}
 \end{equation}
+\begin{equation}
+  \label{eq:definition_of_lambda}
+  \Lambda(\tauth,\xm)
+  \coloneq
+  \xm^2
+  \ab[
+    1-\exp(-\tauth\xm^{-1}I'(\xm))
+  ]
+\end{equation}
 
 \section{}
 % \begin{equation}
@@ -340,6 +349,76 @@ exact one is smaller than \qty{0.5}{\percent}.
   \epsbnorm[-\frac{2}{15}]{\epsBFiducial}
   \muepnorm[\frac{1}{15}]{\muepFiducial}
 \end{equation}
+
+\section{Expression}
+\begin{equation}
+  \label{eq:awind_expressed}
+  \Awind = \frac{4\Acyc}{9\epsB}\ab(\frac{\phith}{\Theta^2})^2
+\end{equation}
+\begin{equation}
+  \label{eq:betash_expressed_by_theta0}
+  \betash = \sqrt{\frac{32\muep\mele\Theta_0}{9\epsth\mpro}}
+\end{equation}
+\begin{equation}
+  \label{eq:radius_expressed_by_theta0}
+  R = ct\sqrt{\frac{32\muep\mele\Theta_0}{9\epsth\mpro}}
+\end{equation}
+\begin{equation}
+  \label{eq:winddensity_expressed_by_theta0}
+  \rho_{\wind} 
+  =
+  \frac{\epsth}{32\pi\epsB\muep\Theta_0\Theta^4}
+  \frac{\mpro}{\mele}
+  \ab(\frac{\phith}{ct})^2
+  \Acyc
+\end{equation}
+\begin{equation}
+  \label{eq:electrondensity_downstream_expressed_by_th}
+  n_{\ele}
+  =
+  \frac{\epsth}{8\pi\epsB\mele\Theta_0\Theta^4}
+  \ab(\frac{\phith}{ct})^2
+  \Acyc
+\end{equation}
+\begin{equation}
+  \label{eq:magnetic_field_expressed}
+  B
+  =
+  \frac{\sqrt{\Acyc}}{t}\ab(\frac{\phith}{\Theta^2})
+\end{equation}
+\begin{equation}
+  \label{eq:jth_expressed}
+  \jth
+  =
+  \frac{8\pi^2\mele^2 c}{\sqrt{3^5 \Acyc^3}}n_{\ele}B f(\Theta)
+  =
+  \frac{\pi\epsth}{3^{5/2}\Theta_0 \epsB}\frac{\melecc}{(ct)^3}
+  \ab(\frac{\phith}{\Theta^2})^3
+\end{equation}
+\begin{equation}
+  \label{eq:alphath_expressed}
+  \alphath
+  =
+  \frac{8\pi^2\mele c}{\Theta^5\sqrt{3^5 \Acyc}}n_{\ele}B^{-1} f(\Theta)
+  =
+  \frac{\pi\epsth}{3^{5/2}\Theta_0 \epsB}
+  \frac{1}{\Theta^5(ct)}
+  \ab(\frac{\phith}{\Theta^2})
+\end{equation}
+\begin{empheq}{align}
+  \label{eq:lth_expressed}
+  L_{\Theta}
+  &=
+  \frac{2^7\pi^2\muep}{9\epsth}
+  \frac{\mele}{\mpro}\Theta_0 \Theta^5 \melecc
+  \ab(\frac{\phith}{\Theta^2})^2 \\
+  &\approx
+  \frac{128\pi^2}{27\epsth}
+  \muep\frac{\mele}{\mpro}
+  \phith^2
+  \Theta_0^2
+  \melecc
+\end{empheq}
 
 \section{Results}
 Figure \ref{fig:chevalier_diagram} shows
