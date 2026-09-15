@@ -8,7 +8,7 @@ from matplotlib.ticker import LogLocator
 from matplotlib.colorbar import Colorbar
 from numpy.typing import NDArray
 from module import dataframe_utils
-from module.mydataclasses import ValueArray, YAMLReadable
+from module.mydataclasses import QuantityGrid, ValueArray, YAMLReadable
 from module.utilities import build_nparray
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
@@ -40,14 +40,14 @@ def format_value(
         return rf"${prefix}={formatted}$"
 
 @dataclass
-class LabelConfig:
+class LabelConfigure:
     prefix: str
-    unit: str|None
+    unit: str
     fontsize: int
 
     @property
     def text(self):
-        if self.unit is None:
+        if self.unit == "":
             return f"{self.prefix}"
         else:
             return f"{self.prefix} [{self.unit}]"
@@ -68,7 +68,7 @@ class SubplotConfig:
 class AxisConfig:
     scale: ValueScale
     limits: FloatPair|None
-    label: LabelConfig
+    label: LabelConfigure
     major_ticks: tuple[float, ...] | None = None
     minor_ticks: tuple[float, ...] | None = None
 
@@ -239,7 +239,7 @@ class AxisConfigure:
     scale: PlotScale
     ticksize: int
     data: PlotData
-    label: LabelConfig
+    label: LabelConfigure
 
     def __post_init__(self):
         if self.direction == "x":
@@ -354,9 +354,9 @@ class ContourConfigure:
     label: ContourLabelStyle
 
 @dataclass(frozen=True, slots=True)
-class ColorbarConfig:
+class ColorbarConfigure:
     show: bool
-    label: str
+    label: LabelConfigure
 
 @dataclass(frozen=True, slots=True)
 class NormConfig:
@@ -369,7 +369,12 @@ class ColormapConfigure(YAMLReadable):
     vmin: float | None
     vmax: float | None
     norm: NormConfig
-    colorbar: ColorbarConfig
+    colorbar: ColorbarConfigure
+
+@dataclass(frozen=True, slots=True)
+class ColormapPlot:
+    quantity: QuantityGrid
+    style: ColormapConfigure
 
 @dataclass(frozen=True, slots=True)
 class MetadataConfig:
@@ -387,61 +392,3 @@ class MetadataConfig:
             prefix=self.prefix,
             fmt=self.fmt
         )
-
-@dataclass
-class ColorbarConfigure:
-    cbar: Colorbar
-    ticksize: int
-    label: LabelConfig
-
-    def show(self):
-        self.cbar.set_label(
-            self.label.text,
-            fontsize = self.label.fontsize
-        )
-        self.cbar.locator = LogLocator(base=10)
-        cbarax = self.cbar.ax
-        cbarax.tick_params(labelsize=self.label.fontsize)
-        self.cbar.update_ticks()
-
-def fetch_colorbar(conf:dict[str,Any],cbar:Colorbar):
-    cbarconf = conf["cbar"]
-    cbarlabel = LabelConfig(
-        **cbarconf["label"]
-    )
-    return ColorbarConfigure(
-        cbar=cbar,
-        ticksize=cbarconf["ticksize"],
-        label = cbarlabel
-    )
-
-@dataclass
-class CurveStyle:
-    color: Any
-    linestyle: str
-    linewidth: float
-    label: str|None = None
-
-def curve(
-    ax:Axes,
-    x,y,
-    style:CurveStyle
-):
-    return ax.plot(
-        x,y,
-        ls=style.linestyle,
-        lw=style.linewidth,
-        color=style.color,
-        label=style.label
-    )[0]
-
-class LightcurvePlotter:
-    def plot(self):
-        return
-    def plot_single(
-        self,
-        x_axis:AxisConfigure,
-        y_axis:AxisConfigure
-    ):
-        return
-

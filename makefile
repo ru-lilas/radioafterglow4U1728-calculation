@@ -77,6 +77,7 @@ $(FILEPATH_CHEVALIER_COLORMAP_PDF): \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
 	$(FILEPATH_OBSLC) \
 	plotconfigs/chevalier_colormaps.yaml \
+	module/chevalier.py \
 	scripts/chevalier_colormaps.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		--model_table $< \

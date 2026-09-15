@@ -1,20 +1,19 @@
+from matplotlib.collections import QuadMesh
 from matplotlib.contour import QuadContourSet
 from matplotlib.figure import Figure
-import numpy as np
 from dataclasses import dataclass
-import pandas as pd
 from pathlib import Path
 from typing import Any, Hashable, Self
 
-from module import dataframe_utils, plot_utils
+from module import plot_utils
 from module.mydataclasses import (
-    QuantityArray, YAMLReadable,QuantityData,QuantityArray1D,
+    YAMLReadable,
+    QuantityData,
     QuantityGrid
 )
-from module import models
 from module.observation import ChevalierScatter
-from module.plot_utils import ColormapConfigure, ContourStyle, MetadataConfig
-from module.types import FloatArray,FloatGrid
+from module.plot_utils import ColormapConfigure, ColormapPlot, ContourStyle, MetadataConfig
+from module.types import FloatArray
 from module.parameter_table import ModelParameterNames,ModelColumnNames
 from enum import StrEnum, auto
 from matplotlib.axes import Axes
@@ -34,6 +33,9 @@ class ColormapConfigures:
     tau_th: plot_utils.ColormapConfigure
     phi_th: plot_utils.ColormapConfigure
     lnu_th: plot_utils.ColormapConfigure
+    beta_sh: plot_utils.ColormapConfigure
+    a_syn: plot_utils.ColormapConfigure
+    a_wind: plot_utils.ColormapConfigure
 
 @dataclass(frozen=True,slots=True)
 class Styles:
@@ -52,17 +54,6 @@ class DebagPlotConfig(YAMLReadable):
     layout: plot_utils.MultiPlotLayoutConfig
     colormaps: ColormapConfigures
     metadata: dict[str,MetadataConfig]
-
-class GridColumns(StrEnum):
-    A_WIND = auto()
-    BETA_SH = auto()
-    PHI_PEAK = auto()
-    FNU_PEAK = auto()
-
-@dataclass(frozen=True,slots=True)
-class ABGrid:
-    a_wind_grid: FloatGrid
-    beta_sh_grid: FloatGrid
 
 @dataclass(frozen=True,slots=True)
 class ChevalierMetadata:
@@ -104,46 +95,21 @@ class ChevalierGrid:
     theta: QuantityGrid
     tau_th: QuantityGrid
     lnu_th: QuantityGrid
+    beta_sh: QuantityGrid
+    a_syn: QuantityGrid
+    a_wind: QuantityGrid
     
-    # def __post_init__(self) -> None:
-    #     a_wind_shape = self.a_wind_arr.values.shape
-    #     beta_sh_shape = self.beta_sh_arr.shape
-    #
-    #     if len(a_wind_shape) != 2:
-    #         raise ValueError(
-    #             "a_wind_gridは2次元でなければなりません. "
-    #             f"shape={a_wind_shape}"
-    #         )
-    #
-    #     if len(beta_sh_shape) != 2:
-    #         raise ValueError(
-    #             "beta_sh_gridは2次元でなければなりません. "
-    #             f"shape={beta_sh_shape}"
-    #         )
-    #
-    #     try:
-    #         np.broadcast_shapes(
-    #             a_wind_shape,
-    #             beta_sh_shape,
-    #         )
-    #     except ValueError as error:
-    #         raise ValueError(
-    #             "a_wind_gridとbeta_sh_gridを"
-    #             "ブロードキャストできません. "
-    #             f"a_wind={a_wind_shape}, "
-    #             f"beta_sh={beta_sh_shape}"
-    #         ) from error
-
     @classmethod
     def from_csv(
         cls,
         path:Path
-    ):
+    )->Self:
         df = FileReader.table_from_csv(path,idx="index")
         metadata = ChevalierMetadata.from_attrs(df.attrs)
         phi_unit = metadata.phi_unit
         fnu_unit = metadata.fnu_unit
         lnu_unit = metadata.lnu_unit
+        a_wind_unit = metadata.a_wind_unit
 
         return cls(
             metadata = metadata,
@@ -181,6 +147,21 @@ class ChevalierGrid:
                 df=df,
                 unit=lnu_unit,
                 column=ModelColumnNames.LNU_THETA
+            ),
+            beta_sh = QuantityGrid.from_df(
+                df=df,
+                unit="",
+                column=ModelColumnNames.BETA_SH
+            ),
+            a_syn = QuantityGrid.from_df(
+                df=df,
+                unit=a_wind_unit,
+                column=ModelColumnNames.A_SYN
+            ),
+            a_wind = QuantityGrid.from_df(
+                df=df,
+                unit=a_wind_unit,
+                column=ModelColumnNames.A_WIND
             )
         )
 
@@ -325,98 +306,53 @@ class ChevalierGrid:
                 contour_phith,
                 contour_theta0,
             )
-    #
-    @staticmethod
+
     def plot_colormap(
-        phi_peak:QuantityGrid,
-        fnu_peak:QuantityGrid,
+        self,
         z:QuantityGrid,
         ax: Axes,
         style: ColormapConfigure,
         *,
         phi_unit: str,
         fnu_unit: str,
-        z_unit: str
-    ):
-        phi_val = phi_peak.to_value_in(phi_unit)
-        fnu_val = fnu_peak.to_value_in(fnu_unit)
-        z_val = z.to_value_in(z_unit)
+    )->QuadMesh:
+        z_unit = style.colorbar.label.unit
         return ax.pcolormesh(
-            phi_val,fnu_val,z_val,
+            self.phi_peak.to_value_in(phi_unit),
+            self.fnu_peak.to_value_in(fnu_unit),
+            z.to_value_in(z_unit),
             shading=style.shading,
             cmap=style.cmap,
-            norm=style.norm.type
+            norm=style.norm.type,
         )
+    def plot_colormaps(
+        self,
+        fig:Figure,
+        axes,
+        cmplots: list[ColormapPlot],
+        *,
+        phi_unit: str,
+        fnu_unit: str,
+    )->None:
+        phi_peak_val:FloatArray = self.phi_peak.to_value_in(phi_unit)
+        fnu_peak_val:FloatArray = self.fnu_peak.to_value_in(fnu_unit)
 
-    def plot_theta_colormap(
-        self,
-        ax: Axes,
-        style: ColormapConfigure,
-        *,
-        phi_unit: str,
-        fnu_unit: str,
-    ):
-        return self.plot_colormap(
-            self.phi_peak,self.fnu_peak,
-            z=self.theta,
-            ax=ax,
-            style=style,
-            phi_unit=phi_unit,
-            fnu_unit=fnu_unit,
-            z_unit=""
-        )
-    def plot_tau_colormap(
-        self,
-        ax: Axes,
-        style: ColormapConfigure,
-        *,
-        phi_unit: str,
-        fnu_unit: str,
-    ):
-        return self.plot_colormap(
-            self.phi_peak,self.fnu_peak,
-            z=self.tau_th,
-            ax=ax,
-            style=style,
-            phi_unit=phi_unit,
-            fnu_unit=fnu_unit,
-            z_unit=""
-        )
-    def plot_phi_th_colormap(
-        self,
-        ax: Axes,
-        style: ColormapConfigure,
-        *,
-        phi_unit: str,
-        fnu_unit: str,
-    ):
-        return self.plot_colormap(
-            self.phi_peak,self.fnu_peak,
-            z=self.phi_th,
-            ax=ax,
-            style=style,
-            phi_unit=phi_unit,
-            fnu_unit=fnu_unit,
-            z_unit=phi_unit
-        )
-    def plot_lnu_th_colormap(
-        self,
-        ax: Axes,
-        style: ColormapConfigure,
-        *,
-        phi_unit: str,
-        fnu_unit: str,
-        lnu_unit: str
-    ):
-        return self.plot_colormap(
-            self.phi_peak,self.fnu_peak,
-            z=self.lnu_th,
-            ax=ax,
-            style=style,
-            phi_unit=phi_unit,
-            fnu_unit=fnu_unit,
-            z_unit=lnu_unit
-        )
+        for ax, cmplot in zip(axes.flat, cmplots):
+            style=cmplot.style
+            label = style.colorbar.label
+            mesh = ax.pcolormesh(
+                phi_peak_val,
+                fnu_peak_val,
+                cmplot.quantity.to_value_in(label.unit),
+                shading=style.shading,
+                norm=style.norm.type,
+                cmap=style.cmap
+            )
+            cbar = fig.colorbar(mesh, ax=ax)
+            cbar.set_label(
+                label.text,
+                fontsize=label.fontsize
+            )
 
     @staticmethod
     def show_colorbar(
@@ -425,7 +361,7 @@ class ChevalierGrid:
         ax: Axes,
         style: ColormapConfigure
     ):
-        label = style.colorbar.label
+        label = style.colorbar.label.text
         cbar = fig.colorbar(mesh, ax=ax)
         cbar.set_label(f"{label}")
     # def plot_metadata(

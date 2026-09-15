@@ -4,8 +4,8 @@ layout:
     dpi: 100
     layout_engine: constrained
   subplots:
-    nrows: 2
-    ncols: 2
+    nrows: 3
+    ncols: 3
     sharex: true
     sharey: true
   axes:
@@ -32,7 +32,7 @@ layout:
       pad: 10.0
 colormaps:
   theta:
-    cmap: viridis
+    cmap: cividis
     shading: auto
     vmin: null
     vmax: null
@@ -40,9 +40,12 @@ colormaps:
       type: linear
     colorbar:
       show: true
-      label: '$\Theta$'
+      label:
+        prefix: '$\Theta$'
+        unit: ""
+        fontsize: 32
   tau_th:
-    cmap: viridis_r
+    cmap: cividis_r
     shading: auto
     vmin: null
     vmax: null
@@ -50,7 +53,10 @@ colormaps:
       type: log
     colorbar:
       show: true
-      label: '$\tau_{\Theta}$'
+      label:
+        prefix: '$\tau_{\Theta}$'
+        unit: ""
+        fontsize: 32
   phi_th:
     cmap: viridis
     shading: auto
@@ -60,7 +66,10 @@ colormaps:
       type: log
     colorbar:
       show: true
-      label: '$\phi_{\Theta}$'
+      label:
+        prefix: '$\phi_{\Theta}$'
+        unit: "GHz min"
+        fontsize: 32
   lnu_th:
     cmap: viridis
     shading: auto
@@ -70,7 +79,49 @@ colormaps:
       type: log
     colorbar:
       show: true
-      label: '$L_{\nu,\Theta}$'
+      label:
+        prefix: '$L_{\nu,\Theta}$'
+        unit: "erg s-1 Hz-1"
+        fontsize: 32
+  beta_sh:
+    cmap: cividis
+    shading: auto
+    vmin: null
+    vmax: null
+    norm:
+      type: linear
+    colorbar:
+      show: true
+      label: 
+        prefix: '$\beta_{\mathrm{sh}}=v_{\mathrm{sh}}/c$'
+        unit: ""
+        fontsize: 32
+  a_syn:
+    cmap: cividis
+    shading: auto
+    vmin: null
+    vmax: null
+    norm:
+      type: log
+    colorbar:
+      show: true
+      label:
+        prefix: '$A_{\mathrm{syn}}$'
+        unit: "g cm-1"
+        fontsize: 32
+  a_wind:
+    cmap: cividis
+    shading: auto
+    vmin: null
+    vmax: null
+    norm:
+      type: log
+    colorbar:
+      show: true
+      label: 
+        prefix: '$A_{\mathrm{w}}$'
+        unit: "g cm-1"
+        fontsize: 32
 metadata:
   eps_b:
     show: true

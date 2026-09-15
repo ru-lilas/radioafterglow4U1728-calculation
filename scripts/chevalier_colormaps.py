@@ -46,6 +46,19 @@ def main():
 
     grids = ChevalierGrid.from_csv(args.model_table)
     plotconf = DebagPlotConfig.from_yaml(args.plotconfig)
+    cmconf=plotconf.colormaps
+
+    cmplots = [
+        plot_utils.ColormapPlot(
+            quantity=grids.theta,
+            style=cmconf.theta
+        ),
+        plot_utils.ColormapPlot(
+            quantity=grids.tau_th,
+            style=cmconf.tau_th
+        ),
+    ]
+
     with PdfPages(outpath) as pdf:
         fig,axes = plot_utils.create_configured_subplots(plotconf.layout)
         fig.set_layout_engine("constrained")
@@ -58,55 +71,14 @@ def main():
         if (fnu_unit is None):
             raise ValueError("fnu_unitの単位が指定されていません")
 
-        mesh = grids.plot_tau_colormap(
-            axes[0,0],
-            style=plotconf.colormaps.tau_th,
-            phi_unit=phi_unit,
-            fnu_unit=fnu_unit
-        )
-        grids.show_colorbar(
-            mesh=mesh,
+        grids.plot_colormaps(
             fig=fig,
-            ax=axes[0,0],
-            style=plotconf.colormaps.tau_th
+            axes=axes,
+            cmplots=cmplots,
+            phi_unit=plotconf.layout.axes.x.label.unit,
+            fnu_unit=plotconf.layout.axes.y.label.unit,
         )
-        mesh = grids.plot_theta_colormap(
-            axes[0,1],
-            style=plotconf.colormaps.theta,
-            phi_unit=phi_unit,
-            fnu_unit=fnu_unit
-        )
-        grids.show_colorbar(
-            mesh=mesh,
-            fig=fig,
-            ax=axes[0,1],
-            style=plotconf.colormaps.theta,
-        )
-        mesh = grids.plot_phi_th_colormap(
-            axes[1,0],
-            style=plotconf.colormaps.phi_th,
-            phi_unit=phi_unit,
-            fnu_unit=fnu_unit
-        )
-        grids.show_colorbar(
-            mesh=mesh,
-            fig=fig,
-            ax=axes[1,0],
-            style=plotconf.colormaps.phi_th,
-        )
-        mesh = grids.plot_lnu_th_colormap(
-            axes[1,1],
-            style=plotconf.colormaps.lnu_th,
-            phi_unit=phi_unit,
-            fnu_unit=fnu_unit,
-            lnu_unit=grids.metadata.lnu_unit
-        )
-        grids.show_colorbar(
-            mesh=mesh,
-            fig=fig,
-            ax=axes[1,1],
-            style=plotconf.colormaps.lnu_th,
-        )
+
         pdf.savefig(fig)
         plt.close(fig)
 
