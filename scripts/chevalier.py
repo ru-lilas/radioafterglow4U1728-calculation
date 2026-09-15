@@ -66,9 +66,9 @@ def main():
         if (fnu_unit is None):
             raise ValueError("fnu_unitの単位が指定されていません")
     #
-        grids.plot_phitheta_contour(
+        grids.plot_main_contour(
             ax,
-            contourconfs=plotconf.contours,
+            confs=plotconf.contours,
             phi_unit=phi_unit,
             fnu_unit=fnu_unit
         )

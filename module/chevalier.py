@@ -24,8 +24,6 @@ from module.utils import FileReader
 class ContourConfigures:
     a_wind: plot_utils.ContourConfigure
     beta_sh: plot_utils.ContourConfigure
-    phi_th: plot_utils.ContourConfigure
-    theta0: plot_utils.ContourConfigure
 
 @dataclass(frozen=True,slots=True)
 class ColormapConfigures:
@@ -178,75 +176,10 @@ class ChevalierGrid:
     #         beta_sh_grid = np.asarray(beta_sh_grid,dtype=np.float64),
     #     )
     #
-    # def plot_main_contour(
-    #     self,
-    #     ax:Axes,
-    #     contourconfs: ContourConfigures,
-    #     *,
-    #     phi_unit: str,
-    #     fnu_unit: str,
-    # )->tuple[QuadContourSet,QuadContourSet]:
-    #     phi_peak = self.phi_peak.to_value_in(phi_unit)
-    #     fnu_peak = self.fnu_peak.to_value_in(fnu_unit)
-    #
-    #     abgrid = self.parameter_grids
-    #     a_wind_grid = abgrid.a_wind_grid
-    #     beta_sh_grid = abgrid.beta_sh_grid
-    #
-    #     if not (
-    #         phi_peak.shape
-    #         == fnu_peak.shape
-    #         == a_wind_grid.shape
-    #         == beta_sh_grid.shape
-    #     ):
-    #         raise ValueError(
-    #             "等高線に使用するグリッドのshapeが"
-    #             "一致していません. "
-    #             f"phi_peak={phi_peak.shape}, "
-    #             f"fnu_peak={fnu_peak.shape}, "
-    #             f"a_wind={a_wind_grid.shape}, "
-    #             f"beta_sh={beta_sh_grid.shape}"
-    #         )
-    #
-    #     contour_a_wind = ax.contour(
-    #         phi_peak,
-    #         fnu_peak,
-    #         a_wind_grid,
-    #         levels=(
-    #             contourconfs.a_wind.levels
-    #             .to_nparray(a_wind_grid)
-    #         ),
-    #         **contourconfs.a_wind.style.to_kwargs(),
-    #     )
-    #     ax.clabel(
-    #         contour_a_wind,
-    #         **contourconfs.a_wind.label.to_kwargs(),
-    #     )
-    #
-    #     contour_beta_sh = ax.contour(
-    #         phi_peak,
-    #         fnu_peak,
-    #         beta_sh_grid,
-    #         levels=(
-    #             contourconfs.beta_sh.levels
-    #             .to_nparray(beta_sh_grid)
-    #         ),
-    #         **contourconfs.beta_sh.style.to_kwargs(),
-    #     )
-    #     ax.clabel(
-    #         contour_beta_sh,
-    #         **contourconfs.beta_sh.label.to_kwargs(),
-    #     )
-    #
-    #     return (
-    #             contour_a_wind,
-    #             contour_beta_sh,
-    #         )
-    #
-    def plot_phitheta_contour(
+    def plot_main_contour(
         self,
         ax:Axes,
-        contourconfs: ContourConfigures,
+        confs: ContourConfigures,
         *,
         phi_unit: str,
         fnu_unit: str,
@@ -254,57 +187,59 @@ class ChevalierGrid:
         phi_peak = self.phi_peak.to_value_in(phi_unit)
         fnu_peak = self.fnu_peak.to_value_in(fnu_unit)
 
-        phi_th = self.phi_th.to_value_in(phi_unit)
-        theta0 = self.theta0.values
+        a_wind_unit = confs.a_wind.unit
+        beta_unit = confs.beta_sh.unit
+        a_wind_grid = self.a_wind.to_value_in(a_wind_unit)
+        beta_sh_grid = self.beta_sh.to_value_in(beta_unit)
 
         if not (
             phi_peak.shape
             == fnu_peak.shape
-            == phi_th.shape
-            == theta0.shape
+            == a_wind_grid.shape
+            == beta_sh_grid.shape
         ):
             raise ValueError(
                 "等高線に使用するグリッドのshapeが"
                 "一致していません. "
                 f"phi_peak={phi_peak.shape}, "
                 f"fnu_peak={fnu_peak.shape}, "
-                f"phi_th={phi_th.shape}, "
-                f"theta0={theta0.shape}"
+                f"a_wind={a_wind_grid.shape}, "
+                f"beta_sh={beta_sh_grid.shape}"
             )
 
-        contour_phith = ax.contour(
+        contour_a_wind = ax.contour(
             phi_peak,
             fnu_peak,
-            phi_th,
+            a_wind_grid,
             levels=(
-                contourconfs.a_wind.levels
-                .to_nparray(phi_th)
+                confs.a_wind.levels
+                .to_nparray(a_wind_grid)
             ),
-            **contourconfs.a_wind.style.to_kwargs(),
+            **confs.a_wind.style.to_kwargs(),
         )
         ax.clabel(
-            contour_phith,
-            **contourconfs.a_wind.label.to_kwargs(),
+            contour_a_wind,
+            **confs.a_wind.label.to_kwargs(),
         )
 
-        contour_theta0 = ax.contour(
+        contour_beta_sh = ax.contour(
             phi_peak,
             fnu_peak,
-            theta0,
+            beta_sh_grid,
             levels=(
-                contourconfs.beta_sh.levels
-                .to_nparray(theta0)
+                confs.beta_sh.levels
+                .to_nparray(beta_sh_grid)
             ),
-            **contourconfs.beta_sh.style.to_kwargs(),
+            **confs.beta_sh.style.to_kwargs(),
         )
         ax.clabel(
-            contour_theta0,
-            **contourconfs.beta_sh.label.to_kwargs(),
+            contour_beta_sh,
+            **confs.beta_sh.label.to_kwargs(),
         )
 
         return (
-                contour_phith,
-                contour_theta0,
+                contour_a_wind,
+                contour_beta_sh,
             )
 
     def plot_colormap(

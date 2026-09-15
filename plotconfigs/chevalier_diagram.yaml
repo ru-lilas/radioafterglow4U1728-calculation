@@ -5,14 +5,14 @@ layout:
   axes:
     x:
       scale: "log"
-      limits: [1.0e+00,1.0e+02]
+      limits: [1.0e-01,1.0e+03]
       label:
         prefix: '$\nu t_{\mathrm{peak}}$'
         unit: "GHz min"
         fontsize: 32
     y:
       scale: "log"
-      limits: [1.0e-01,1.0e+01]
+      limits: [1.0e-02,1.0e+02]
       label:
         prefix: '$F_{\nu,\mathrm{net,peak}}$'
         unit: "mJy"
@@ -36,39 +36,19 @@ contours:
     label:
       fontsize: 16
       fmt: "%.1e"
+    unit: "g cm-1"
   beta_sh:
     style:
       colors: "#000000"
       linestyles: "--"
     levels:
-      start: null
-      stop: null
+      start: 0.2
+      stop: 0.5
       num: 10
     label:
       fontsize: 16
       fmt: "%.1f"
-  phi_th:
-    style:
-      colors: "#000000"
-      linestyles: "-"
-    levels:
-      start: 1.0e-01
-      stop: 1.0e+01
-      num: 10
-    label:
-      fontsize: 16
-      fmt: "%.1f"
-  theta0:
-    style:
-      colors: "#000000"
-      linestyles: "--"
-    levels:
-      start: 3.0
-      stop: 10.0
-      num: 7.0
-    label:
-      fontsize: 16
-      fmt: "%.1f"
+    unit: ""
 styles:
   obs_range:
     facecolor: "#C8C8CB"

@@ -90,6 +90,7 @@ chevalier: $(FILEPATH_CHEVALIER_PDF)
 $(FILEPATH_CHEVALIER_PDF): \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
 	$(FILEPATH_OBSLC) \
+	module/chevalier.py \
 	plotconfigs/chevalier_diagram.yaml \
 	scripts/chevalier.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \

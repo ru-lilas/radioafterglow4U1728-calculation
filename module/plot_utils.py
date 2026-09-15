@@ -362,6 +362,7 @@ class ContourConfigure:
     style: ContourStyle
     levels: ContourLevelConfigure
     label: ContourLabelStyle
+    unit: str
 
 @dataclass(frozen=True, slots=True)
 class ColorbarConfigure:
