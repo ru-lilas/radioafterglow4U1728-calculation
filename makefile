@@ -166,6 +166,7 @@ modeltable: $(FILEPATH_MODEL_PARAMETER_TABLE)
 $(FILEPATH_MODEL_PARAMETER_TABLE): \
 	$(FILEPATH_INPUT) \
 	$(FILEPATH_PEAK_TABLE) \
+	module/parameter_table.py \
 	scripts/$(MODEL_PARAMETER_TABLE).py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \

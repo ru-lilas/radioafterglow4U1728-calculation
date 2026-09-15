@@ -27,11 +27,9 @@ e = u.Quantity(e.esu)
 c = u.Quantity(c)
 m_e = u.Quantity(m_e)
 m_p = u.Quantity(m_p)
-hbar = u.Quantity(hbar)
 mec2 = (m_e*c**2).to("erg")
 
 A_CYC = (((4.0*np.pi*mec2)/(3.0*e*c))**2).to("g cm-1")
-T_ELE = (hbar/mec2).to("s")
 PHI = (1*u.Unit("GHz")*1*u.Unit("min")).decompose()
 
 MASS_RATIO_ELE_PRO = (m_e/m_p).decompose()
@@ -227,6 +225,20 @@ class ThermalSynchrotronPhase(PhaseParameter):
     )->NormalizedWindParameter:
         return NormalizedWindParameter.from_Quantity(
             2.0*self.quantity/(3.0*np.sqrt(eps_b))
+        )
+
+@dataclass(frozen=True,slots=True)
+class WindParameter(QuantityArray):
+    @classmethod
+    def from_phi_th(
+        cls,
+        eps_b:float,
+        a_syn:QuantityArray,
+        phi_th:ThermalSynchrotronPhase
+    )->Self:
+        phi_val = phi_th.decompose()
+        return cls.from_Quantity(
+            4.0*a_syn.quantity*phi_val**2/(9.0*eps_b)
         )
 
 @dataclass(frozen=True,slots=True)
