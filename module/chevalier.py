@@ -1,4 +1,5 @@
 from matplotlib.contour import QuadContourSet
+from matplotlib.figure import Figure
 import numpy as np
 from dataclasses import dataclass
 import pandas as pd
@@ -12,7 +13,7 @@ from module.mydataclasses import (
 )
 from module import models
 from module.observation import ChevalierScatter
-from module.plot_utils import ContourStyle, MetadataConfig
+from module.plot_utils import ColormapConfigure, ContourStyle, MetadataConfig
 from module.types import FloatArray,FloatGrid
 from module.parameter_table import ModelParameterNames,ModelColumnNames
 from enum import StrEnum, auto
@@ -28,6 +29,13 @@ class ContourConfigures:
     theta0: plot_utils.ContourConfigure
 
 @dataclass(frozen=True,slots=True)
+class ColormapConfigures:
+    theta: plot_utils.ColormapConfigure
+    tau_th: plot_utils.ColormapConfigure
+    phi_th: plot_utils.ColormapConfigure
+    lnu_th: plot_utils.ColormapConfigure
+
+@dataclass(frozen=True,slots=True)
 class Styles:
     obs_center: plot_utils.ScatterStyle
     obs_range: plot_utils.RectangleStyle
@@ -37,6 +45,12 @@ class PlotConfig(YAMLReadable):
     layout: plot_utils.PlotLayoutConfig
     contours: ContourConfigures
     styles: Styles
+    metadata: dict[str,MetadataConfig]
+
+@dataclass(frozen=True, slots=True)
+class DebagPlotConfig(YAMLReadable):
+    layout: plot_utils.MultiPlotLayoutConfig
+    colormaps: ColormapConfigures
     metadata: dict[str,MetadataConfig]
 
 class GridColumns(StrEnum):
@@ -312,6 +326,108 @@ class ChevalierGrid:
                 contour_theta0,
             )
     #
+    @staticmethod
+    def plot_colormap(
+        phi_peak:QuantityGrid,
+        fnu_peak:QuantityGrid,
+        z:QuantityGrid,
+        ax: Axes,
+        style: ColormapConfigure,
+        *,
+        phi_unit: str,
+        fnu_unit: str,
+        z_unit: str
+    ):
+        phi_val = phi_peak.to_value_in(phi_unit)
+        fnu_val = fnu_peak.to_value_in(fnu_unit)
+        z_val = z.to_value_in(z_unit)
+        return ax.pcolormesh(
+            phi_val,fnu_val,z_val,
+            shading=style.shading,
+            cmap=style.cmap,
+            norm=style.norm.type
+        )
+
+    def plot_theta_colormap(
+        self,
+        ax: Axes,
+        style: ColormapConfigure,
+        *,
+        phi_unit: str,
+        fnu_unit: str,
+    ):
+        return self.plot_colormap(
+            self.phi_peak,self.fnu_peak,
+            z=self.theta,
+            ax=ax,
+            style=style,
+            phi_unit=phi_unit,
+            fnu_unit=fnu_unit,
+            z_unit=""
+        )
+    def plot_tau_colormap(
+        self,
+        ax: Axes,
+        style: ColormapConfigure,
+        *,
+        phi_unit: str,
+        fnu_unit: str,
+    ):
+        return self.plot_colormap(
+            self.phi_peak,self.fnu_peak,
+            z=self.tau_th,
+            ax=ax,
+            style=style,
+            phi_unit=phi_unit,
+            fnu_unit=fnu_unit,
+            z_unit=""
+        )
+    def plot_phi_th_colormap(
+        self,
+        ax: Axes,
+        style: ColormapConfigure,
+        *,
+        phi_unit: str,
+        fnu_unit: str,
+    ):
+        return self.plot_colormap(
+            self.phi_peak,self.fnu_peak,
+            z=self.phi_th,
+            ax=ax,
+            style=style,
+            phi_unit=phi_unit,
+            fnu_unit=fnu_unit,
+            z_unit=phi_unit
+        )
+    def plot_lnu_th_colormap(
+        self,
+        ax: Axes,
+        style: ColormapConfigure,
+        *,
+        phi_unit: str,
+        fnu_unit: str,
+        lnu_unit: str
+    ):
+        return self.plot_colormap(
+            self.phi_peak,self.fnu_peak,
+            z=self.lnu_th,
+            ax=ax,
+            style=style,
+            phi_unit=phi_unit,
+            fnu_unit=fnu_unit,
+            z_unit=lnu_unit
+        )
+
+    @staticmethod
+    def show_colorbar(
+        mesh,
+        fig:Figure,
+        ax: Axes,
+        style: ColormapConfigure
+    ):
+        label = style.colorbar.label
+        cbar = fig.colorbar(mesh, ax=ax)
+        cbar.set_label(f"{label}")
     # def plot_metadata(
     #     self,
     #     ax: Axes,

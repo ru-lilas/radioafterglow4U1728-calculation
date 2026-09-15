@@ -1,0 +1,99 @@
+layout:
+  figure:
+    figsize: [24,24]
+    dpi: 100
+    layout_engine: constrained
+  subplots:
+    nrows: 2
+    ncols: 2
+    sharex: true
+    sharey: true
+  axes:
+    x:
+      scale: "log"
+      limits: [1.0e-01,1.0e+03]
+      label:
+        prefix: '$\nu t_{\mathrm{peak}}$'
+        unit: "GHz min"
+        fontsize: 32
+    y:
+      scale: "log"
+      limits: [1.0e-02,1.0e+02]
+      label:
+        prefix: '$F_{\nu,\mathrm{net,peak}}$'
+        unit: "mJy"
+        fontsize: 32
+    ticks:
+      labelsize: 32
+      direction: "in"
+      major_length: 10.0
+      minor_length: 8.0
+      width: 1.0
+      pad: 10.0
+colormaps:
+  theta:
+    cmap: viridis
+    shading: auto
+    vmin: null
+    vmax: null
+    norm:
+      type: linear
+    colorbar:
+      show: true
+      label: '$\Theta$'
+  tau_th:
+    cmap: viridis_r
+    shading: auto
+    vmin: null
+    vmax: null
+    norm:
+      type: log
+    colorbar:
+      show: true
+      label: '$\tau_{\Theta}$'
+  phi_th:
+    cmap: viridis
+    shading: auto
+    vmin: null
+    vmax: null
+    norm:
+      type: log
+    colorbar:
+      show: true
+      label: '$\phi_{\Theta}$'
+  lnu_th:
+    cmap: viridis
+    shading: auto
+    vmin: null
+    vmax: null
+    norm:
+      type: log
+    colorbar:
+      show: true
+      label: '$L_{\nu,\Theta}$'
+metadata:
+  eps_b:
+    show: true
+    prefix: '\varepsilon_{\mathrm{B}}'
+    fmt: '.1e'
+    unit: null
+  eps_th:
+    show: true
+    prefix: '\varepsilon_{\mathrm{th}}'
+    fmt: '.2f'
+    unit: null
+  distance:
+    show: true
+    prefix: 'D'
+    fmt: '.1f'
+    unit: "kpc"
+  mu:
+    show: true
+    prefix: '\mu'
+    fmt: '.1f'
+    unit: null
+  mu_e:
+    show: true
+    prefix: '\mu_e'
+    fmt: '.1f'
+    unit: null

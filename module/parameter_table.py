@@ -53,6 +53,7 @@ class ModelColumnNames(StrEnum):
     THETA_THIN = auto()
     IS_SSA_THICK = auto()
     A_SYN = auto()
+    BETA_SH = auto()
     PHI_A = auto()
     PHI_THETA = auto()
     TAU_THETA = auto()
@@ -240,7 +241,8 @@ class ModelParameterTable:
             ModelColumnNames.LNU_THETA: self.lnu_theta.to_value_in(lnu_unit).ravel(),
             ModelColumnNames.DOPPLER_DELTA: self.doppler_delta.ravel(),
             ModelColumnNames.PHI_PEAK: phi_peak.to_value_in(phi_unit).ravel(),
-            ModelColumnNames.FNU_PEAK: fnu_peak.to_value_in(fnu_unit).ravel()
+            ModelColumnNames.FNU_PEAK: fnu_peak.to_value_in(fnu_unit).ravel(),
+            ModelColumnNames.BETA_SH: self.beta_sh.ravel()
         })
         df.attrs[ModelParameterNames.EPS_B] = self.eps_b
         df.attrs[ModelParameterNames.EPS_TH] = self.eps_th

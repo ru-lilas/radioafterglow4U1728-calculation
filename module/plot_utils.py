@@ -57,6 +57,13 @@ class PlotData:
     value: str
     unit: str|None
 
+@dataclass(frozen=True, slots=True)
+class SubplotConfig:
+    nrows: int
+    ncols: int
+    sharex: bool = False
+    sharey: bool = False
+
 @dataclass(frozen=True,slots=True)
 class AxisConfig:
     scale: ValueScale
@@ -101,6 +108,12 @@ class PlotLayoutConfig:
             data_class = cls,
             data = dict_data
         )
+
+@dataclass(frozen=True, slots=True)
+class MultiPlotLayoutConfig:
+    figure: FigureConfig
+    axes: AxesConfig
+    subplots: SubplotConfig
 
 class AxesConfigurator:
     @staticmethod
@@ -195,6 +208,28 @@ def create_configured_axes(
     AxesConfigurator.apply(ax,config.axes)
 
     return fig, ax
+
+def create_configured_subplots(
+    config: MultiPlotLayoutConfig,
+) -> tuple[Figure, NDArray]:
+    fig, axes = plt.subplots(
+        nrows=config.subplots.nrows,
+        ncols=config.subplots.ncols,
+        figsize=config.figure.figsize,
+        dpi=config.figure.dpi,
+        sharex=config.subplots.sharex,
+        sharey=config.subplots.sharey,
+        layout=config.figure.layout_engine,
+        squeeze=False,
+    )
+
+    for ax in axes.flat:
+        AxesConfigurator.apply(
+            ax,
+            config.axes,
+        )
+
+    return fig, axes
 
 @dataclass
 class AxisConfigure:
@@ -318,23 +353,23 @@ class ContourConfigure:
     levels: ContourLevelConfigure
     label: ContourLabelStyle
 
-def build_meshgrid(
-    df,
-    x_column:str,
-    y_column:str,
-    z_column:str
-):
-    pivot = df.pivot(
-        index=y_column,
-        columns=x_column,
-        values=z_column,
-    )
-    X, Y = np.meshgrid(
-        pivot.columns.to_numpy(),
-        pivot.index.to_numpy(),
-    )
-    Z = pivot.to_numpy()
-    return (X,Y,Z)
+@dataclass(frozen=True, slots=True)
+class ColorbarConfig:
+    show: bool
+    label: str
+
+@dataclass(frozen=True, slots=True)
+class NormConfig:
+    type: str
+
+@dataclass(frozen=True, slots=True)
+class ColormapConfigure(YAMLReadable):
+    cmap: str
+    shading: Literal["flat","nearest","gouraud","auto"]
+    vmin: float | None
+    vmax: float | None
+    norm: NormConfig
+    colorbar: ColorbarConfig
 
 @dataclass(frozen=True, slots=True)
 class MetadataConfig:
@@ -352,23 +387,6 @@ class MetadataConfig:
             prefix=self.prefix,
             fmt=self.fmt
         )
-
-@dataclass
-class ColormapConfigure:
-    name: str
-    over: str|None
-    under: str|None
-
-    def build_cmap(self):
-        cmap = plt.get_cmap(self.name).copy()
-        if (self.over is None) and (self.under is None):
-            return cmap
-        if self.over is not None:
-            cmap.set_over(self.over)
-        if self.under is not None:
-            cmap.set_under(self.under)
-        return cmap
-
 
 @dataclass
 class ColorbarConfigure:

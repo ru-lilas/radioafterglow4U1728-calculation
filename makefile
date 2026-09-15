@@ -40,6 +40,7 @@ FILEPATH_OBSBG := $(DATADIR)/$(OBSDIR)/bg.$(EXTENTION_CSV)
 FILEPATH_LC_EST := $(DATADIR)/$(RUN_DIR)/lc_est.$(EXTENTION_CSV)
 FILEPATH_LC_PDF := $(FIGDIR)/$(RUN_DIR)/lc.$(EXTENTION_PDF)
 FILEPATH_CHEVALIER_PDF := $(FIGDIR)/$(RUN_DIR)/chevalier_diagram.$(EXTENTION_PDF)
+FILEPATH_CHEVALIER_COLORMAP_PDF := $(FIGDIR)/$(RUN_DIR)/chevalier_colormap.$(EXTENTION_PDF)
 FILEPATH_CHI2 := $(DATADIR)/$(RUN_DIR)/chi2.$(EXTENTION_CSV)
 FILEPATH_MINIMUM_CHI2_LC := $(DATADIR)/$(RUN_DIR)/minimum_chi2_lc.$(EXTENTION_CSV)
 FILEPATH_ALLOWING_MODELS := $(DATADIR)/$(RUN_DIR)/$(ALLOWING_MODELS).$(EXTENTION_CSV)
@@ -54,7 +55,7 @@ param: \
 		--input $(FILEPATH_INPUT)
 
 lcfig: $(FILEPATH_LC_PDF)
-chfig: $(FILEPATH_CHEVALIER_PDF)
+
 
 $(FILEPATH_LC_PDF): \
 	$(FILEPATH_INPUT) \
@@ -71,15 +72,27 @@ $(FILEPATH_LC_PDF): \
 		--plotconfig plotconfigs/estimated_lightcurve.yaml \
 		--output $@
 
+chevaliercm: $(FILEPATH_CHEVALIER_COLORMAP_PDF)
+$(FILEPATH_CHEVALIER_COLORMAP_PDF): \
+	$(FILEPATH_MODEL_PARAMETER_TABLE) \
+	$(FILEPATH_OBSLC) \
+	plotconfigs/chevalier_colormaps.yaml \
+	scripts/chevalier_colormaps.py
+	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+		--model_table $< \
+		--plotconfig plotconfigs/chevalier_colormaps.yaml \
+		--obslc $(FILEPATH_OBSLC) \
+		--output $@
+
+chevalier: $(FILEPATH_CHEVALIER_PDF)
+
 $(FILEPATH_CHEVALIER_PDF): \
-	$(FILEPATH_INPUT) \
-	$(FILEPATH_PEAK_TABLE) \
+	$(FILEPATH_MODEL_PARAMETER_TABLE) \
 	$(FILEPATH_OBSLC) \
 	plotconfigs/chevalier_diagram.yaml \
 	scripts/chevalier.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--input $< \
-		--peak_table $(FILEPATH_PEAK_TABLE) \
+		--model_table $< \
 		--plotconfig plotconfigs/chevalier_diagram.yaml \
 		--obslc $(FILEPATH_OBSLC) \
 		--output $@
