@@ -8,6 +8,7 @@ layout:
     ncols: 3
     sharex: true
     sharey: true
+    hide_shared_labels: true
   axes:
     x:
       scale: "log"
@@ -18,7 +19,7 @@ layout:
         fontsize: 32
     y:
       scale: "log"
-      limits: [1.0e-02,1.0e+02]
+      limits: [1.0e-02,1.0e+01]
       label:
         prefix: '$F_{\nu,\mathrm{net,peak}}$'
         unit: "mJy"
@@ -38,8 +39,11 @@ colormaps:
     vmax: null
     norm:
       type: linear
-    colorbar:
+    colorbar: &colorbar_tmp
       show: true
+      pad: 0.01
+      tick_labelsize: 12
+      fraction: 0.5
       label:
         prefix: '$\Theta$'
         unit: ""
@@ -52,7 +56,7 @@ colormaps:
     norm:
       type: log
     colorbar:
-      show: true
+      <<: *colorbar_tmp
       label:
         prefix: '$\tau_{\Theta}$'
         unit: ""
@@ -65,7 +69,7 @@ colormaps:
     norm:
       type: log
     colorbar:
-      show: true
+      <<: *colorbar_tmp
       label:
         prefix: '$\phi_{\Theta}$'
         unit: "GHz min"
@@ -78,7 +82,7 @@ colormaps:
     norm:
       type: log
     colorbar:
-      show: true
+      <<: *colorbar_tmp
       label:
         prefix: '$L_{\nu,\Theta}$'
         unit: "erg s-1 Hz-1"
@@ -91,7 +95,7 @@ colormaps:
     norm:
       type: linear
     colorbar:
-      show: true
+      <<: *colorbar_tmp
       label: 
         prefix: '$\beta_{\mathrm{sh}}=v_{\mathrm{sh}}/c$'
         unit: ""
@@ -104,7 +108,7 @@ colormaps:
     norm:
       type: log
     colorbar:
-      show: true
+      <<: *colorbar_tmp
       label:
         prefix: '$A_{\mathrm{syn}}$'
         unit: "g cm-1"
@@ -117,7 +121,7 @@ colormaps:
     norm:
       type: log
     colorbar:
-      show: true
+      <<: *colorbar_tmp
       label: 
         prefix: '$A_{\mathrm{w}}$'
         unit: "g cm-1"

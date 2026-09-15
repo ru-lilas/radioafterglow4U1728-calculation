@@ -57,6 +57,22 @@ def main():
             quantity=grids.tau_th,
             style=cmconf.tau_th
         ),
+        plot_utils.ColormapPlot(
+            quantity=grids.phi_th,
+            style=cmconf.phi_th
+        ),
+        plot_utils.ColormapPlot(
+            quantity=grids.beta_sh,
+            style=cmconf.beta_sh
+        ),
+        plot_utils.ColormapPlot(
+            quantity=grids.a_wind,
+            style=cmconf.a_wind
+        ),
+        plot_utils.ColormapPlot(
+            quantity=grids.a_syn,
+            style=cmconf.a_syn
+        ),
     ]
 
     with PdfPages(outpath) as pdf:

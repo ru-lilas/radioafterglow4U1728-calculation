@@ -339,7 +339,8 @@ class ChevalierGrid:
 
         for ax, cmplot in zip(axes.flat, cmplots):
             style=cmplot.style
-            label = style.colorbar.label
+            cb = style.colorbar
+            label = cb.label
             mesh = ax.pcolormesh(
                 phi_peak_val,
                 fnu_peak_val,
@@ -348,7 +349,15 @@ class ChevalierGrid:
                 norm=style.norm.type,
                 cmap=style.cmap
             )
-            cbar = fig.colorbar(mesh, ax=ax)
+            cbar = fig.colorbar(
+                mesh,
+                ax=ax,
+                pad=cb.pad,
+                fraction=cb.fraction,
+            )
+            cbar.ax.tick_params(
+                labelsize=cb.tick_labelsize
+            )
             cbar.set_label(
                 label.text,
                 fontsize=label.fontsize

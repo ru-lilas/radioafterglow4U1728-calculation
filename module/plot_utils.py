@@ -63,6 +63,7 @@ class SubplotConfig:
     ncols: int
     sharex: bool = False
     sharey: bool = False
+    hide_shared_labels: bool = True
 
 @dataclass(frozen=True,slots=True)
 class AxisConfig:
@@ -229,6 +230,15 @@ def create_configured_subplots(
             config.axes,
         )
 
+    if config.subplots.hide_shared_labels:
+        if config.subplots.sharex:
+            for ax in axes[:-1, :].flat:
+                ax.set_xlabel("")
+
+        if config.subplots.sharey:
+            for ax in axes[:, 1:].flat:
+                ax.set_ylabel("")
+
     return fig, axes
 
 @dataclass
@@ -356,6 +366,9 @@ class ContourConfigure:
 @dataclass(frozen=True, slots=True)
 class ColorbarConfigure:
     show: bool
+    pad: float
+    fraction: float
+    tick_labelsize: float
     label: LabelConfigure
 
 @dataclass(frozen=True, slots=True)
