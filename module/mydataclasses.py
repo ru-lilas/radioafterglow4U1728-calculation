@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import numpy as np
 from pathlib import Path
 from numpy.typing import NDArray
@@ -162,6 +162,44 @@ class BoolGrid:
         return cls(
             values=values.reshape(n,n),
         )
+
+@dataclass(frozen=True, slots=True)
+class FloatGrid:
+    values: NDArray[np.float64]| np.ma.MaskedArray
+    def __post_init__(self) -> None:
+        if self.values.ndim != 2:
+            raise ValueError(
+                "valuesは2次元配列でなければなりません. "
+                f"shape={self.values.shape}"
+            )
+
+    @property
+    def shape(self):
+        return self.values.shape
+
+    def masking(
+        self,
+        mask:BoolGrid,
+        condition:bool = True
+    )->Self:
+        val = self.values
+        if condition:
+            return replace(
+                self,
+                values=np.ma.masked_where(
+                    mask.values.reshape(val.shape),
+                    val,
+                )
+            )
+        else:
+            return replace(
+                self,
+                values=np.ma.masked_where(
+                    ~mask.values.reshape(val.shape),
+                    val,
+                )
+            )
+
 
 
 @dataclass(frozen=True,slots=True)

@@ -70,7 +70,9 @@ def main():
             ax,
             confs=plotconf.contours,
             phi_unit=phi_unit,
-            fnu_unit=fnu_unit
+            fnu_unit=fnu_unit,
+            phi_range=grids.plot_range(plotconf.layout.axes.x),
+            fnu_range=grids.plot_range(plotconf.layout.axes.y),
         )
     #     grids.plot(
     #         ax,

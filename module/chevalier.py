@@ -10,14 +10,15 @@ import numpy as np
 
 from module import plot_utils
 from module.mydataclasses import (
+    FloatGrid,
     YAMLReadable,
     QuantityData,
     QuantityGrid,
     BoolGrid
 )
 from module.observation import ChevalierScatter
-from module.plot_utils import ColormapConfigure, ColormapPlot, ContourStyle, MetadataConfig
-from module.types import FloatArray
+from module.plot_utils import AxesConfig, AxisConfig, ColormapConfigure, ColormapPlot, ContourStyle, MetadataConfig
+from module.types import FloatArray, FloatPair
 from module.parameter_table import ModelParameterNames,ModelColumnNames
 from enum import StrEnum, auto
 from matplotlib.axes import Axes
@@ -176,19 +177,25 @@ class ChevalierGrid:
             )
         )
 
-    # @property
-    # def parameter_grids(
-    #     self
-    # )->ABGrid:
-    #     a_wind_grid, beta_sh_grid = np.broadcast_arrays(
-    #         self.a_wind_arr.values,
-    #         self.beta_sh_arr,
-    #     )
-    #     return ABGrid(
-    #         a_wind_grid = np.asarray(a_wind_grid,dtype=np.float64),
-    #         beta_sh_grid = np.asarray(beta_sh_grid,dtype=np.float64),
-    #     )
-    #
+    @staticmethod
+    def plot_range(
+        axisconfig:AxisConfig
+    )->tuple[float,float]:
+        lim = axisconfig.limits
+        if lim is not None:
+            return lim
+        else:
+            raise ValueError("描画範囲が設定されていないため, 値を取得できません")
+
+    def grid_masked(
+        self,
+        grid_val:FloatArray
+    )->FloatArray:
+        return np.ma.masked_where(
+            ~self.is_ssa_thick.values.reshape(grid_val.shape),
+            grid_val,
+        )
+
     def plot_main_contour(
         self,
         ax:Axes,
@@ -196,37 +203,51 @@ class ChevalierGrid:
         *,
         phi_unit: str,
         fnu_unit: str,
+        phi_range: FloatPair,
+        fnu_range: FloatPair
     )->tuple[QuadContourSet,QuadContourSet]:
-        phi_peak = self.phi_peak.to_value_in(phi_unit)
-        fnu_peak = self.fnu_peak.to_value_in(fnu_unit)
+        phi_peak = FloatGrid(self.phi_peak.to_value_in(phi_unit))
+        fnu_peak = FloatGrid(self.fnu_peak.to_value_in(fnu_unit))
 
         a_wind_unit = confs.a_wind.unit
         beta_unit = confs.beta_sh.unit
-        a_wind_grid = self.a_wind.to_value_in(a_wind_unit)
-        beta_sh_grid = self.beta_sh.to_value_in(beta_unit)
+        a_wind_grid = FloatGrid(self.a_wind.to_value_in(a_wind_unit))
+        beta_sh_grid = FloatGrid(self.beta_sh.to_value_in(beta_unit))
+
+        out_plot_range = BoolGrid(
+            (phi_peak.values <= phi_range[0] )
+            | (phi_peak.values >= phi_range[1])
+            | (fnu_peak.values <= fnu_range[0])
+            | (fnu_peak.values >= fnu_range[1])
+        )
+
+        phi_masked = phi_peak.masking(out_plot_range)
+        fnu_masked = fnu_peak.masking(out_plot_range)
+        a_masked = a_wind_grid.masking(out_plot_range)
+        b_masked = beta_sh_grid.masking(out_plot_range)
 
         if not (
-            phi_peak.shape
-            == fnu_peak.shape
-            == a_wind_grid.shape
-            == beta_sh_grid.shape
+            phi_masked.shape
+            == fnu_masked.shape
+            == a_masked.shape
+            == b_masked.shape
         ):
             raise ValueError(
                 "等高線に使用するグリッドのshapeが"
                 "一致していません. "
-                f"phi_peak={phi_peak.shape}, "
-                f"fnu_peak={fnu_peak.shape}, "
-                f"a_wind={a_wind_grid.shape}, "
-                f"beta_sh={beta_sh_grid.shape}"
+                f"phi_peak={phi_masked.shape}, "
+                f"fnu_peak={fnu_masked.shape}, "
+                f"a_wind={a_masked.shape}, "
+                f"beta_sh={b_masked.shape}"
             )
 
         contour_a_wind = ax.contour(
-            phi_peak,
-            fnu_peak,
-            a_wind_grid,
+            phi_masked.values,
+            fnu_masked.values,
+            a_masked.values,
             levels=(
                 confs.a_wind.levels
-                .to_nparray(a_wind_grid)
+                .to_nparray(a_masked.values)
             ),
             **confs.a_wind.style.to_kwargs(),
         )
@@ -236,12 +257,12 @@ class ChevalierGrid:
         )
 
         contour_beta_sh = ax.contour(
-            phi_peak,
-            fnu_peak,
-            beta_sh_grid,
+            phi_masked.values,
+            fnu_masked.values,
+            b_masked.values,
             levels=(
                 confs.beta_sh.levels
-                .to_nparray(beta_sh_grid)
+                .to_nparray(b_masked.values)
             ),
             **confs.beta_sh.style.to_kwargs(),
         )
@@ -290,10 +311,7 @@ class ChevalierGrid:
             cb = style.colorbar
             label = cb.label
             z_val = cmplot.quantity.to_value_in(label.unit)
-            z_masked = np.ma.masked_where(
-                ~self.is_ssa_thick.values.reshape(z_val.shape),
-                z_val,
-            )
+            z_masked = self.grid_masked(z_val)
             mesh = ax.pcolormesh(
                 phi_peak_val,
                 fnu_peak_val,
