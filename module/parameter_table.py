@@ -16,6 +16,7 @@ from module import (
     quantity_converter)
 import numpy as np
 import pandas as pd
+from module.synchrotron_numerical_table import DimensionlessThermalPeak
 from module import mydataclasses, synchrotron_scaling_values
 from enum import StrEnum, auto
 from module.mydataclasses import (
@@ -60,44 +61,6 @@ class ModelColumnNames(StrEnum):
     TAU_THETA = auto()
     LNU_THETA = auto()
     DOPPLER_DELTA = auto()
-
-@dataclass(frozen=True,slots=True)
-class LambdaPeakTable:
-    tau_theta_ref: FloatArray
-    xm_peak_ref: FloatArray
-    lambda_peak_ref: FloatArray
-
-    @classmethod
-    def from_csv(
-            cls,
-            path:Path
-    )->Self:
-        df = FileReader.table_from_csv(path)
-        return cls(
-            tau_theta_ref = convert_ndarray(df,SynchrotronPeakColumns.TAU_THETA),
-            xm_peak_ref = convert_ndarray(df,SynchrotronPeakColumns.XM_PEAK),
-            lambda_peak_ref = convert_ndarray(df,SynchrotronPeakColumns.LAMBDA_PEAK),
-        )
-
-    def interpolated_xm_peak(
-        self,
-        tau_theta:FloatArray
-    )->FloatArray:
-        return np.interp(
-            tau_theta,
-            self.tau_theta_ref,
-            self.xm_peak_ref
-        )
-
-    def interpolated_lambda_peak(
-        self,
-        tau_theta:FloatArray
-    )->FloatArray:
-        return np.interp(
-            tau_theta,
-            self.tau_theta_ref,
-            self.lambda_peak_ref
-        )
 
 @dataclass(frozen=True,slots=True)
 class ParameterGrid:
@@ -209,27 +172,30 @@ class ModelParameterTable:
 
     def phi_peak(
         self,
-        peak_table:LambdaPeakTable,
+        table:DimensionlessThermalPeak,
         tau_th:models.OpticalDepthParameter
     )->QuantityArray:
-        phi_theta = self.grid.phi_th
-        xm_peak = peak_table.interpolated_lambda_peak(
-            tau_th.values
+        ln_xm_peak = table.ln_xm_peak(
+            ln_tau_th=np.log(tau_th.values)
         )
+        xm_peak = np.exp(ln_xm_peak)
+
+        phi_th = self.grid.phi_th
         return QuantityArray(
-            values = phi_theta.values*xm_peak,
-            unit = phi_theta.unit
+            values = phi_th.values*xm_peak,
+            unit = phi_th.unit
         )
 
     def lnu_peak(
         self,
-        peak_table:LambdaPeakTable,
+        table:DimensionlessThermalPeak,
         lnu_th:models.ThermalSynchrotronLuminosity,
         tau_th:models.OpticalDepthParameter
     )->QuantityArray:
-        lambda_peak = peak_table.interpolated_lambda_peak(
-            tau_th.values
+        ln_lambda_peak = table.ln_lambda_peak(
+            ln_tau_th=np.log(tau_th.values)
         )
+        lambda_peak = np.exp(ln_lambda_peak)
         return QuantityArray(
             values = lnu_th.values*lambda_peak,
             unit = lnu_th.unit
@@ -237,7 +203,7 @@ class ModelParameterTable:
 
     def fnu_peak_observerframe(
         self,
-        peak_table:LambdaPeakTable,
+        table:DimensionlessThermalPeak,
         lnu_peak:QuantityArray,
         doppler_delta:FloatArray
     )->QuantityArray:
@@ -249,7 +215,7 @@ class ModelParameterTable:
 
     def to_df(
         self,
-        peak_table:LambdaPeakTable,
+        table:DimensionlessThermalPeak,
         *,
         a_wind_unit:str = "g cm-1",
         phi_unit:str = "GHz min",
@@ -274,16 +240,16 @@ class ModelParameterTable:
         lnu_th = self.lnu_theta(theta)
 
         phi_peak = self.phi_peak(
-            peak_table,
+            table,
             tau_th=tau_th
         )
         lnu_peak = self.lnu_peak(
-            peak_table,
+            table,
             lnu_th=lnu_th,
             tau_th=tau_th
         )
         fnu_peak = self.fnu_peak_observerframe(
-            peak_table,
+            table,
             lnu_peak=lnu_peak,
             doppler_delta=doppler_delta
         )

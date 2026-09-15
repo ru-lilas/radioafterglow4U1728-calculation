@@ -42,6 +42,23 @@ class ValueArray(YAMLReadable):
         else:
             return np.logspace(start=self.start,stop=self.stop,num=self.num,dtype=np.float64)
 
+@dataclass(frozen=True, slots=True)
+class LnSpace(YAMLReadable):
+    start_log10: float
+    stop_log10: float
+    num: int
+
+    def to_log10(self) -> NDArray[np.float64]:
+        return np.linspace(
+            self.start_log10,
+            self.stop_log10,
+            self.num,
+            dtype=np.float64,
+        )
+
+    def to_ln(self) -> NDArray[np.float64]:
+        return self.to_log10() * np.log(10.0)
+
 @dataclass(frozen=True,slots=True)
 class QuantityArrayBase:
     values: ValueArray

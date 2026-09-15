@@ -10,7 +10,6 @@ from module.chevalier import (
 from module.inputs_as_dataclass import GeneralInputs, ModelParameterTable
 from module.mydataclasses import QuantityData
 from module.observation import LongformatLightcurve
-from module.parameter_table import LambdaPeakTable
 from module.utils import FileWriter
 
 def parse_args()->argparse.Namespace:

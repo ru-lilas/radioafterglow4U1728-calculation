@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 from module.inputs_as_dataclass import GeneralInputs
-from module.parameter_table import LambdaPeakTable
+from module.synchrotron_numerical_table import DimensionlessThermalPeak
 from module.utils import FileWriter
 
 def parse_args()->argparse.Namespace:
@@ -29,7 +29,7 @@ def main():
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
     general_inputs = GeneralInputs.from_yaml(args.input)
-    peak_table = LambdaPeakTable.from_csv(args.peak_table)
+    peak_table =DimensionlessThermalPeak.from_csv(args.peak_table)
     model_params = general_inputs.model_parameters
     model_table = model_params.build()
 
