@@ -58,15 +58,6 @@ def main():
     phi_unit = plotconf.layout.axes.x.label.unit
     fnu_unit=plotconf.layout.axes.y.label.unit
 
-    thin_limit.show_row(
-        theta_range=(
-            3.0,
-            4.0
-        ),
-        phi_unit=phi_unit,
-        fnu_unit=fnu_unit
-    )
-
     ranges = plotconf.layout.axes.range()
     with PdfPages(outpath) as pdf:
         fig,ax = plot_utils.create_configured_axes(plotconf.layout)
@@ -89,7 +80,8 @@ def main():
             ax,
             style=plotconf.styles.thin_boundary,
             phi_unit=phi_unit,
-            fnu_unit=fnu_unit
+            fnu_unit=fnu_unit,
+            phi_range=ranges.x
         )
     #     grids.plot(
     #         ax,

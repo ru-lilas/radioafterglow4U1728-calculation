@@ -18,7 +18,7 @@ from module.mydataclasses import (
     BoolGrid
 )
 from module.observation import ChevalierScatter
-from module.plot_utils import AxesConfig, AxesRange, AxisConfig, ColormapConfigure, ColormapPlot, ContourStyle, MetadataConfig
+from module.plot_utils import AxesConfig, AxesRange, AxisConfig, AxisRange, ColormapConfigure, ColormapPlot, ContourStyle, MetadataConfig
 from module.types import FloatArray, FloatPair
 from module.parameter_table import ModelParameterNames,ModelColumnNames
 from enum import StrEnum, auto
@@ -108,10 +108,21 @@ class OpticallythinBoundary:
         style:plot_utils.LineStyle,
         *,
         phi_unit: str,
-        fnu_unit: str
+        fnu_unit: str,
+        phi_range: AxisRange
     ):
         x=self.phi_peak.to_value_in(phi_unit)
         y=self.fnu_peak.to_value_in(fnu_unit)
+        outof_plot_range = (
+            (x < phi_range.min)
+            | (x > phi_range.max)
+        )
+        x_masked = np.ma.masked_where(
+            outof_plot_range,x 
+        )
+        y_masked = np.ma.masked_where(
+            outof_plot_range,y
+        )
         ax.plot(
             x,y,
             **style.to_kwargs()
