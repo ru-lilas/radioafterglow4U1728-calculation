@@ -38,6 +38,7 @@ def main():
     model_table.view_df(
         df,
         [
+            "theta",
             "phi_peak_thin",
             "fnu_peak_thin"
 

@@ -44,6 +44,7 @@ def main():
 
     grids = ChevalierGrid.from_csv(args.model_table)
     grids.turning_point()
+    thin_limit = grids.build_optically_thin_boundary()
     df_obs_long = LongformatLightcurve.from_csv(args.obslc)
     df_obs_nu = df_obs_long.extract_lightcurve(
         QuantityData(
@@ -54,13 +55,23 @@ def main():
     obs_scat = df_obs_nu.peak
     #
     plotconf = PlotConfig.from_yaml(args.plotconfig)
+    phi_unit = plotconf.layout.axes.x.label.unit
+    fnu_unit=plotconf.layout.axes.y.label.unit
+
+    thin_limit.show_row(
+        theta_range=(
+            3.0,
+            4.0
+        ),
+        phi_unit=phi_unit,
+        fnu_unit=fnu_unit
+    )
+
     ranges = plotconf.layout.axes.range()
     with PdfPages(outpath) as pdf:
         fig,ax = plot_utils.create_configured_axes(plotconf.layout)
         fig.set_layout_engine("constrained")
 
-        phi_unit = plotconf.layout.axes.x.label.unit
-        fnu_unit=plotconf.layout.axes.y.label.unit
 
         if (phi_unit is None):
             raise ValueError("phi_unitの単位が指定されていません")
@@ -73,6 +84,12 @@ def main():
             phi_unit=phi_unit,
             fnu_unit=fnu_unit,
             plotranges=ranges
+        )
+        thin_limit.plot(
+            ax,
+            style=plotconf.styles.thin_boundary,
+            phi_unit=phi_unit,
+            fnu_unit=fnu_unit
         )
     #     grids.plot(
     #         ax,

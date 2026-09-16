@@ -233,7 +233,8 @@ class ThermalSynchrotronPhase(PhaseParameter):
         f_factor = MaxwellJuttnerFactor.exact(theta)
         phi_th_thin_inv = u.Quantity(
                 (np.pi*f_factor)/(eps_b*theta_val**7)
-            *np.sqrt(TWO_TO_FIVE*eps_th*mep/(THREE_TO_SEVEN*theta0_val))
+            *np.sqrt(TWO_TO_FIVE*eps_th*mep/(THREE_TO_SEVEN*theta0_val)),
+            u.dimensionless_unscaled
         )
         return cls.from_Quantity(phi_th_thin_inv**(-1))
 

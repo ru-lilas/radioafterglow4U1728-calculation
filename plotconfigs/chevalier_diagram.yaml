@@ -69,6 +69,12 @@ styles:
     linestyle: "none"
     alpha: null
     zorder: 1.0
+  thin_boundary: 
+    color: "#84919E"
+    linewidth: 2.0
+    linestyle: "--"
+    alpha: null
+    zorder: 1.0
 metadata:
   eps_b:
     show: true

@@ -69,6 +69,7 @@ class ModelColumnNames(StrEnum):
     LNU_TH_THIN = auto()
     PHI_PEAK_THIN = auto()
     FNU_PEAK_THIN = auto()
+    LNU_PEAK_THIN = auto()
 
 class ModelOpticallythinColumnNames(StrEnum):
     PHI_TH_THIN = auto()
@@ -351,6 +352,7 @@ class ModelParameterTable:
             ModelColumnNames.TAU_TH_THIN: tau_th_thin.values.ravel(),
             ModelColumnNames.LNU_TH_THIN: lnu_th_thin.to_value_in(lnu_unit).ravel(),
             ModelColumnNames.PHI_PEAK_THIN: phi_peak_thin.to_value_in(phi_unit).ravel(),
+            ModelColumnNames.LNU_PEAK_THIN: lnu_peak_thin.to_value_in(lnu_unit).ravel(),
             ModelColumnNames.FNU_PEAK_THIN: fnu_peak_thin.to_value_in(fnu_unit).ravel(),
         })
         df.attrs[ModelParameterNames.EPS_B] = self.eps_b
