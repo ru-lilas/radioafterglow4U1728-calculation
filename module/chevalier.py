@@ -4,7 +4,7 @@ from matplotlib.figure import Figure
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Hashable, Self
-
+import pandas as pd
 from numpy.typing import NDArray
 import numpy as np
 
@@ -115,9 +115,6 @@ class ChevalierGrid:
         lnu_unit = metadata.lnu_unit
         a_wind_unit = metadata.a_wind_unit
 
-        n_false = df["is_ssa_thick"].eq(False).sum()
-        false_rows = df.loc[df["is_ssa_thick"].eq(False)]
-        print(false_rows)
         is_ssa_thick = BoolGrid.from_df(
             df=df,
             column=ModelColumnNames.IS_SSA_THICK
@@ -178,15 +175,73 @@ class ChevalierGrid:
             is_ssa_thin = ~is_ssa_thick,
         )
 
-    @staticmethod
-    def plot_range(
-        axisconfig:AxisConfig
-    )->tuple[float,float]:
-        lim = axisconfig.limits
-        if lim is not None:
-            return lim
-        else:
-            raise ValueError("描画範囲が設定されていないため, 値を取得できません")
+    def diagnostic_monotonicity(self):
+        phi = FloatGrid(self.phi_peak.values)
+        fnu = FloatGrid(self.fnu_peak.values)
+
+        print(
+            "phi_peakが非単調な行",
+            phi.find_nonmonotonic_lines(axis=1)
+        )
+        print(
+            "phi_peakが非単調な列",
+            phi.find_nonmonotonic_lines(axis=0)
+        )
+        print(
+            "fnu_peakが非単調な行",
+            fnu.find_nonmonotonic_lines(axis=1)
+        )
+        print(
+            "fnu_peakが非単調な列",
+            fnu.find_nonmonotonic_lines(axis=0)
+        )
+        return
+
+    def turning_point(self):
+
+        turning_points = FloatGrid(self.fnu_peak.values).find_turning_points_in_columns()
+        fnu_values = self.fnu_peak.values
+        records: list[dict[str, object]] = []
+
+        nrows = self.fnu_peak.values.shape[0]
+
+        for turning_row, column in turning_points:
+            row_start = max(0, turning_row - 1)
+            row_stop = min(nrows, turning_row + 2)
+
+            for row in range(row_start, row_stop):
+                records.append({
+                    "turning_row": turning_row,
+                    "row": row,
+                    "column": column,
+                    ModelColumnNames.A_WIND: self.a_wind.values[row, column],
+                    ModelColumnNames.BETA_SH: self.beta_sh.values[row, column],
+                    "theta": self.theta.values[row, column],
+                    "tau_theta": self.tau_th.values[row, column],
+                    "fnu_peak": self.fnu_peak.values[row, column],
+                    "is_ssa_thin": self.is_ssa_thin.values[
+                        row,
+                        column,
+                    ],
+                })
+
+        turning_neighborhood_df = pd.DataFrame(records)
+        print(turning_neighborhood_df)
+        turning_neighborhood_df["tau_theta_lt_1"] = (
+            turning_neighborhood_df["tau_theta"] < 1.0
+        )
+        print(
+            turning_neighborhood_df[
+                [
+                    "column",
+                    "theta",
+                    "tau_theta",
+                    "tau_theta_lt_1",
+                    "is_ssa_thin",
+                    ModelColumnNames.FNU_PEAK
+                ]
+            ].to_string(index=False)
+        )
 
     def plot_main_contour(
         self,
@@ -275,10 +330,18 @@ class ChevalierGrid:
         *,
         phi_unit: str,
         fnu_unit: str,
+        plotranges: AxesRange
     )->None:
         mask = self.is_ssa_thin
         phi = self.phi_peak.to_FloatGrid(phi_unit)
         fnu = self.fnu_peak.to_FloatGrid(fnu_unit)
+
+        out_plot_range = BoolGrid(
+            (phi.values <= plotranges.x.min )
+            | (phi.values >= plotranges.x.max )
+            | (fnu.values <= plotranges.y.min )
+            | (fnu.values >= plotranges.y.max )
+        )
 
         for ax, cmplot in zip(axes.flat, cmplots):
             style=cmplot.style

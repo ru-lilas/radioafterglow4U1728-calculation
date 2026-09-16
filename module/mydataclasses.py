@@ -194,6 +194,91 @@ class FloatGrid:
                 )
             )
 
+    def find_nonmonotonic_lines(
+        self,
+        *,
+        axis: int,
+        rtol: float = 1.0e-10,
+        atol: float = 0.0,
+    ) -> NDArray[np.intp]:
+        values = self.values
+
+        if axis not in (0, 1):
+            raise ValueError(
+                f"axisは0または1である必要があります: axis={axis}"
+            )
+
+        diff = np.diff(values, axis=axis)
+
+        if axis == 0:
+            left = values[:-1, :]
+            right = values[1:, :]
+        else:
+            left = values[:, :-1]
+            right = values[:, 1:]
+
+        scale = np.maximum(
+            np.abs(left),
+            np.abs(right),
+        )
+        tolerance = atol + rtol * scale
+
+        increasing = (diff > tolerance).any(axis=axis)
+        decreasing = (diff < -tolerance).any(axis=axis)
+
+        nonmonotonic = increasing & decreasing
+
+        return np.flatnonzero(nonmonotonic)
+
+    def find_turning_points_in_columns(
+        self,
+        *,
+        rtol: float = 1.0e-10,
+        atol: float = 0.0,
+    ) -> list[tuple[int, int]]:
+        values = self.values
+        turning_points: list[tuple[int, int]] = []
+
+        for column in range(values.shape[1]):
+            line = values[:, column]
+            diff = np.diff(line)
+
+            scale = np.maximum(
+                np.abs(line[:-1]),
+                np.abs(line[1:]),
+            )
+            tolerance = atol + rtol * scale
+
+            # 数値誤差程度の差分を除外する
+            significant_indices = np.flatnonzero(
+                np.abs(diff) > tolerance
+            )
+
+            if significant_indices.size < 2:
+                continue
+
+            significant_signs = np.sign(
+                diff[significant_indices]
+            )
+
+            sign_changed = (
+                significant_signs[1:]
+                != significant_signs[:-1]
+            )
+
+            # diff[i-1]とdiff[i]の符号が変わる場合、
+            # values[i]が折り返し点に対応する
+            turning_rows = significant_indices[1:][
+                sign_changed
+            ]
+
+            for row in turning_rows:
+                turning_points.append(
+                    (int(row), column)
+                )
+
+        return turning_points
+
 @dataclass(frozen=True, slots=True)
 class QuantityGrid(QuantityArray):
     def __post_init__(self) -> None:

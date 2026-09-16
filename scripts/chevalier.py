@@ -43,14 +43,15 @@ def main():
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
     grids = ChevalierGrid.from_csv(args.model_table)
-    # df_obs_long = LongformatLightcurve.from_csv(args.obslc)
-    # df_obs_nu = df_obs_long.extract_lightcurve(
-    #     QuantityData(
-    #         value=9.0,
-    #         unit="GHz"
-    #     )
-    # )
-    # obs_scat = df_obs_nu.peak
+    grids.turning_point()
+    df_obs_long = LongformatLightcurve.from_csv(args.obslc)
+    df_obs_nu = df_obs_long.extract_lightcurve(
+        QuantityData(
+            value=9.0,
+            unit="GHz"
+        )
+    )
+    obs_scat = df_obs_nu.peak
     #
     plotconf = PlotConfig.from_yaml(args.plotconfig)
     ranges = plotconf.layout.axes.range()
@@ -84,18 +85,18 @@ def main():
     #         ax,
     #         plotconf=plotconf
     #     )
-    #     obs_scat.plot_range(
-    #         ax,
-    #         style=plotconf.styles.obs_range,
-    #         phi_unit=phi_unit,
-    #         fnu_unit=fnu_unit
-    #     )
-    #     obs_scat.plot_center(
-    #         ax,
-    #         style=plotconf.styles.obs_center,
-    #         phi_unit=phi_unit,
-    #         fnu_unit=fnu_unit
-    #     )
+        obs_scat.plot_range(
+            ax,
+            style=plotconf.styles.obs_range,
+            phi_unit=phi_unit,
+            fnu_unit=fnu_unit
+        )
+        obs_scat.plot_center(
+            ax,
+            style=plotconf.styles.obs_center,
+            phi_unit=phi_unit,
+            fnu_unit=fnu_unit
+        )
     #     est_params = grids.select_parameters_in(
     #         obs_scat,
     #         peak_table,

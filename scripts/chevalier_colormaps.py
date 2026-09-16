@@ -45,6 +45,7 @@ def main():
 
     grids = ChevalierGrid.from_csv(args.model_table)
     plotconf = DebagPlotConfig.from_yaml(args.plotconfig)
+    ranges = plotconf.layout.axes.range()
     cmconf=plotconf.colormaps
 
     cmplots = [
@@ -92,6 +93,7 @@ def main():
             cmplots=cmplots,
             phi_unit=plotconf.layout.axes.x.label.unit,
             fnu_unit=plotconf.layout.axes.y.label.unit,
+            plotranges=ranges,
         )
 
         pdf.savefig(fig)
