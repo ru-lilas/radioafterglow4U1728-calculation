@@ -109,24 +109,41 @@ class OpticallythinBoundary:
         *,
         phi_unit: str,
         fnu_unit: str,
-        phi_range: AxisRange
+        plotranges: AxesRange
     ):
+        xrange = plotranges.x
+        yrange = plotranges.y
         x=self.phi_peak.to_value_in(phi_unit)
         y=self.fnu_peak.to_value_in(fnu_unit)
-        outof_plot_range = (
-            (x < phi_range.min)
-            | (x > phi_range.max)
+        in_plot_range = (
+            (x >= xrange.min)
+            & (x <= xrange.max)
+            & (y >= yrange.min)
+            & (y <= yrange.max)
         )
-        x_masked = np.ma.masked_where(
-            outof_plot_range,x 
-        )
-        y_masked = np.ma.masked_where(
-            outof_plot_range,y
-        )
-        ax.plot(
-            x,y,
-            **style.to_kwargs()
-        )
+        x_visible = x[in_plot_range]
+        y_visible = y[in_plot_range]
+
+        if len(x_visible) > 0:
+            log10_x_center = 0.5 * (
+                np.log10(x_visible.min()) + np.log10(x_visible.max())
+            )
+
+            i = np.argmin(np.abs(np.log10(x_visible) - log10_x_center))
+
+            x_pos = x_visible[i]
+            y_pos = y_visible[i]
+
+            ax.plot(x, y, **style.to_kwargs())
+            ax.text(
+                x_pos,
+                y_pos,
+                r"$\tau_{\Theta}=1$",
+                ha="right",
+                va="bottom",
+                fontsize=32,
+                color=style.color
+            )
 
     def plot_theta_dependence(
         self,

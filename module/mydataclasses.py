@@ -346,3 +346,44 @@ class QuantityData:
     def value_in(self,unit:str)->float:
         value: float = float(np.asarray(self.quantity.to_value(unit)).item())
         return value
+
+@dataclass(frozen=True, slots=True)
+class MyVector:
+    values: NDArray
+    def __post_init__(self) -> None:
+        if self.values.ndim != 1:
+            raise ValueError(
+                "valuesは1次元配列でなければなりません. "
+                f"shape={self.values.shape}"
+            )
+
+@dataclass(frozen=True, slots=True)
+class BoolVector(MyVector):
+    pass
+
+@dataclass(frozen=True, slots=True)
+class FloatVector(MyVector):
+    values: NDArray[np.float64]| np.ma.MaskedArray
+
+    def masking(
+        self,
+        mask:BoolGrid,
+        condition:bool = True
+    )->Self:
+        val = self.values
+        if condition:
+            return replace(
+                self,
+                values=np.ma.masked_where(
+                    mask.values.reshape(val.shape),
+                    val,
+                )
+            )
+        else:
+            return replace(
+                self,
+                values=np.ma.masked_where(
+                    ~mask.values.reshape(val.shape),
+                    val,
+                )
+            )

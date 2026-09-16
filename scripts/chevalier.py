@@ -46,13 +46,22 @@ def main():
     grids.turning_point()
     thin_limit = grids.build_optically_thin_boundary()
     df_obs_long = LongformatLightcurve.from_csv(args.obslc)
-    df_obs_nu = df_obs_long.extract_lightcurve(
-        QuantityData(
-            value=9.0,
-            unit="GHz"
+
+    freqs = [5.5,9.0]
+    nu_unit = "GHz"
+    dfs_obs_nu = [
+        df_obs_long.extract_lightcurve(
+            QuantityData(
+                value = nu,
+                unit = nu_unit
+            )
         )
-    )
-    obs_scat = df_obs_nu.peak
+        for nu in freqs
+    ]
+    obs_ranges = [
+        df_obs_nu.peak
+        for df_obs_nu in dfs_obs_nu
+    ]
     #
     plotconf = PlotConfig.from_yaml(args.plotconfig)
     phi_unit = plotconf.layout.axes.x.label.unit
@@ -81,31 +90,19 @@ def main():
             style=plotconf.styles.thin_boundary,
             phi_unit=phi_unit,
             fnu_unit=fnu_unit,
-            phi_range=ranges.x
+            plotranges=ranges
         )
-    #     grids.plot(
-    #         ax,
-    #         peak_table=peak_table,
-    #         contourconfs=plotconf.contours,
-    #         phi_unit=phi_unit,
-    #         fnu_unit=fnu_unit,
-    #     )
     #     grids.plot_metadata(
     #         ax,
     #         plotconf=plotconf
     #     )
-        obs_scat.plot_range(
-            ax,
-            style=plotconf.styles.obs_range,
-            phi_unit=phi_unit,
-            fnu_unit=fnu_unit
-        )
-        obs_scat.plot_center(
-            ax,
-            style=plotconf.styles.obs_center,
-            phi_unit=phi_unit,
-            fnu_unit=fnu_unit
-        )
+        for obs_range in obs_ranges:
+            obs_range.plot_range(
+                ax,
+                style=plotconf.styles.obs_range,
+                phi_unit=phi_unit,
+                fnu_unit=fnu_unit
+            )
     #     est_params = grids.select_parameters_in(
     #         obs_scat,
     #         peak_table,
