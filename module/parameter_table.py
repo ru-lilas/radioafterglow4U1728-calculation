@@ -67,6 +67,15 @@ class ModelColumnNames(StrEnum):
     DOPPLER_DELTA = auto()
     TAU_TH_THIN = auto()
     LNU_TH_THIN = auto()
+    PHI_PEAK_THIN = auto()
+    FNU_PEAK_THIN = auto()
+
+class ModelOpticallythinColumnNames(StrEnum):
+    PHI_TH_THIN = auto()
+    TAU_TH_THIN = auto()
+    LNU_TH_THIN = auto()
+    PHI_PEAK_THIN = auto()
+    FNU_PEAK_THIN = auto()
 
 @dataclass(frozen=True,slots=True)
 class ParameterGrid:
@@ -229,9 +238,9 @@ class ModelParameterTable:
 
     def phi_peak(
         self,
-        xm_peak:NDArray[np.float64]
+        xm_peak:NDArray[np.float64],
+        phi_th:models.ThermalSynchrotronPhase
     )->QuantityArray:
-        phi_th = self.grid.phi_th
         return QuantityArray(
             values = phi_th.values*xm_peak,
             unit = phi_th.unit
@@ -254,7 +263,6 @@ class ModelParameterTable:
 
     def fnu_peak_observerframe(
         self,
-        table:DimensionlessThermalPeak,
         lnu_peak:QuantityArray,
         doppler_delta:FloatArray
     )->QuantityArray:
@@ -292,14 +300,13 @@ class ModelParameterTable:
 
         # peak values
         xm_peak = self.xm_peak(table,tau_th)
-        phi_peak = self.phi_peak(xm_peak)
+        phi_peak = self.phi_peak(xm_peak,grid.phi_th)
         lnu_peak = self.lnu_peak(
             table,
             lnu_th=lnu_th,
             tau_th=tau_th
         )
         fnu_peak = self.fnu_peak_observerframe(
-            table,
             lnu_peak=lnu_peak,
             doppler_delta=doppler_delta
         )
@@ -310,6 +317,20 @@ class ModelParameterTable:
         lnu_th_thin = self.lnu_theta(
             theta = theta,
             phi_th = phi_th_thin
+        )
+        xm_peak_thin = self.xm_peak(table,tau_th_thin)
+        phi_peak_thin = self.phi_peak(
+            xm_peak_thin,
+            phi_th_thin
+        )
+        lnu_peak_thin = self.lnu_peak(
+            table=table,
+            lnu_th=lnu_th_thin,
+            tau_th=tau_th_thin
+        )
+        fnu_peak_thin = self.fnu_peak_observerframe(
+            lnu_peak = lnu_peak_thin,
+            doppler_delta=doppler_delta
         )
 
         df = pd.DataFrame({
@@ -329,6 +350,8 @@ class ModelParameterTable:
             ModelColumnNames.PHI_TH_THIN: phi_th_thin.to_value_in(phi_unit).ravel(),
             ModelColumnNames.TAU_TH_THIN: tau_th_thin.values.ravel(),
             ModelColumnNames.LNU_TH_THIN: lnu_th_thin.to_value_in(lnu_unit).ravel(),
+            ModelColumnNames.PHI_PEAK_THIN: phi_peak_thin.to_value_in(phi_unit).ravel(),
+            ModelColumnNames.FNU_PEAK_THIN: fnu_peak_thin.to_value_in(fnu_unit).ravel(),
         })
         df.attrs[ModelParameterNames.EPS_B] = self.eps_b
         df.attrs[ModelParameterNames.EPS_TH] = self.eps_th
