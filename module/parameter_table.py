@@ -3,9 +3,12 @@
     inputからmodelごとのパラメータ表を作成する
 """
 
+from os import wait
 from pathlib import Path
 from typing import Self, cast
 from dataclasses import dataclass
+
+from numpy.typing import NDArray
 from module.dataframe_processors import convert_ndarray
 from module.types import FloatArray
 from module import (
@@ -48,6 +51,7 @@ class ModelParameterNames(StrEnum):
     FNU_UNIT = auto()
 
 class ModelColumnNames(StrEnum):
+    PHI_TH_THIN = auto()
     PHI_PEAK = auto()
     FNU_PEAK = auto()
     THETA = auto()
@@ -59,6 +63,7 @@ class ModelColumnNames(StrEnum):
     PHI_A = auto()
     PHI_THETA = auto()
     TAU_THETA = auto()
+    TAU_TH_THIN = auto()
     LNU_THETA = auto()
     DOPPLER_DELTA = auto()
 
@@ -152,6 +157,36 @@ class ModelParameterTable:
             phi_th=self.grid.phi_th
         )
 
+    def phi_th_thin(
+        self,
+        theta:models.ElectronTemperature
+    )->models.ThermalSynchrotronPhase:
+        return models.ThermalSynchrotronPhase.optically_thin_limit(
+            eps_b=self.eps_b,
+            eps_th=self.eps_th,
+            mep=self.mep,
+            theta=theta,
+            theta0=self.grid.theta0
+        )
+
+    def tau_theta_thinlimit(
+        self,
+        theta:models.ElectronTemperature,
+        phi_th_thin: models.ThermalSynchrotronPhase
+    )->models.OpticalDepthParameter:
+        """
+            order unity
+        """
+        return models.OpticalDepthParameter.from_params_exact(
+            mep=self.mep,
+            eps_b=self.eps_b,
+            eps_th=self.eps_th,
+            theta=theta,
+            theta0=self.grid.theta0,
+            phi_th=phi_th_thin
+        )
+
+
     def lnu_theta(
         self,
         theta:models.ElectronTemperature
@@ -164,22 +199,49 @@ class ModelParameterTable:
             phi_th=self.grid.phi_th
         )
 
+    def lnu_th_thin(
+        self,
+        theta:models.ElectronTemperature,
+    )->models.ThermalSynchrotronLuminosity:
+        phi_th_thin = self.phi_th_thin(theta)
+        return models.ThermalSynchrotronLuminosity.from_params(
+            mep=self.mep,
+            theta=theta,
+            theta0=self.grid.theta0,
+            eps_th=self.eps_th,
+            phi_th=phi_th_thin
+        )
+
     def doppler_delta(
         self,
         beta_sh:FloatArray
     )->FloatArray:
         return quantity_converter.beta_into_doppler_delta(beta_sh)
 
-    def phi_peak(
+    def xm_peak(
         self,
         table:DimensionlessThermalPeak,
         tau_th:models.OpticalDepthParameter
-    )->QuantityArray:
+    )->NDArray[np.float64]:
         ln_xm_peak = table.ln_xm_peak(
             ln_tau_th=np.log(tau_th.values)
         )
-        xm_peak = np.exp(ln_xm_peak)
+        return np.exp(ln_xm_peak)
 
+    def lambda_peak(
+        self,
+        table:DimensionlessThermalPeak,
+        tau_th:models.OpticalDepthParameter
+    )->NDArray[np.float64]:
+        ln_lambda_peak = table.ln_lambda_peak(
+            ln_tau_th=np.log(tau_th.values)
+        )
+        return np.exp(ln_lambda_peak)
+
+    def phi_peak(
+        self,
+        xm_peak:NDArray[np.float64]
+    )->QuantityArray:
         phi_th = self.grid.phi_th
         return QuantityArray(
             values = phi_th.values*xm_peak,
@@ -239,10 +301,9 @@ class ModelParameterTable:
         tau_th = self.tau_theta(theta)
         lnu_th = self.lnu_theta(theta)
 
-        phi_peak = self.phi_peak(
-            table,
-            tau_th=tau_th
-        )
+        # peak values
+        xm_peak = self.xm_peak(table,tau_th)
+        phi_peak = self.phi_peak(xm_peak)
         lnu_peak = self.lnu_peak(
             table,
             lnu_th=lnu_th,
@@ -254,11 +315,17 @@ class ModelParameterTable:
             doppler_delta=doppler_delta
         )
 
+        # optically thin limit
+        phi_th_thin = self.phi_th_thin(theta)
+        tau_th_thin = self.tau_theta_thinlimit(theta,phi_th_thin)
+
         df = pd.DataFrame({
             ModelParameterNames.PHI_TH: grid.phi_th.to_value_in(phi_unit).ravel(),
             ModelParameterNames.THETA0: grid.theta0.values.ravel(),
             ModelColumnNames.THETA: theta.values.ravel(),
+            ModelColumnNames.PHI_TH_THIN: phi_th_thin.to_value_in(phi_unit).ravel(),
             ModelColumnNames.THETA_THIN: theta_thin_val.ravel(),
+            ModelColumnNames.TAU_TH_THIN: tau_th_thin.values.ravel(),
             ModelColumnNames.IS_SSA_THICK: (grid.theta0.values < theta_thin_val).ravel(),
             ModelColumnNames.TAU_THETA: tau_th.values.ravel(),
             ModelColumnNames.LNU_THETA: lnu_th.to_value_in(lnu_unit).ravel(),
@@ -278,5 +345,8 @@ class ModelParameterTable:
         df.attrs[ModelParameterNames.PHI_UNIT] = phi_unit
         df.attrs[ModelParameterNames.LNU_UNIT] = lnu_unit
         df.attrs[ModelParameterNames.FNU_UNIT] = fnu_unit
+
         return df
 
+    def view_df(self,df:pd.DataFrame,columns:list[str]):
+        print(df[columns].to_string(index=False))

@@ -34,6 +34,8 @@ MASS_RATIO_ELE_PRO = (m_e/m_p).decompose()
 
 log10_2 = np.log10(2.0)
 log10_3 = np.log10(3.0)
+TWO_TO_FIVE:float = 2**5
+THREE_TO_SEVEN = 3**7
 
 @dataclass(frozen=True,slots=True)
 class ElectronTemperature:
@@ -216,6 +218,24 @@ class ThermalSynchrotronPhase(PhaseParameter):
         return cls.from_Quantity(
             1.5*phi_a.quantity*np.sqrt(eps_b)
         )
+
+    @classmethod
+    def optically_thin_limit(
+        cls,
+        eps_b:float,
+        eps_th:float,
+        mep:float,
+        theta:ElectronTemperature,
+        theta0:ElectronTemperatureScaling,
+    )->Self:
+        theta_val = theta.values
+        theta0_val = theta0.values
+        f_factor = MaxwellJuttnerFactor.exact(theta)
+        phi_th_thin_inv = u.Quantity(
+                (np.pi*f_factor)/(eps_b*theta_val**7)
+            *np.sqrt(TWO_TO_FIVE*eps_th*mep/(THREE_TO_SEVEN*theta0_val))
+        )
+        return cls.from_Quantity(phi_th_thin_inv**(-1))
 
     def to_phiA(
         self,

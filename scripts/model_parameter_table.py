@@ -34,6 +34,15 @@ def main():
     model_table = model_params.build()
 
     df = model_table.to_df(peak_table)
+
+    model_table.view_df(
+        df,
+        [
+            "tau_th_thin",
+            "phi_th_thin"
+
+        ]
+    )
     FileWriter.df_to_csv(
         path=args.output,
         df = df,
