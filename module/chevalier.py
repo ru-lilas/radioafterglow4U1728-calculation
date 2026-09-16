@@ -206,6 +206,54 @@ class OpticallythinBoundary:
         df_selected = self.select_theta_range(df,theta_range)
         print(df_selected.to_string())
 
+@dataclass(frozen=True,slots=True)
+class RelativisticBoundary:
+    phi_boundary:NDArray
+    fnu_boundary:NDArray
+    style:plot_utils.LineStyle
+
+    @classmethod
+    def build(
+        cls,
+        phi_plot:FloatGrid,
+        fnu_plot:FloatGrid,
+        is_relativistic: BoolGrid,
+        style:plot_utils.LineStyle
+    )->Self:
+        return cls(
+            phi_boundary = phi_plot.values[is_relativistic.values],
+            fnu_boundary = fnu_plot.values[is_relativistic.values],
+            style=style
+        )
+
+    def label(
+        self,
+        ax:Axes
+    ):
+        textpos = plot_utils.LineLabel.log10(
+            log10x = np.log10(self.phi_boundary),
+            log10y = np.log10(self.fnu_boundary)
+        )
+        ax.text(
+            *textpos,
+            r"$\Theta=1$",
+            ha="left",
+            va="top",
+            fontsize=32,
+            color=self.style.color
+        )
+        return
+
+    def plot(
+        self,
+        ax:Axes
+    ):
+        self.label(ax)
+        return ax.plot(
+            self.phi_boundary,
+            self.fnu_boundary,
+            **self.style.to_kwargs()
+        )
 
 
 @dataclass(frozen=True,slots=True)
@@ -542,13 +590,15 @@ class ChevalierGrid:
             **contourconfs.beta_sh.label.to_kwargs(),
         )
 
-        self.plot_relativistic_boundary(
-            ax=ax,
-            phi_grid=phi_masked,
-            fnu_grid=fnu_masked,
+        rela_boundary = RelativisticBoundary.build(
+            phi_plot=phi_masked,
+            fnu_plot=fnu_masked,
             is_relativistic=self.mask_relativistic(),
             style=plotconf.styles.relativistic_boundary
         )
+
+        rela_boundary.plot(ax)
+
 
         return (
                 contour_a_wind,
