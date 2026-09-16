@@ -92,10 +92,10 @@ def main():
             fnu_unit=fnu_unit,
             plotranges=ranges
         )
-    #     grids.plot_metadata(
-    #         ax,
-    #         plotconf=plotconf
-    #     )
+        grids.metadata.plot(
+            ax=ax,
+            conf=plotconf.metadata
+        )
         for obs_range in obs_ranges:
             obs_range.plot_range(
                 ax,

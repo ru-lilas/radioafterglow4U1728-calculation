@@ -53,12 +53,20 @@ class OpticallythinBoundaryPlotConfig(YAMLReadable):
     layout: plot_utils.PlotLayoutConfig
     thin_boundary: plot_utils.LineStyle
 
+@dataclass(frozen=True,slots=True)
+class ChevalierMetadataConfig:
+    fontsize: float
+    eps_b:  plot_utils.QuantityLabel
+    eps_th: plot_utils.QuantityLabel
+    mue_mu: plot_utils.QuantityLabel
+    distance: plot_utils.QuantityLabel
+
 @dataclass(frozen=True, slots=True)
 class PlotConfig(YAMLReadable):
     layout: plot_utils.PlotLayoutConfig
     contours: ContourConfigures
     styles: Styles
-    metadata: dict[str,MetadataConfig]
+    metadata: ChevalierMetadataConfig
 
 @dataclass(frozen=True, slots=True)
 class DebagPlotConfig(YAMLReadable):
@@ -95,6 +103,29 @@ class ChevalierMetadata:
             lnu_unit = attrs[ModelParameterNames.LNU_UNIT],
             fnu_unit = attrs[ModelParameterNames.FNU_UNIT],
         )
+
+    def plot(
+        self,
+        ax:Axes,
+        conf:ChevalierMetadataConfig
+    )->None:
+        txt_epsb = conf.eps_b.to_text(self.eps_b)
+        txt_epsth = conf.eps_th.to_text(self.eps_th)
+        txt_muemu = conf.mue_mu.to_text(self.mue_mu)
+        txt_distance = conf.distance.to_text(self.distance.value_in(conf.distance.unit))
+
+        strings = [
+            txt_epsb,
+            txt_epsth,
+            txt_muemu,
+            txt_distance
+        ]
+
+        ax.set_title(
+            ", ".join(strings),
+            fontsize=conf.fontsize
+        )
+
 
 @dataclass(frozen=True,slots=True)
 class OpticallythinBoundary:
@@ -599,7 +630,6 @@ class ChevalierGrid:
 
         rela_boundary.plot(ax)
 
-
         return (
                 contour_a_wind,
                 contour_beta_sh,
@@ -653,36 +683,6 @@ class ChevalierGrid:
                 label.text,
                 fontsize=label.fontsize
             )
-
-    def to_colormap(
-        self,
-        phi_unit: str,
-        fnu_unit: str,
-        cmplots: list[ColormapPlot],
-    ):
-        return
-
-
-    # def plot_metadata(
-    #     self,
-    #     ax: Axes,
-    #     plotconf: PlotConfig
-    # ):
-    #     strings = []
-    #     conf_metadata = plotconf.metadata
-    #     conf_eps_b = conf_metadata["eps_b"]
-    #     conf_eps_th = conf_metadata["eps_th"]
-    #     conf_mu = conf_metadata["mu"]
-    #     conf_mu_e = conf_metadata["mu_e"]
-    #     strings.append(conf_eps_b.format_value(self.eps_b))
-    #     strings.append(conf_eps_th.format_value(self.eps_th))
-    #     strings.append(conf_mu.format_value(self.mu))
-    #     strings.append(conf_mu_e.format_value(self.mu_e))
-    #     ax.set_title(
-    #         ", ".join(strings),
-    #         fontsize=16
-    #     )
-    #
     # def select_parameters_in(
     #     self,
     #     observation: ChevalierScatter,

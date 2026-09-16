@@ -8,7 +8,7 @@ from matplotlib.ticker import LogLocator
 from matplotlib.colorbar import Colorbar
 from numpy.typing import NDArray
 from module import dataframe_utils
-from module.mydataclasses import FloatGrid, QuantityGrid, ValueArray, YAMLReadable
+from module.mydataclasses import FloatGrid, QuantityData, QuantityGrid, ValueArray, YAMLReadable
 from module.utilities import build_nparray
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
@@ -38,6 +38,37 @@ def format_value(
         )
     else:
         return rf"${prefix}={formatted}$"
+
+@dataclass(frozen=True, slots=True)
+class QuantityLabel:
+    show:bool
+    prefix: str
+    fmt: str
+    unit: str
+
+    def formatted_value(
+        self,
+        value:float
+    ):
+        fmt = self.fmt
+        formatted = f"{value:{fmt}}"
+        if fmt.endswith("e"):
+            mantissa,exponent = formatted.split("e")
+            exponent = int(exponent)
+            return (
+                rf'${self.prefix}={mantissa}\times 10^{{{exponent}}}$'
+            )
+        else:
+            return rf"${self.prefix}={formatted}$"
+
+    def to_text(
+        self,
+        value:float
+    ):
+        if self.unit == "":
+            return f"{self.formatted_value(value)}"
+        else:
+            return f"{self.formatted_value(value)}{self.unit}"
 
 @dataclass
 class LabelConfigure:

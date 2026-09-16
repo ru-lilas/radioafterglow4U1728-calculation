@@ -82,28 +82,24 @@ styles:
     alpha: null
     zorder: 2.0
 metadata:
+  fontsize: 16
   eps_b:
     show: true
     prefix: '\varepsilon_{\mathrm{B}}'
     fmt: '.1e'
-    unit: null
+    unit: ""
   eps_th:
     show: true
     prefix: '\varepsilon_{\mathrm{th}}'
     fmt: '.2f'
-    unit: null
+    unit: ""
+  mue_mu:
+    show: true
+    prefix: '\mu_{\mathrm{e}}/\mu'
+    fmt: '.1f'
+    unit: ""
   distance:
     show: true
     prefix: 'D'
     fmt: '.1f'
-    unit: "kpc"
-  mu:
-    show: true
-    prefix: '\mu'
-    fmt: '.1f'
-    unit: null
-  mu_e:
-    show: true
-    prefix: '\mu_e'
-    fmt: '.1f'
-    unit: null
+    unit: " kpc"
