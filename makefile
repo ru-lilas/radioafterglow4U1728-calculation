@@ -77,6 +77,9 @@ $(FILEPATH_LC_PDF): \
 		--plotconfig plotconfigs/estimated_lightcurve.yaml \
 		--output $@
 
+view-chevalier_cmp: $(FILEPATH_CHEVALIER_PDF)
+	evince $< >/dev/null 2>&1 &
+
 chevaliercm: $(FILEPATH_CHEVALIER_COLORMAP_PDF)
 $(FILEPATH_CHEVALIER_COLORMAP_PDF): \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
@@ -89,6 +92,9 @@ $(FILEPATH_CHEVALIER_COLORMAP_PDF): \
 		--plotconfig plotconfigs/chevalier_colormaps.yaml \
 		--obslc $(FILEPATH_OBSLC) \
 		--output $@
+
+view-chevalier: $(FILEPATH_CHEVALIER_PDF)
+	evince $< >/dev/null 2>&1 &
 
 chevalier: $(FILEPATH_CHEVALIER_PDF)
 

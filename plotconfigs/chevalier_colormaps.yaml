@@ -4,7 +4,7 @@ layout:
     dpi: 100
     layout_engine: constrained
   subplots:
-    nrows: 3
+    nrows: 2
     ncols: 3
     sharex: true
     sharey: true

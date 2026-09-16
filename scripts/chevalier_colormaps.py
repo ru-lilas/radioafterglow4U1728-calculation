@@ -69,10 +69,6 @@ def main():
             quantity=grids.a_wind,
             style=cmconf.a_wind
         ),
-        plot_utils.ColormapPlot(
-            quantity=grids.a_syn,
-            style=cmconf.a_syn
-        ),
     ]
 
     with PdfPages(outpath) as pdf:
