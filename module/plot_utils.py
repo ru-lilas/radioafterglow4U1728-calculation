@@ -8,7 +8,7 @@ from matplotlib.ticker import LogLocator
 from matplotlib.colorbar import Colorbar
 from numpy.typing import NDArray
 from module import dataframe_utils
-from module.mydataclasses import QuantityGrid, ValueArray, YAMLReadable
+from module.mydataclasses import FloatGrid, QuantityGrid, ValueArray, YAMLReadable
 from module.utilities import build_nparray
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
@@ -437,4 +437,17 @@ class MetadataConfig:
             value=value,
             prefix=self.prefix,
             fmt=self.fmt
+        )
+
+class LineLabel:
+    @staticmethod
+    def log10(
+        log10x: NDArray[np.float64],
+        log10y: NDArray[np.float64]
+    )->tuple[float,float]:
+        log10x_center = 0.5 * (log10x.min() + log10x.max())
+        i = np.argmin(np.abs(log10x - log10x_center))
+        return (
+            10**log10x[i],
+            10**log10y[i]
         )

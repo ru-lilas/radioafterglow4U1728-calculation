@@ -27,7 +27,7 @@ layout:
 contours:
   a_wind: &ContourConfigure_tmp
     style: &ContourStyle_tmp
-      colors: "#000000"
+      colors: "#84919B"
       linestyles: "-"
     levels:
       start: null
@@ -39,7 +39,7 @@ contours:
     unit: "g cm-1"
   beta_sh:
     style:
-      colors: "#000000"
+      colors: "#84919B"
       linestyles: "--"
     levels:
       start: null
@@ -70,11 +70,17 @@ styles:
     alpha: null
     zorder: 1.0
   thin_boundary: 
-    color: "#84919E"
-    linewidth: 2.0
-    linestyle: "--"
+    color: "#000000"
+    linewidth: 4.0
+    linestyle: "-"
     alpha: null
-    zorder: 1.0
+    zorder: 2.0
+  relativistic_boundary: 
+    color: "#000000"
+    linewidth: 4.0
+    linestyle: "-"
+    alpha: null
+    zorder: 2.0
 metadata:
   eps_b:
     show: true

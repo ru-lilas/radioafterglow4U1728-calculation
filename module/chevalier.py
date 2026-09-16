@@ -46,6 +46,7 @@ class Styles:
     obs_center: plot_utils.ScatterStyle
     obs_range: plot_utils.RectangleStyle
     thin_boundary: plot_utils.LineStyle
+    relativistic_boundary: plot_utils.LineStyle
 
 @dataclass(frozen=True, slots=True)
 class OpticallythinBoundaryPlotConfig(YAMLReadable):
@@ -125,19 +126,14 @@ class OpticallythinBoundary:
         y_visible = y[in_plot_range]
 
         if len(x_visible) > 0:
-            log10_x_center = 0.5 * (
-                np.log10(x_visible.min()) + np.log10(x_visible.max())
+            textpos = plot_utils.LineLabel.log10(
+                log10x = np.log10(x_visible),
+                log10y = np.log10(y_visible)
             )
-
-            i = np.argmin(np.abs(np.log10(x_visible) - log10_x_center))
-
-            x_pos = x_visible[i]
-            y_pos = y_visible[i]
 
             ax.plot(x, y, **style.to_kwargs())
             ax.text(
-                x_pos,
-                y_pos,
+                *textpos,
                 r"$\tau_{\Theta}=1$",
                 ha="right",
                 va="bottom",
@@ -407,10 +403,75 @@ class ChevalierGrid:
             ].to_string(index=False)
         )
 
+    def mask_relativistic(
+        self,
+        theta_crit:float = 1.0
+    )->BoolGrid:
+        """
+            theta_crit: critical value of theta for relativistic
+        """
+        theta = self.theta.values
+        row_indices = np.argmin(
+            np.abs(theta - theta_crit),
+            axis=0
+        )
+        column_indices = np.arange(theta.shape[1])
+        mask = np.zeros_like(
+            theta,
+            dtype=bool,
+        )
+
+        mask[row_indices, column_indices] = True
+
+        return BoolGrid(mask)
+
+    def mask_outof_plotrange(
+        self,
+        phi_grid:FloatGrid,
+        fnu_grid:FloatGrid,
+        plotranges: AxesRange
+    )->BoolGrid:
+        return BoolGrid(
+            (phi_grid.values <= plotranges.x.min )
+            | (phi_grid.values >= plotranges.x.max )
+            | (fnu_grid.values <= plotranges.y.min )
+            | (fnu_grid.values >= plotranges.y.max )
+        )
+
+    def plot_relativistic_boundary(
+        self,
+        ax:Axes,
+        phi_grid:FloatGrid,
+        fnu_grid:FloatGrid,
+        is_relativistic: BoolGrid,
+        style:plot_utils.LineStyle,
+    ):
+        phi_boundary = phi_grid.values[is_relativistic.values]
+        fnu_boundary = fnu_grid.values[is_relativistic.values]
+        ax.plot(
+            phi_boundary,
+            fnu_boundary,
+            **style.to_kwargs()
+        )
+        textpos = plot_utils.LineLabel.log10(
+            log10x = np.log10(phi_boundary),
+            log10y = np.log10(fnu_boundary)
+        )
+
+        ax.text(
+            *textpos,
+            r"$\Theta=1$",
+            ha="left",
+            va="top",
+            fontsize=32,
+            color=style.color
+        )
+        return
+
     def plot_main_contour(
         self,
         ax:Axes,
-        confs: ContourConfigures,
+        plotconf: PlotConfig,
         *,
         phi_unit: str,
         fnu_unit: str,
@@ -419,22 +480,22 @@ class ChevalierGrid:
         phi_peak = FloatGrid(self.phi_peak.to_value_in(phi_unit))
         fnu_peak = FloatGrid(self.fnu_peak.to_value_in(fnu_unit))
 
-        a_wind_unit = confs.a_wind.unit
-        beta_unit = confs.beta_sh.unit
+        contourconfs = plotconf.contours
+        a_wind_unit = contourconfs.a_wind.unit
+        beta_unit = contourconfs.beta_sh.unit
         a_wind_grid = FloatGrid(self.a_wind.to_value_in(a_wind_unit))
         beta_sh_grid = FloatGrid(self.beta_sh.to_value_in(beta_unit))
 
-        out_plot_range = BoolGrid(
-            (phi_peak.values <= plotranges.x.min )
-            | (phi_peak.values >= plotranges.x.max )
-            | (fnu_peak.values <= plotranges.y.min )
-            | (fnu_peak.values >= plotranges.y.max )
+        out_of_plotrange = self.mask_outof_plotrange(
+            phi_grid=phi_peak,
+            fnu_grid=fnu_peak,
+            plotranges=plotranges
         )
 
-        phi_masked = phi_peak.masking(out_plot_range)
-        fnu_masked = fnu_peak.masking(out_plot_range)
-        a_masked = a_wind_grid.masking(out_plot_range)
-        b_masked = beta_sh_grid.masking(out_plot_range)
+        phi_masked = phi_peak.masking(out_of_plotrange)
+        fnu_masked = fnu_peak.masking(out_of_plotrange)
+        a_masked = a_wind_grid.masking(out_of_plotrange)
+        b_masked = beta_sh_grid.masking(out_of_plotrange)
 
         if not (
             phi_masked.shape
@@ -456,14 +517,14 @@ class ChevalierGrid:
             fnu_masked.values,
             a_masked.values,
             levels=(
-                confs.a_wind.levels
+                contourconfs.a_wind.levels
                 .to_nparray(a_masked.values)
             ),
-            **confs.a_wind.style.to_kwargs(),
+            **contourconfs.a_wind.style.to_kwargs(),
         )
         ax.clabel(
             contour_a_wind,
-            **confs.a_wind.label.to_kwargs(),
+            **contourconfs.a_wind.label.to_kwargs(),
         )
 
         contour_beta_sh = ax.contour(
@@ -471,14 +532,22 @@ class ChevalierGrid:
             fnu_masked.values,
             b_masked.values,
             levels=(
-                confs.beta_sh.levels
+                contourconfs.beta_sh.levels
                 .to_nparray(b_masked.values)
             ),
-            **confs.beta_sh.style.to_kwargs(),
+            **contourconfs.beta_sh.style.to_kwargs(),
         )
         ax.clabel(
             contour_beta_sh,
-            **confs.beta_sh.label.to_kwargs(),
+            **contourconfs.beta_sh.label.to_kwargs(),
+        )
+
+        self.plot_relativistic_boundary(
+            ax=ax,
+            phi_grid=phi_masked,
+            fnu_grid=fnu_masked,
+            is_relativistic=self.mask_relativistic(),
+            style=plotconf.styles.relativistic_boundary
         )
 
         return (

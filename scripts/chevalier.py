@@ -80,7 +80,7 @@ def main():
     #
         grids.plot_main_contour(
             ax,
-            confs=plotconf.contours,
+            plotconf=plotconf,
             phi_unit=phi_unit,
             fnu_unit=fnu_unit,
             plotranges=ranges
