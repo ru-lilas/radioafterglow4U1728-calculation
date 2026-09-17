@@ -3,9 +3,10 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from module import plot_utils
+from module import chevalier
 from module.chevalier import (
     ChevalierGrid,
-    DebagPlotConfig,
+    ColormapPlotConfig,
     PlotConfig
 )
 from module.inputs_as_dataclass import GeneralInputs, ModelParameterTable
@@ -44,7 +45,25 @@ def main():
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
     grids = ChevalierGrid.from_csv(args.model_table)
-    plotconf = DebagPlotConfig.from_yaml(args.plotconfig)
+    df_obs_long = LongformatLightcurve.from_csv(args.obslc)
+
+    freqs = [5.5,9.0]
+    nu_unit = "GHz"
+    dfs_obs_nu = [
+        df_obs_long.extract_lightcurve(
+            QuantityData(
+                value = nu,
+                unit = nu_unit
+            )
+        )
+        for nu in freqs
+    ]
+    obs_ranges = [
+        df_obs_nu.peak
+        for df_obs_nu in dfs_obs_nu
+    ]
+
+    plotconf = ColormapPlotConfig.from_yaml(args.plotconfig)
     ranges = plotconf.layout.axes.range()
     cmconf=plotconf.colormaps
 
@@ -83,14 +102,22 @@ def main():
         if (fnu_unit is None):
             raise ValueError("fnu_unitの単位が指定されていません")
 
-        grids.plot_colormaps(
-            fig=fig,
-            axes=axes,
+        colormaps = grids.colormaps(
             cmplots=cmplots,
-            phi_unit=plotconf.layout.axes.x.label.unit,
-            fnu_unit=plotconf.layout.axes.y.label.unit,
-            plotranges=ranges,
+            phi_unit=phi_unit,
+            fnu_unit=fnu_unit,
+            plotranges=ranges
         )
+        style_obs_ranges = plotconf.styles.obs_ranges.to_stylelist()
+        for (colormap,ax) in zip(colormaps,axes.flat):
+            colormap.plot(fig,ax)
+            for i,obs_range in enumerate(obs_ranges):
+                obs_range.plot_range(
+                    ax,
+                    style=style_obs_ranges[i],
+                    phi_unit=phi_unit,
+                    fnu_unit=fnu_unit
+                )
 
         pdf.savefig(fig)
         plt.close(fig)

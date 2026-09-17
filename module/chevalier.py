@@ -1,6 +1,7 @@
 from matplotlib.collections import QuadMesh
 from matplotlib.contour import QuadContourSet
 from matplotlib.figure import Figure
+from matplotlib import patches as pltpatch
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Hashable, Self
@@ -20,7 +21,7 @@ from module.mydataclasses import (
     BoolGrid
 )
 from module.observation import ChevalierComponent
-from module.plot_utils import AxesConfig, AxesRange, AxisConfig, AxisRange, ColormapConfigure, ColormapPlot, ContourStyle, LegendStyle, MetadataConfig
+from module.plot_utils import AxesConfig, AxesRange, AxisConfig, AxisRange, ColorbarConfigure, ColormapConfigure, ColormapPlot, ContourStyle, LegendStyle, MetadataConfig
 from module.types import FloatArray, FloatPair
 from module.parameter_table import ModelParameterNames,ModelColumnNames
 from enum import StrEnum, auto
@@ -72,10 +73,11 @@ class PlotConfig(YAMLReadable):
     legend: LegendStyle
 
 @dataclass(frozen=True, slots=True)
-class DebagPlotConfig(YAMLReadable):
+class ColormapPlotConfig(YAMLReadable):
     layout: plot_utils.MultiPlotLayoutConfig
     colormaps: ColormapConfigures
     metadata: ChevalierMetadataConfig
+    styles: Styles
     legend: LegendStyle
 
 @dataclass(frozen=True,slots=True)
@@ -320,6 +322,63 @@ class ChevalierPlotRegion:
     @property
     def fnu_in_plotregion(self):
         return self.fnu.masking(self.out_of_plotregion)
+
+@dataclass(frozen=True,slots=True)
+class Colormap:
+    x: FloatGrid
+    y: FloatGrid
+    z: FloatGrid
+    cm_style: ColormapConfigure
+    cb_style: ColorbarConfigure
+
+    @classmethod
+    def build(
+        cls,
+        xy_grid: ChevalierPlotRegion,
+        z_qgrid: QuantityGrid,
+        z_mask: BoolGrid,
+        cm_style: ColormapConfigure,
+        cb_style: ColorbarConfigure
+    )->Self:
+        z_unit = cm_style.colorbar.label.unit
+        z_val = z_qgrid.to_FloatGrid(z_unit)
+        return cls(
+            xy_grid.phi,xy_grid.fnu,
+            z=z_val.masking(z_mask),
+            cm_style=cm_style,
+            cb_style=cb_style
+        )
+
+    def plot(
+        self,
+        fig:Figure,
+        ax:Axes,
+    ):
+        label = self.cb_style.label
+        cm_style = self.cm_style
+        cb_style = self.cb_style
+        mesh = ax.pcolormesh(
+            self.x.values,
+            self.y.values,
+            self.z.values,
+            shading=cm_style.shading,
+            norm=cm_style.norm.type,
+            cmap=cm_style.cmap
+        )
+        cbar = fig.colorbar(
+            mesh,
+            ax=ax,
+            pad=cb_style.pad,
+            fraction=cb_style.fraction,
+        )
+        cbar.ax.tick_params(
+            labelsize=cb_style.tick_labelsize
+        )
+        cbar.set_label(
+            label.text,
+            fontsize=label.fontsize
+        )
+
         
 
 @dataclass(frozen=True,slots=True)
@@ -516,6 +575,21 @@ class ChevalierGrid:
     ):
         return FloatGrid(self.theta.values).less_than(theta_crit)
 
+    def chevalier_plotregion(
+        self,
+        *,
+        x_unit:str,
+        y_unit:str,
+        plotrange:AxesRange
+    )->ChevalierPlotRegion:
+        return ChevalierPlotRegion.build(
+            phi_qgrid=self.phi_peak,
+            fnu_qgrid=self.fnu_peak,
+            phi_unit=x_unit,
+            fnu_unit=y_unit,
+            plotrange=plotrange
+        )
+
     def mask_outof_plotrange(
         self,
         phi_grid:FloatGrid,
@@ -528,6 +602,20 @@ class ChevalierGrid:
             | (fnu_grid.values <= plotranges.y.min )
             | (fnu_grid.values >= plotranges.y.max )
         )
+
+    def mask_invisible(
+        self,
+        plot_region: ChevalierPlotRegion
+    )->BoolGrid:
+        ssa_boundary = self.mask_SSA_boundary()
+        relativistic_boundary = self.mask_Theta_boundary()
+        is_ssa_thin = self.mask_SSA_thin()
+        is_nonrelativistic = self.mask_nonrelativistic()
+
+        return plot_region.out_of_plotregion.take_or([
+            is_ssa_thin,
+            is_nonrelativistic
+        ])
 
     def plot_main_contour(
         self,
@@ -552,13 +640,7 @@ class ChevalierGrid:
 
         ssa_boundary = self.mask_SSA_boundary()
         relativistic_boundary = self.mask_Theta_boundary()
-        is_ssa_thin = self.mask_SSA_thin()
-        is_nonrelativistic = self.mask_nonrelativistic()
-
-        invisible = plt_region.out_of_plotregion.take_or([
-            is_ssa_thin,
-            is_nonrelativistic
-        ])
+        invisible = self.mask_invisible(plt_region)
 
         a_wind_contour = ChevalierContour(
             z_quantitygrid=self.a_wind,
@@ -630,30 +712,54 @@ class ChevalierGrid:
         for ax, cmplot in zip(axes.flat, cmplots):
             style=cmplot.style
             cb = style.colorbar
-            label = cb.label
-            z_val = FloatGrid(cmplot.quantity.to_value_in(label.unit))
-            z_plot = z_val.masking(invisible)
-            mesh = ax.pcolormesh(
-                phi.values,
-                fnu.values,
-                z_plot.values,
-                shading=style.shading,
-                norm=style.norm.type,
-                cmap=style.cmap
+            colormap = Colormap.build(
+                xy_grid=plt_region,
+                z_qgrid=cmplot.quantity,
+                z_mask = invisible,
+                cm_style=style,
+                cb_style=cb
             )
-            cbar = fig.colorbar(
-                mesh,
-                ax=ax,
-                pad=cb.pad,
-                fraction=cb.fraction,
+            colormap.plot(fig,ax)
+
+    def colormaps(
+        self,
+        cmplots: list[ColormapPlot],
+        *,
+        phi_unit: str,
+        fnu_unit: str,
+        plotranges: AxesRange
+    )->list[Colormap]:
+        plt_region = ChevalierPlotRegion.build(
+            phi_qgrid=self.phi_peak,
+            fnu_qgrid=self.fnu_peak,
+            phi_unit=phi_unit,
+            fnu_unit=fnu_unit,
+            plotrange=plotranges
+        )
+        phi = plt_region.phi
+        fnu = plt_region.fnu
+
+        is_ssa_thin = self.mask_SSA_thin()
+        is_nonrelativistic = self.mask_nonrelativistic()
+        invisible = plt_region.out_of_plotregion.take_or([
+            is_ssa_thin,
+            is_nonrelativistic
+        ])
+
+        colormaps:list[Colormap] = []
+        for cmplot in cmplots:
+            style=cmplot.style
+            cb = style.colorbar
+            colormaps.append(
+                Colormap.build(
+                    xy_grid=plt_region,
+                    z_qgrid=cmplot.quantity,
+                    z_mask = invisible,
+                    cm_style=style,
+                    cb_style=cb
+                )
             )
-            cbar.ax.tick_params(
-                labelsize=cb.tick_labelsize
-            )
-            cbar.set_label(
-                label.text,
-                fontsize=label.fontsize
-            )
+        return colormaps
 
     def bool_contain_in_obs(
         self,
@@ -687,50 +793,6 @@ class ChevalierGrid:
 
         return self.index.select(in_observation_range)
 
-
-    #     phi_theta_q = self.phi_theta
-    #     phi_theta = QuantityArray(
-    #         phi_theta_q.values[mask],
-    #         phi_theta_q.unit
-    #     )
-    #     lnu_theta_q = self.lnu_theta
-    #     lnu_theta = QuantityArray(
-    #         lnu_theta_q.values[mask],
-    #         lnu_theta_q.unit
-    #     )
-    #     tau_theta = self.tau_theta[mask]
-    #     doppler_delta = models.doppler_delta(abgrid.beta_sh_grid)[mask]
-    #
-    #     return AllowningParameters(
-    #         a_wind = QuantityArray(
-    #             values=abgrid.a_wind_grid[mask],
-    #             unit=self.a_wind_arr.unit
-    #         ),
-    #         beta_sh = abgrid.beta_sh_grid[mask],
-    #         phi_peak = QuantityArray(
-    #             values=phi_grid[mask],
-    #             unit=phi_unit
-    #         ),
-    #         fnu_peak = QuantityArray(
-    #             values=fnu_grid[mask],
-    #             unit=fnu_unit
-    #         ),
-    #         tau_theta = tau_theta,
-    #         lnu_theta=lnu_theta,
-    #         phi_theta=phi_theta,
-    #         eps_b=self.eps_b,
-    #         eps_th=self.eps_th,
-    #         distance=self.distance,
-    #         doppler_delta=doppler_delta,
-    #         mu=self.mu,
-    #         mu_e=self.mu_e
-    #     )
-
-
-# @dataclass(frozen=True,slots=True)
-# class ChevalierColormap:
-#     phi: FloatGrid
-#     fnu: FloatGrid
 #     ssa_mask: BoolGrid
 #     cmplots:list[ColormapPlot]
 #

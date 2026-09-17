@@ -31,6 +31,43 @@ layout:
       minor_length: 8.0
       width: 1.0
       pad: 10.0
+styles:
+  obs_ranges:
+    facecolors: 
+      - "#FFCABF"
+      - "#BFE4FF"
+    edgecolor: "#000000"
+    linewidth: 1.0
+    alpha: 0.8
+    zorder: 1
+    hatches:
+      - "/"
+      - null
+  obs_center:
+    marker: "o"
+    markersize: 64.0
+    markerfacecolor : "#000000"
+    markeredgecolor : "#000000"
+    markeredgewidth: 1.0
+    ecolor: "#000000"
+    elinewidth: 1.0
+    capsize: 1.0
+    capthick: 1.0
+    linestyle: "none"
+    alpha: null
+    zorder: 1.0
+  thin_boundary: 
+    color: "#000000"
+    linewidth: 4.0
+    linestyle: "-"
+    alpha: null
+    zorder: 2.0
+  relativistic_boundary: 
+    color: "#000000"
+    linewidth: 4.0
+    linestyle: "-"
+    alpha: null
+    zorder: 2.0
 colormaps:
   theta:
     cmap: cividis
@@ -156,3 +193,6 @@ metadata:
       prefix: 'D'
       fmt: '.1f'
       unit: '\mathrm{kpc}'
+legend:
+  fontsize: 24
+  loc: "upper left"
