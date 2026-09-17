@@ -41,34 +41,41 @@ def format_value(
 
 @dataclass(frozen=True, slots=True)
 class QuantityLabel:
-    show:bool
     prefix: str
     fmt: str
     unit: str
 
     def formatted_value(
         self,
-        value:float
-    ):
-        fmt = self.fmt
-        formatted = f"{value:{fmt}}"
-        if fmt.endswith("e"):
-            mantissa,exponent = formatted.split("e")
-            exponent = int(exponent)
+        value: float,
+    ) -> str:
+        formatted = f"{value:{self.fmt}}"
+
+        if self.fmt.endswith("e"):
+            mantissa, exponent = formatted.split("e")
+
             return (
-                rf'${self.prefix}={mantissa}\times 10^{{{exponent}}}$'
+                rf"{mantissa}"
+                rf"\times10^{{{int(exponent)}}}"
             )
-        else:
-            return rf"${self.prefix}={formatted}$"
+
+        return formatted
 
     def to_text(
-        self,
-        value:float
-    ):
-        if self.unit == "":
-            return f"{self.formatted_value(value)}"
-        else:
-            return f"{self.formatted_value(value)}{self.unit}"
+            self,
+            value: float,
+        ) -> str:
+            formatted = self.formatted_value(value)
+
+            if self.unit == "":
+                return (
+                    rf"${self.prefix}={formatted}$"
+                )
+
+            return (
+                rf"${self.prefix}={formatted}"
+                rf"\,{self.unit}$"
+            )
 
 @dataclass
 class LabelConfigure:
@@ -417,15 +424,30 @@ class ContourStyle(Style):
 
 @dataclass(frozen=True,slots=True)
 class ContourLabelStyle(Style):
-    fontsize: int = 10
-    fmt: str = "%.1e"
+    inline: bool
+    inline_spacing: int
+    fontsize: int
+
+@dataclass(frozen=True,slots=True)
+class ContourLabelFormat(QuantityLabel):
+    pass
 
 @dataclass(frozen=True,slots=True)
 class ContourConfigure:
     style: ContourStyle
     levels: ContourLevelConfigure
     label: ContourLabelStyle
+    label_format: ContourLabelFormat
     unit: str
+
+    def build_quantity_label(
+        self
+    )->QuantityLabel:
+        return QuantityLabel(
+            prefix=self.label_format.prefix,
+            fmt=self.label_format.fmt,
+            unit=self.label_format.unit
+        )
 
 @dataclass(frozen=True, slots=True)
 class ColorbarConfigure:

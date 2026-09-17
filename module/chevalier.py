@@ -601,9 +601,12 @@ class ChevalierGrid:
             ),
             **contourconfs.a_wind.style.to_kwargs(),
         )
+        quantity_conf = contourconfs.a_wind.build_quantity_label()
+        label_kwargs = contourconfs.a_wind.label.to_kwargs()
+        label_kwargs["fmt"] = quantity_conf.to_text
         ax.clabel(
             contour_a_wind,
-            **contourconfs.a_wind.label.to_kwargs(),
+            **label_kwargs
         )
 
         contour_beta_sh = ax.contour(
@@ -616,9 +619,12 @@ class ChevalierGrid:
             ),
             **contourconfs.beta_sh.style.to_kwargs(),
         )
+        quantity_conf = contourconfs.beta_sh.build_quantity_label()
+        label_kwargs = contourconfs.beta_sh.label.to_kwargs()
+        label_kwargs["fmt"] = quantity_conf.to_text
         ax.clabel(
             contour_beta_sh,
-            **contourconfs.beta_sh.label.to_kwargs(),
+            **label_kwargs
         )
 
         rela_boundary = RelativisticBoundary.build(

@@ -26,6 +26,7 @@ layout:
       pad: 10.0
 contours:
   a_wind: &ContourConfigure_tmp
+    unit: "g cm-1"
     style: &ContourStyle_tmp
       colors: "#84919B"
       linestyles: "-"
@@ -34,9 +35,13 @@ contours:
       stop: null
       num: 5
     label:
+      inline: true
+      inline_spacing: 5
       fontsize: 16
-      fmt: "%.1e"
-    unit: "g cm-1"
+    label_format:
+      prefix: 'A_{\mathrm{w}}'
+      fmt: ".1e"
+      unit: '\mathrm{g\,cm^{-1}}'
   beta_sh:
     style:
       colors: "#84919B"
@@ -46,8 +51,13 @@ contours:
       stop: null
       num: 5
     label:
+      inline: true
+      inline_spacing: 5
       fontsize: 16
-      fmt: "%.2f"
+    label_format:
+      prefix: '\beta_{\mathrm{sh}}'
+      fmt: ".2f"
+      unit: ''
     unit: ""
 styles:
   obs_range:
@@ -102,4 +112,4 @@ metadata:
     show: true
     prefix: 'D'
     fmt: '.1f'
-    unit: " kpc"
+    unit: "\mathrm{kpc}"
