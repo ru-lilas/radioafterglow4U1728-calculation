@@ -6,7 +6,7 @@ from matplotlib.lines import Line2D
 from matplotlib import patches as pltpatch
 from numpy.typing import NDArray
 from module import dataframe_processors, dataframe_utils, mystatistics
-from module.mydataclasses import QuantityData,QuantityArray
+from module.mydataclasses import GridRange, QuantityData,QuantityArray
 from module.types import BoolGrid, FloatArray, FloatGrid
 import numpy as np
 import pandas as pd
@@ -161,6 +161,22 @@ class ChevalierComponent:
             & (phi_grid <= phi_max)
             & (fnu_grid >= fnu_min)
             & (fnu_grid <= fnu_max)
+        )
+
+    def allowing_range(
+        self,
+        x_unit:str,
+        y_unit:str
+    )->GridRange:
+        x_center = self.phi_peak.value_in(x_unit)
+        x_err = self.phi_peak_err.value_in(x_unit)
+        y_center = self.fnu_peak.value_in(y_unit)
+        y_err = self.fnu_peak_err.value_in(y_unit)
+        return GridRange(
+            xmin = x_center - x_err,
+            xmax = x_center + x_err,
+            ymin = y_center - y_err,
+            ymax = y_center + y_err
         )
 
 @dataclass

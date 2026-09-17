@@ -11,6 +11,8 @@ import numpy as np
 from module import plot_utils
 from module.mydataclasses import (
     FloatGrid,
+    FloatGridPair,
+    IndexGrid,
     QuantityArray,
     YAMLReadable,
     QuantityData,
@@ -323,6 +325,7 @@ class ChevalierPlotRegion:
 @dataclass(frozen=True,slots=True)
 class ChevalierGrid:
     metadata: ChevalierMetadata
+    index: IndexGrid
     phi_peak: QuantityGrid
     fnu_peak: QuantityGrid
     phi_th: QuantityGrid
@@ -341,6 +344,7 @@ class ChevalierGrid:
         path:Path
     )->Self:
         df = FileReader.table_from_csv(path,idx="index")
+        df = df.sort_index()
         metadata = ChevalierMetadata.from_attrs(df.attrs)
         phi_unit = metadata.phi_unit
         fnu_unit = metadata.fnu_unit
@@ -354,6 +358,7 @@ class ChevalierGrid:
 
         return cls(
             metadata = metadata,
+            index = IndexGrid.from_df(df),
             phi_peak = QuantityGrid.from_df(
                 df=df,
                 unit=phi_unit,
@@ -649,39 +654,40 @@ class ChevalierGrid:
                 label.text,
                 fontsize=label.fontsize
             )
-    # def select_parameters_in(
-    #     self,
-    #     observation: ChevalierScatter,
-    #     peak_table: LambdaPeakTable,
-    #     *,
-    #     phi_unit: str,
-    #     fnu_unit: str,
-    # )->AllowningParameters:
-    #     phi_grid = (
-    #         self.phi_peak(peak_table)
-    #         .to_value_in(phi_unit)
-    #     )
-    #     fnu_grid = (
-    #         self.fnu_peak(peak_table)
-    #         .to_value_in(fnu_unit)
-    #     )
-    #     abgrid = self.parameter_grids
-    #
-    #     mask = observation.contains(
-    #         phi_grid,
-    #         fnu_grid,
-    #         phi_unit=phi_unit,
-    #         fnu_unit=fnu_unit,
-    #     )
-    #
-    #     if mask.shape != abgrid.a_wind_grid.shape:
-    #         raise ValueError(
-    #             "包含判定マスクとパラメータグリッドの"
-    #             "shapeが一致しません. "
-    #             f"mask={mask.shape}, "
-    #             f"beta_sh={abgrid.a_wind_grid.shape}"
-    #         )
-    #
+
+    def bool_contain_in_obs(
+        self,
+        obs: ChevalierComponent,
+        *,
+        phi_unit: str,
+        fnu_unit: str,
+    )->BoolGrid:
+        chevalier_grids = FloatGridPair(
+            x=self.phi_peak.to_FloatGrid(phi_unit),
+            y=self.fnu_peak.to_FloatGrid(fnu_unit)
+        )
+        obs_region = obs.allowing_range(
+            x_unit=phi_unit,
+            y_unit=fnu_unit
+        )
+        return chevalier_grids.is_contained_in(obs_region)
+
+    def allowed_modelindex(
+        self,
+        obs: ChevalierComponent,
+        *,
+        phi_unit: str,
+        fnu_unit: str,
+    )->NDArray[np.int64]:
+        in_observation_range = self.bool_contain_in_obs(
+            obs,
+            phi_unit=phi_unit,
+            fnu_unit=fnu_unit
+        )
+
+        return self.index.select(in_observation_range)
+
+
     #     phi_theta_q = self.phi_theta
     #     phi_theta = QuantityArray(
     #         phi_theta_q.values[mask],

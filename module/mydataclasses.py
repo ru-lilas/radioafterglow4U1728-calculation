@@ -119,6 +119,7 @@ class QuantityArray1D(QuantityArray):
                 f"shape={self.values.shape}"
             )
 
+
 @dataclass(frozen=True, slots=True)
 class BoolGrid:
     values: NDArray[np.bool_]
@@ -375,6 +376,46 @@ class FloatGrid:
         return turning_points
 
 @dataclass(frozen=True, slots=True)
+class GridRange:
+    xmin: float
+    xmax: float
+    ymin: float
+    ymax: float
+
+@dataclass(frozen=True, slots=True)
+class FloatGridPair:
+    x: FloatGrid
+    y: FloatGrid
+
+    def __post_init__(self):
+        if self.x.shape != self.y.shape:
+            raise ValueError(
+                "xとyのグリッドshapeが一致していません: "
+                f"x={self.x.shape}, y={self.y.shape}"
+            )
+
+    def is_contained_in(
+        self,
+        gridrange: GridRange,
+    ) -> BoolGrid:
+        x = self.x.values
+        y = self.y.values
+
+        contained = (
+            (gridrange.xmin <= x)
+            & (x <= gridrange.xmax)
+            & (gridrange.ymin <= y)
+            & (y <= gridrange.ymax)
+        )
+
+        return BoolGrid(
+            values=np.asarray(
+                np.ma.filled(contained, False),
+                dtype=np.bool_,
+            )
+        )
+
+@dataclass(frozen=True, slots=True)
 class QuantityGrid(QuantityArray):
     def __post_init__(self) -> None:
         if self.values.ndim != 2:
@@ -506,4 +547,54 @@ class NDArraySpace:
             start=self.start,
             stop=self.stop,
             num=self.num,
+        )
+
+@dataclass(frozen=True, slots=True)
+class IndexGrid:
+    values: NDArray[np.int64]
+
+    def __post_init__(self) -> None:
+        if self.values.ndim != 2:
+            raise ValueError(
+                "valuesは2次元配列でなければなりません: "
+                f"shape={self.values.shape}"
+            )
+
+    @property
+    def shape(self) -> tuple[int, int]:
+        return self.values.shape
+
+    @classmethod
+    def from_df(
+        cls,
+        df: pd.DataFrame,
+    ) -> Self:
+        values = df.index.to_numpy(dtype=np.int64)
+
+        n = int(np.sqrt(values.size))
+
+        if n * n != values.size:
+            raise ValueError(
+                f"{values.size}個のindexを"
+                "正方形gridへ変換できません"
+            )
+
+        return cls(
+            values=values.reshape(n, n),
+        )
+
+    def select(
+        self,
+        mask: BoolGrid,
+    ) -> NDArray[np.int64]:
+        if self.shape != mask.values.shape:
+            raise ValueError(
+                "indexとmaskのshapeが一致していません: "
+                f"index={self.shape}, "
+                f"mask={mask.values.shape}"
+            )
+
+        return np.asarray(
+            self.values[mask.values],
+            dtype=np.int64,
         )

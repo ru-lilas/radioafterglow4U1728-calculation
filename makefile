@@ -159,17 +159,16 @@ $(FILEPATH_CHI2): \
 		--obslc $(FILEPATH_OBSLC) \
 		--output $@
 
-est : $(DATADIR)/$(RUN_DIR)/estimation.csv
 
+candidates: $(FILEPATH_ALLOWING_MODELS)
 $(FILEPATH_ALLOWING_MODELS): \
 	$(FILEPATH_INPUT) \
-	$(FILEPATH_PEAK_TABLE) \
+	$(FILEPATH_MODEL_PARAMETER_TABLE) \
 	$(FILEPATH_OBSLC) \
-	scripts/chevalier_est.py
+	scripts/extract_model_candidates.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		--input $< \
 		--model_table $(FILEPATH_MODEL_PARAMETER_TABLE) \
-		--peak_table $(FILEPATH_PEAK_TABLE) \
 		--obslc $(FILEPATH_OBSLC) \
 		--output $@
 
