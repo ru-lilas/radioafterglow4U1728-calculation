@@ -3,7 +3,8 @@ from dataclasses import dataclass,replace
 from typing import Self, cast, Any
 from matplotlib.axes import Axes
 from matplotlib.lines import Line2D
-from matplotlib.patches import Rectangle
+from matplotlib import patches as pltpatch
+from numpy.typing import NDArray
 from module import dataframe_processors, dataframe_utils, mystatistics
 from module.mydataclasses import QuantityData,QuantityArray
 from module.types import BoolGrid, FloatArray, FloatGrid
@@ -25,7 +26,52 @@ class Columns(StrEnum):
     BG_ERR = auto()
 
 @dataclass(frozen=True,slots=True)
-class ChevalierScatter:
+class ChevalierRectangleStyle(plot_utils.RectangleStyle):
+    label: str
+
+@dataclass(frozen=True,slots=True)
+class ChevalierRectangle:
+    x: float
+    y: float
+    width: float
+    height: float
+    style: ChevalierRectangleStyle
+
+    @classmethod
+    def build(
+        cls,
+        x:float,
+        y:float,
+        *,
+        x_err:float,
+        y_err:float,
+        style:ChevalierRectangleStyle
+    )->Self:
+        return cls(
+            x = x - x_err,
+            y = y - y_err,
+            width = 2.0 * x_err,
+            height = 2.0 * y_err,
+            style = style
+        )
+
+    def plot(
+        self,
+        ax:Axes
+    )->pltpatch.Rectangle:
+        rectangle = pltpatch.Rectangle(
+            xy=(self.x,self.y),
+            width=self.width,
+            height=self.height,
+            **self.style.to_kwargs()
+        )
+
+        ax.add_patch(rectangle)
+
+        return rectangle
+
+@dataclass(frozen=True,slots=True)
+class ChevalierComponent:
     t_peak: QuantityData
     t_peak_err: QuantityData
     fnu_peak: QuantityData
@@ -55,23 +101,18 @@ class ChevalierScatter:
         fnu = self.fnu_peak.value_in(fnu_unit)
         fnu_err = self.fnu_peak_err.value_in(fnu_unit)
 
-        rectangle = Rectangle(
-            xy=(
-                phi - phi_err,
-                fnu - fnu_err,
-            ),
-            width=2.0 * phi_err,
-            height=2.0 * fnu_err,
-            facecolor=style.facecolor,
-            edgecolor=style.edgecolor,
-            linewidth=style.linewidth,
-            alpha=style.alpha,
-            zorder=style.zorder
+        style_che = ChevalierRectangleStyle(
+            **style.to_kwargs(),
+            label=f"{self.nu.quantity}"
         )
 
-        ax.add_patch(rectangle)
-
-        return rectangle
+        rectangle = ChevalierRectangle.build(
+            phi,fnu,
+            x_err=phi_err,
+            y_err=fnu_err,
+            style=style_che
+        )
+        return rectangle.plot(ax)
 
     def plot_center(
         self,
@@ -378,7 +419,7 @@ class ObservedLightcurve:
         )
 
     @property
-    def peak(self)->ChevalierScatter:
+    def peak(self)->ChevalierComponent:
         metadata = self.metadata
         t_width = metadata.t_bin_width
         nu = self.nu
@@ -394,7 +435,7 @@ class ObservedLightcurve:
         t_peak = QuantityData(float(np.mean(t)),unit=t_unit)
         t_peak_width = np.ptp(t) + t_width.value
         t_peak_err = QuantityData(t_peak_width / 2.0, unit=t_unit)
-        return ChevalierScatter(
+        return ChevalierComponent(
             t_peak = t_peak,
             t_peak_err = t_peak_err,
             fnu_peak = QuantityData(fnu_peak,fnu_unit),

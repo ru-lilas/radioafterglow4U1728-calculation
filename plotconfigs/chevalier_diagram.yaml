@@ -75,12 +75,17 @@ contours:
       unit: ''
     unit: ""
 styles:
-  obs_range:
-    facecolor: "#C8C8CB"
+  obs_ranges:
+    facecolors: 
+      - "#FFCABF"
+      - "#BFE4FF"
     edgecolor: "#000000"
     linewidth: 1.0
     alpha: 0.8
     zorder: 1
+    hatches:
+      - "/"
+      - null
   obs_center:
     marker: "o"
     markersize: 64.0
@@ -136,3 +141,6 @@ metadata:
       prefix: 'D'
       fmt: '.1f'
       unit: '\mathrm{kpc}'
+legend:
+  fontsize: 24
+  loc: "upper left"

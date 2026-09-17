@@ -87,10 +87,11 @@ def main():
             ax=ax,
             conf=plotconf.metadata
         )
-        for obs_range in obs_ranges:
+        style_obs_ranges = plotconf.styles.obs_ranges.to_stylelist()
+        for i,obs_range in enumerate(obs_ranges):
             obs_range.plot_range(
                 ax,
-                style=plotconf.styles.obs_range,
+                style=style_obs_ranges[i],
                 phi_unit=phi_unit,
                 fnu_unit=fnu_unit
             )
@@ -106,6 +107,7 @@ def main():
     #         lnu_unit="erg s-1 Hz-1"
     #     )
     #
+        ax.legend(**plotconf.legend.to_kwargs())
         pdf.savefig(fig)
         plt.close(fig)
 

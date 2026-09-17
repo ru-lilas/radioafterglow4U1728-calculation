@@ -346,7 +346,6 @@ class Style:
         return {
             key: value
             for key, value in asdict(self).items()
-            if value is not None
         }
 
 @dataclass(frozen=True, slots=True)
@@ -390,9 +389,34 @@ class ScatterStyle:
 class RectangleStyle(Style):
     facecolor: str
     edgecolor: str
-    linewidth: float = 1.0
-    alpha: float = 0.0
-    zorder: float|None = None
+    linewidth: float
+    alpha: float
+    zorder: float|None
+    hatch: str|None
+
+@dataclass(frozen=True, slots=True)
+class RectangleStyles:
+    facecolors: list[str]
+    edgecolor: str
+    linewidth: float
+    alpha: float
+    zorder: float|None
+    hatches: list[str|None]
+
+    def to_stylelist(self)->list[RectangleStyle]:
+        return [
+            RectangleStyle(
+                facecolor=fc,
+                edgecolor=self.edgecolor,
+                linewidth=self.linewidth,
+                alpha=self.alpha,
+                zorder=self.zorder,
+                hatch=self.hatches[i]
+                if self.hatches[i] is not None
+                else None
+            )
+            for i,fc in enumerate(self.facecolors)
+        ]
 
 @dataclass(frozen=True, slots=True)
 class ContourLevelConfigure:
@@ -574,3 +598,7 @@ class LineLabel:
             10**log10x[i],
             10**log10y[i]
         )
+
+@dataclass(frozen=True, slots=True)
+class LegendStyle(Style):
+    fontsize: int

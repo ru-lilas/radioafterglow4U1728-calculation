@@ -17,8 +17,8 @@ from module.mydataclasses import (
     QuantityGrid,
     BoolGrid
 )
-from module.observation import ChevalierScatter
-from module.plot_utils import AxesConfig, AxesRange, AxisConfig, AxisRange, ColormapConfigure, ColormapPlot, ContourStyle, MetadataConfig
+from module.observation import ChevalierComponent
+from module.plot_utils import AxesConfig, AxesRange, AxisConfig, AxisRange, ColormapConfigure, ColormapPlot, ContourStyle, LegendStyle, MetadataConfig
 from module.types import FloatArray, FloatPair
 from module.parameter_table import ModelParameterNames,ModelColumnNames
 from enum import StrEnum, auto
@@ -44,7 +44,7 @@ class ColormapConfigures:
 @dataclass(frozen=True,slots=True)
 class Styles:
     obs_center: plot_utils.ScatterStyle
-    obs_range: plot_utils.RectangleStyle
+    obs_ranges: plot_utils.RectangleStyles
     thin_boundary: plot_utils.LineStyle
     relativistic_boundary: plot_utils.LineStyle
 
@@ -67,12 +67,14 @@ class PlotConfig(YAMLReadable):
     contours: ContourConfigures
     styles: Styles
     metadata: ChevalierMetadataConfig
+    legend: LegendStyle
 
 @dataclass(frozen=True, slots=True)
 class DebagPlotConfig(YAMLReadable):
     layout: plot_utils.MultiPlotLayoutConfig
     colormaps: ColormapConfigures
     metadata: ChevalierMetadataConfig
+    legend: LegendStyle
 
 @dataclass(frozen=True,slots=True)
 class ChevalierMetadata:
