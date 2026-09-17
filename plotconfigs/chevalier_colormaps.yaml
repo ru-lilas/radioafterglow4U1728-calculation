@@ -127,28 +127,32 @@ colormaps:
         unit: "g cm-1"
         fontsize: 32
 metadata:
+  fontsize: 24
   eps_b:
     show: true
-    prefix: '\varepsilon_{\mathrm{B}}'
-    fmt: '.1e'
-    unit: null
+    unit: ""
+    label_format:
+      prefix: '\varepsilon_{\mathrm{B}}'
+      fmt: '.1e'
+      unit: ""
   eps_th:
     show: true
-    prefix: '\varepsilon_{\mathrm{th}}'
-    fmt: '.2f'
-    unit: null
+    unit: ""
+    label_format:
+      prefix: '\varepsilon_{\mathrm{th}}'
+      fmt: '.2f'
+      unit: ""
+  mue_mu:
+    show: true
+    unit: ""
+    label_format:
+      prefix: '\mu_{\mathrm{e}}/\mu'
+      fmt: '.1f'
+      unit: ""
   distance:
     show: true
-    prefix: 'D'
-    fmt: '.1f'
     unit: "kpc"
-  mu:
-    show: true
-    prefix: '\mu'
-    fmt: '.1f'
-    unit: null
-  mu_e:
-    show: true
-    prefix: '\mu_e'
-    fmt: '.1f'
-    unit: null
+    label_format:
+      prefix: 'D'
+      fmt: '.1f'
+      unit: '\mathrm{kpc}'

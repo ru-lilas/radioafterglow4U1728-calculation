@@ -72,7 +72,7 @@ class PlotConfig(YAMLReadable):
 class DebagPlotConfig(YAMLReadable):
     layout: plot_utils.MultiPlotLayoutConfig
     colormaps: ColormapConfigures
-    metadata: dict[str,MetadataConfig]
+    metadata: ChevalierMetadataConfig
 
 @dataclass(frozen=True,slots=True)
 class ChevalierMetadata:
@@ -278,6 +278,45 @@ class ChevalierContour:
             **label_kwargs
         )
         return contour
+
+@dataclass(frozen=True,slots=True)
+class ChevalierPlotRegion:
+    phi:FloatGrid
+    fnu:FloatGrid
+    out_of_plotregion: BoolGrid
+
+    @classmethod
+    def build(
+        cls,
+        phi_qgrid: QuantityGrid,
+        fnu_qgrid: QuantityGrid,
+        *,
+        phi_unit: str,
+        fnu_unit: str,
+        plotrange: AxesRange
+    )->Self:
+        phi = FloatGrid(phi_qgrid.to_value_in(phi_unit))
+        fnu = FloatGrid(fnu_qgrid.to_value_in(fnu_unit))
+        out_of_plotregion = BoolGrid(
+            (phi.values <= plotrange.x.min )
+            | (phi.values >= plotrange.x.max )
+            | (fnu.values <= plotrange.y.min )
+            | (fnu.values >= plotrange.y.max )
+        )
+        return cls(
+            phi=phi,
+            fnu=fnu,
+            out_of_plotregion=out_of_plotregion
+        )
+
+    @property
+    def phi_in_plotregion(self):
+        return self.phi.masking(self.out_of_plotregion)
+
+    @property
+    def fnu_in_plotregion(self):
+        return self.fnu.masking(self.out_of_plotregion)
+        
 
 @dataclass(frozen=True,slots=True)
 class ChevalierGrid:
@@ -492,28 +531,27 @@ class ChevalierGrid:
         fnu_unit: str,
         plotranges: AxesRange
     )->tuple[QuadContourSet,QuadContourSet]:
-        phi_peak = FloatGrid(self.phi_peak.to_value_in(phi_unit))
-        fnu_peak = FloatGrid(self.fnu_peak.to_value_in(fnu_unit))
-
         contourconfs = plotconf.contours
 
-        out_of_plotrange = self.mask_outof_plotrange(
-            phi_grid=phi_peak,
-            fnu_grid=fnu_peak,
-            plotranges=plotranges
+        plt_region = ChevalierPlotRegion.build(
+            phi_qgrid=self.phi_peak,
+            fnu_qgrid=self.fnu_peak,
+            phi_unit=phi_unit,
+            fnu_unit=fnu_unit,
+            plotrange=plotranges
         )
+        phi_visible = plt_region.phi_in_plotregion
+        fnu_visible = plt_region.fnu_in_plotregion
+
         ssa_boundary = self.mask_SSA_boundary()
-        is_ssa_thin = self.mask_SSA_thin()
         relativistic_boundary = self.mask_Theta_boundary()
+        is_ssa_thin = self.mask_SSA_thin()
         is_nonrelativistic = self.mask_nonrelativistic()
 
-        invisible = out_of_plotrange.take_or([
+        invisible = plt_region.out_of_plotregion.take_or([
             is_ssa_thin,
             is_nonrelativistic
         ])
-
-        phi_masked = phi_peak.masking(out_of_plotrange)
-        fnu_masked = fnu_peak.masking(out_of_plotrange)
 
         a_wind_contour = ChevalierContour(
             z_quantitygrid=self.a_wind,
@@ -522,8 +560,8 @@ class ChevalierGrid:
         )
         ca = a_wind_contour.plot(
             ax=ax,
-            phi_visible=phi_masked,
-            fnu_visible=fnu_masked
+            phi_visible=phi_visible,
+            fnu_visible=fnu_visible
         )
 
         betash_contour = ChevalierContour(
@@ -533,21 +571,21 @@ class ChevalierGrid:
         )
         cb = betash_contour.plot(
             ax=ax,
-            phi_visible=phi_masked,
-            fnu_visible=fnu_masked
+            phi_visible=phi_visible,
+            fnu_visible=fnu_visible
         )
 
         rela_boundary = RelativisticBoundary.build(
-            phi_plot=phi_masked,
-            fnu_plot=fnu_masked,
+            phi_plot=phi_visible,
+            fnu_plot=fnu_visible,
             is_relativistic=relativistic_boundary,
             style=plotconf.styles.relativistic_boundary
         )
         rela_boundary.plot(ax)
 
         thin_boundary = OpticallythinBoundary.build(
-            phi_plot=phi_masked,
-            fnu_plot=fnu_masked,
+            phi_plot=phi_visible,
+            fnu_plot=fnu_visible,
             is_optically_thick=ssa_boundary,
             style=plotconf.styles.thin_boundary,
         ) 
@@ -565,23 +603,29 @@ class ChevalierGrid:
         fnu_unit: str,
         plotranges: AxesRange
     )->None:
-        mask = self.is_ssa_thin
-        phi = self.phi_peak.to_FloatGrid(phi_unit)
-        fnu = self.fnu_peak.to_FloatGrid(fnu_unit)
-
-        out_plot_range = BoolGrid(
-            (phi.values <= plotranges.x.min )
-            | (phi.values >= plotranges.x.max )
-            | (fnu.values <= plotranges.y.min )
-            | (fnu.values >= plotranges.y.max )
+        plt_region = ChevalierPlotRegion.build(
+            phi_qgrid=self.phi_peak,
+            fnu_qgrid=self.fnu_peak,
+            phi_unit=phi_unit,
+            fnu_unit=fnu_unit,
+            plotrange=plotranges
         )
+        phi = plt_region.phi
+        fnu = plt_region.fnu
+
+        is_ssa_thin = self.mask_SSA_thin()
+        is_nonrelativistic = self.mask_nonrelativistic()
+        invisible = plt_region.out_of_plotregion.take_or([
+            is_ssa_thin,
+            is_nonrelativistic
+        ])
 
         for ax, cmplot in zip(axes.flat, cmplots):
             style=cmplot.style
             cb = style.colorbar
             label = cb.label
             z_val = FloatGrid(cmplot.quantity.to_value_in(label.unit))
-            z_plot = z_val.masking(mask)
+            z_plot = z_val.masking(invisible)
             mesh = ax.pcolormesh(
                 phi.values,
                 fnu.values,
@@ -675,43 +719,64 @@ class ChevalierGrid:
     #     )
 
 
-@dataclass(frozen=True,slots=True)
-class ChevalierColormap:
-    phi: FloatGrid
-    fnu: FloatGrid
-    ssa_mask: BoolGrid
-    cmplots:list[ColormapPlot]
-
-    def plot_colormaps(
-        self,
-        fig:Figure,
-        axes,
-    )->None:
-
-        for ax, cmplot in zip(axes.flat, self.cmplots):
-            style=cmplot.style
-            cb = style.colorbar
-            label = cb.label
-            z_val = FloatGrid(cmplot.quantity.to_value_in(label.unit))
-            z_plot = z_val.masking(self.ssa_mask)
-            mesh = ax.pcolormesh(
-                self.phi.values,
-                self.fnu.values,
-                z_plot.values,
-                shading=style.shading,
-                norm=style.norm.type,
-                cmap=style.cmap
-            )
-            cbar = fig.colorbar(
-                mesh,
-                ax=ax,
-                pad=cb.pad,
-                fraction=cb.fraction,
-            )
-            cbar.ax.tick_params(
-                labelsize=cb.tick_labelsize
-            )
-            cbar.set_label(
-                label.text,
-                fontsize=label.fontsize
-            )
+# @dataclass(frozen=True,slots=True)
+# class ChevalierColormap:
+#     phi: FloatGrid
+#     fnu: FloatGrid
+#     ssa_mask: BoolGrid
+#     cmplots:list[ColormapPlot]
+#
+#     def plot_colormaps(
+#         self,
+#         fig:Figure,
+#         axes,
+#         cmplots: list[ColormapPlot],
+#         *,
+#         phi_unit: str,
+#         fnu_unit: str,
+#         plotranges: AxesRange
+#     )->None:
+#         plt_region = ChevalierPlotRegion.build(
+#             phi_qgrid=self.phi,
+#             fnu_qgrid=self.fnu,
+#             phi_unit=phi_unit,
+#             fnu_unit=fnu_unit,
+#             plotrange=plotranges
+#         )
+#         phi = plt_region.phi
+#         fnu = plt_region.fnu
+#
+#         is_ssa_thin = self.mask_SSA_thin()
+#         is_nonrelativistic = self.mask_nonrelativistic()
+#         invisible = plt_region.out_of_plotregion.take_or([
+#             is_ssa_thin,
+#             is_nonrelativistic
+#         ])
+#
+#         for ax, cmplot in zip(axes.flat, cmplots):
+#             style=cmplot.style
+#             cb = style.colorbar
+#             label = cb.label
+#             z_val = FloatGrid(cmplot.quantity.to_value_in(label.unit))
+#             z_plot = z_val.masking(invisible)
+#             mesh = ax.pcolormesh(
+#                 phi.values,
+#                 fnu.values,
+#                 z_plot.values,
+#                 shading=style.shading,
+#                 norm=style.norm.type,
+#                 cmap=style.cmap
+#             )
+#             cbar = fig.colorbar(
+#                 mesh,
+#                 ax=ax,
+#                 pad=cb.pad,
+#                 fraction=cb.fraction,
+#             )
+#             cbar.ax.tick_params(
+#                 labelsize=cb.tick_labelsize
+#             )
+#             cbar.set_label(
+#                 label.text,
+#                 fontsize=label.fontsize
+#             )
