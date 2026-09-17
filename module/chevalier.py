@@ -126,116 +126,6 @@ class ChevalierMetadata:
             fontsize=conf.fontsize
         )
 
-
-# @dataclass(frozen=True,slots=True)
-# class OpticallythinBoundary:
-#     theta: FloatArray
-#     phi_peak: QuantityArray
-#     lnu_peak: QuantityArray
-#     fnu_peak: QuantityArray
-#
-#     def plot(
-#         self,
-#         ax:Axes,
-#         style:plot_utils.LineStyle,
-#         *,
-#         phi_unit: str,
-#         fnu_unit: str,
-#         plotranges: AxesRange
-#     ):
-#         xrange = plotranges.x
-#         yrange = plotranges.y
-#         x=self.phi_peak.to_value_in(phi_unit)
-#         y=self.fnu_peak.to_value_in(fnu_unit)
-#         in_plot_range = (
-#             (x >= xrange.min)
-#             & (x <= xrange.max)
-#             & (y >= yrange.min)
-#             & (y <= yrange.max)
-#         )
-#         x_visible = x[in_plot_range]
-#         y_visible = y[in_plot_range]
-#
-#         if len(x_visible) > 0:
-#             textpos = plot_utils.LineLabel.log10(
-#                 log10x = np.log10(x_visible),
-#                 log10y = np.log10(y_visible)
-#             )
-#
-#             ax.plot(x, y, **style.to_kwargs())
-#             ax.text(
-#                 *textpos,
-#                 r"$\tau_{\Theta}=1$",
-#                 ha="right",
-#                 va="bottom",
-#                 fontsize=32,
-#                 color=style.color
-#             )
-#
-#     def plot_theta_dependence(
-#         self,
-#         ax:Axes,
-#         style:plot_utils.LineStyle,
-#         y:QuantityArray,
-#         *,
-#         y_unit: str
-#     ):
-#         ax.plot(
-#             self.theta,y.to_value_in(y_unit),
-#             **style.to_kwargs()
-#         )
-#
-#     def to_df(
-#         self,
-#         *,
-#         phi_unit: str,
-#         fnu_unit: str
-#     ):
-#         df = pd.DataFrame({
-#             ModelColumnNames.THETA: self.theta,
-#             ModelColumnNames.PHI_PEAK_THIN: self.phi_peak.to_value_in(phi_unit),
-#             ModelColumnNames.FNU_PEAK_THIN: self.fnu_peak.to_value_in(fnu_unit)
-#         })
-#         return df
-    #
-    # def select_theta_range(
-    #     self,
-    #     df: pd.DataFrame,
-    #     theta_range: tuple[float, float],
-    #     *,
-    #     theta_column: str = "theta",
-    # ) -> pd.DataFrame:
-    #     theta_min, theta_max = theta_range
-    #
-    #     if theta_min > theta_max:
-    #         raise ValueError(
-    #             "thetaの下限が上限を超えています: "
-    #             f"{theta_min} > {theta_max}"
-    #         )
-    #
-    #     if theta_column not in df.columns:
-    #         raise KeyError(
-    #             f"列が存在しません: {theta_column}"
-    #         )
-    #
-    #     mask = df[theta_column].between(
-    #         theta_min,
-    #         theta_max,
-    #         inclusive="both",
-    #     )
-    #
-    #     return df.loc[mask].sort_values(theta_column) 
-    #
-    # def show_row(
-    #     self,
-    #     theta_range: tuple[float,float],
-    #     *,
-    #     phi_unit: str,
-    #     fnu_unit: str
-    # ):
-    #     df = self.to_df(phi_unit=phi_unit,fnu_unit=fnu_unit)
-    #     df_selected = self.select_theta_range(df,theta_range)
-
 @dataclass(frozen=True,slots=True)
 class RelativisticBoundary:
     phi_boundary:NDArray
@@ -403,9 +293,6 @@ class ChevalierGrid:
     a_syn: QuantityGrid
     a_wind: QuantityGrid
     is_ssa_thin: BoolGrid
-    phi_peak_thin: QuantityGrid
-    fnu_peak_thin: QuantityGrid
-    lnu_peak_thin: QuantityGrid
     
     @classmethod
     def from_csv(
@@ -477,21 +364,6 @@ class ChevalierGrid:
                 column=ModelColumnNames.A_WIND
             ),
             is_ssa_thin = ~is_ssa_thick,
-            phi_peak_thin = QuantityGrid.from_df(
-                df=df,
-                unit=phi_unit,
-                column=ModelColumnNames.PHI_PEAK_THIN
-            ),
-            fnu_peak_thin = QuantityGrid.from_df(
-                df=df,
-                unit=fnu_unit,
-                column=ModelColumnNames.FNU_PEAK_THIN
-            ),
-            lnu_peak_thin = QuantityGrid.from_df(
-                df=df,
-                unit=lnu_unit,
-                column=ModelColumnNames.LNU_PEAK_THIN
-            ),
         )
 
     def diagnostic_monotonicity(self):
