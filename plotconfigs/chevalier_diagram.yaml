@@ -107,7 +107,7 @@ styles:
     alpha: null
     zorder: 2.0
 metadata:
-  fontsize: 16
+  fontsize: 24
   eps_b:
     show: true
     unit: ""

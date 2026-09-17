@@ -127,114 +127,114 @@ class ChevalierMetadata:
         )
 
 
-@dataclass(frozen=True,slots=True)
-class OpticallythinBoundary:
-    theta: FloatArray
-    phi_peak: QuantityArray
-    lnu_peak: QuantityArray
-    fnu_peak: QuantityArray
-
-    def plot(
-        self,
-        ax:Axes,
-        style:plot_utils.LineStyle,
-        *,
-        phi_unit: str,
-        fnu_unit: str,
-        plotranges: AxesRange
-    ):
-        xrange = plotranges.x
-        yrange = plotranges.y
-        x=self.phi_peak.to_value_in(phi_unit)
-        y=self.fnu_peak.to_value_in(fnu_unit)
-        in_plot_range = (
-            (x >= xrange.min)
-            & (x <= xrange.max)
-            & (y >= yrange.min)
-            & (y <= yrange.max)
-        )
-        x_visible = x[in_plot_range]
-        y_visible = y[in_plot_range]
-
-        if len(x_visible) > 0:
-            textpos = plot_utils.LineLabel.log10(
-                log10x = np.log10(x_visible),
-                log10y = np.log10(y_visible)
-            )
-
-            ax.plot(x, y, **style.to_kwargs())
-            ax.text(
-                *textpos,
-                r"$\tau_{\Theta}=1$",
-                ha="right",
-                va="bottom",
-                fontsize=32,
-                color=style.color
-            )
-
-    def plot_theta_dependence(
-        self,
-        ax:Axes,
-        style:plot_utils.LineStyle,
-        y:QuantityArray,
-        *,
-        y_unit: str
-    ):
-        ax.plot(
-            self.theta,y.to_value_in(y_unit),
-            **style.to_kwargs()
-        )
-
-    def to_df(
-        self,
-        *,
-        phi_unit: str,
-        fnu_unit: str
-    ):
-        df = pd.DataFrame({
-            ModelColumnNames.THETA: self.theta,
-            ModelColumnNames.PHI_PEAK_THIN: self.phi_peak.to_value_in(phi_unit),
-            ModelColumnNames.FNU_PEAK_THIN: self.fnu_peak.to_value_in(fnu_unit)
-        })
-        return df
-
-    def select_theta_range(
-        self,
-        df: pd.DataFrame,
-        theta_range: tuple[float, float],
-        *,
-        theta_column: str = "theta",
-    ) -> pd.DataFrame:
-        theta_min, theta_max = theta_range
-
-        if theta_min > theta_max:
-            raise ValueError(
-                "thetaの下限が上限を超えています: "
-                f"{theta_min} > {theta_max}"
-            )
-
-        if theta_column not in df.columns:
-            raise KeyError(
-                f"列が存在しません: {theta_column}"
-            )
-
-        mask = df[theta_column].between(
-            theta_min,
-            theta_max,
-            inclusive="both",
-        )
-
-        return df.loc[mask].sort_values(theta_column) 
-
-    def show_row(
-        self,
-        theta_range: tuple[float,float],
-        *,
-        phi_unit: str,
-        fnu_unit: str
-    ):
-        df = self.to_df(phi_unit=phi_unit,fnu_unit=fnu_unit)
-        df_selected = self.select_theta_range(df,theta_range)
+# @dataclass(frozen=True,slots=True)
+# class OpticallythinBoundary:
+#     theta: FloatArray
+#     phi_peak: QuantityArray
+#     lnu_peak: QuantityArray
+#     fnu_peak: QuantityArray
+#
+#     def plot(
+#         self,
+#         ax:Axes,
+#         style:plot_utils.LineStyle,
+#         *,
+#         phi_unit: str,
+#         fnu_unit: str,
+#         plotranges: AxesRange
+#     ):
+#         xrange = plotranges.x
+#         yrange = plotranges.y
+#         x=self.phi_peak.to_value_in(phi_unit)
+#         y=self.fnu_peak.to_value_in(fnu_unit)
+#         in_plot_range = (
+#             (x >= xrange.min)
+#             & (x <= xrange.max)
+#             & (y >= yrange.min)
+#             & (y <= yrange.max)
+#         )
+#         x_visible = x[in_plot_range]
+#         y_visible = y[in_plot_range]
+#
+#         if len(x_visible) > 0:
+#             textpos = plot_utils.LineLabel.log10(
+#                 log10x = np.log10(x_visible),
+#                 log10y = np.log10(y_visible)
+#             )
+#
+#             ax.plot(x, y, **style.to_kwargs())
+#             ax.text(
+#                 *textpos,
+#                 r"$\tau_{\Theta}=1$",
+#                 ha="right",
+#                 va="bottom",
+#                 fontsize=32,
+#                 color=style.color
+#             )
+#
+#     def plot_theta_dependence(
+#         self,
+#         ax:Axes,
+#         style:plot_utils.LineStyle,
+#         y:QuantityArray,
+#         *,
+#         y_unit: str
+#     ):
+#         ax.plot(
+#             self.theta,y.to_value_in(y_unit),
+#             **style.to_kwargs()
+#         )
+#
+#     def to_df(
+#         self,
+#         *,
+#         phi_unit: str,
+#         fnu_unit: str
+#     ):
+#         df = pd.DataFrame({
+#             ModelColumnNames.THETA: self.theta,
+#             ModelColumnNames.PHI_PEAK_THIN: self.phi_peak.to_value_in(phi_unit),
+#             ModelColumnNames.FNU_PEAK_THIN: self.fnu_peak.to_value_in(fnu_unit)
+#         })
+#         return df
+    #
+    # def select_theta_range(
+    #     self,
+    #     df: pd.DataFrame,
+    #     theta_range: tuple[float, float],
+    #     *,
+    #     theta_column: str = "theta",
+    # ) -> pd.DataFrame:
+    #     theta_min, theta_max = theta_range
+    #
+    #     if theta_min > theta_max:
+    #         raise ValueError(
+    #             "thetaの下限が上限を超えています: "
+    #             f"{theta_min} > {theta_max}"
+    #         )
+    #
+    #     if theta_column not in df.columns:
+    #         raise KeyError(
+    #             f"列が存在しません: {theta_column}"
+    #         )
+    #
+    #     mask = df[theta_column].between(
+    #         theta_min,
+    #         theta_max,
+    #         inclusive="both",
+    #     )
+    #
+    #     return df.loc[mask].sort_values(theta_column) 
+    #
+    # def show_row(
+    #     self,
+    #     theta_range: tuple[float,float],
+    #     *,
+    #     phi_unit: str,
+    #     fnu_unit: str
+    # ):
+    #     df = self.to_df(phi_unit=phi_unit,fnu_unit=fnu_unit)
+    #     df_selected = self.select_theta_range(df,theta_range)
 
 @dataclass(frozen=True,slots=True)
 class RelativisticBoundary:
@@ -285,6 +285,109 @@ class RelativisticBoundary:
             **self.style.to_kwargs()
         )
 
+
+@dataclass(frozen=True,slots=True)
+class OpticallythinBoundary:
+    phi_boundary:NDArray
+    fnu_boundary:NDArray
+    style:plot_utils.LineStyle
+
+    @classmethod
+    def build(
+        cls,
+        phi_plot:FloatGrid,
+        fnu_plot:FloatGrid,
+        is_optically_thick: BoolGrid,
+        style:plot_utils.LineStyle
+    )->Self:
+        return cls(
+            phi_boundary = phi_plot.values[is_optically_thick.values],
+            fnu_boundary = fnu_plot.values[is_optically_thick.values],
+            style=style
+        )
+
+    def label(
+        self,
+        ax:Axes
+    ):
+        textpos = plot_utils.LineLabel.log10(
+            log10x = np.log10(self.phi_boundary),
+            log10y = np.log10(self.fnu_boundary)
+        )
+        ax.text(
+            *textpos,
+            r"$\tau_{\Theta}=1$",
+            ha="right",
+            va="bottom",
+            fontsize=32,
+            color=self.style.color
+        )
+        return
+
+    def plot(
+        self,
+        ax:Axes
+    ):
+        self.label(ax)
+        return ax.plot(
+            self.phi_boundary,
+            self.fnu_boundary,
+            **self.style.to_kwargs()
+        )
+
+@dataclass(frozen=True,slots=True)
+class ChevalierContour:
+    z_quantitygrid: QuantityGrid
+    mask_invisible: BoolGrid
+    contourconf: plot_utils.ContourConfigure
+
+    @property
+    def z_floatgrid(self):
+        return FloatGrid(self.z_quantitygrid.to_value_in(self.contourconf.unit))
+
+    @property
+    def z_visible(self):
+        return self.z_floatgrid.masking(self.mask_invisible)
+
+    def plot(
+        self,
+        ax: Axes,
+        phi_visible: FloatGrid, 
+        fnu_visible: FloatGrid
+    ):
+        conf = self.contourconf
+        z_visible = self.z_visible.values
+        if not (
+            phi_visible.shape
+            == fnu_visible.shape
+            == z_visible.shape
+        ):
+            raise ValueError(
+                "等高線に使用するグリッドのshapeが"
+                "一致していません. "
+                f"phi_peak={phi_visible.shape}, "
+                f"fnu_peak={fnu_visible.shape}, "
+                f"contour={z_visible.shape}, "
+            )
+        contour = ax.contour(
+            phi_visible.values,
+            fnu_visible.values,
+            z_visible,
+            levels = (
+                conf.levels
+                .levels(z_visible)
+            ),
+            **conf.style.to_kwargs(),
+        )
+        quantity_conf = conf.build_quantity_label()
+        label_kwargs = conf.label.to_kwargs()
+        label_kwargs["fmt"] = quantity_conf.to_text
+
+        ax.clabel(
+            contour,
+            **label_kwargs
+        )
+        return contour
 
 @dataclass(frozen=True,slots=True)
 class ChevalierGrid:
@@ -391,28 +494,6 @@ class ChevalierGrid:
             ),
         )
 
-    def build_optically_thin_boundary(
-        self
-    ):
-        phi_peak_thin = self.phi_peak_thin
-        fnu_peak_thin = self.fnu_peak_thin
-        lnu_peak_thin = self.lnu_peak_thin
-        return OpticallythinBoundary(
-            theta = np.unique(self.theta.values),
-            phi_peak= QuantityArray(
-                values = np.unique(phi_peak_thin.values),
-                unit = phi_peak_thin.unit
-            ),
-            lnu_peak = QuantityArray(
-                values = np.unique(lnu_peak_thin.values),
-                unit = lnu_peak_thin.unit
-            ),
-            fnu_peak= QuantityArray(
-                values = np.unique(fnu_peak_thin.values),
-                unit = fnu_peak_thin.unit
-            )
-        )
-
     def diagnostic_monotonicity(self):
         phi = FloatGrid(self.phi_peak.values)
         fnu = FloatGrid(self.fnu_peak.values)
@@ -481,27 +562,41 @@ class ChevalierGrid:
             ].to_string(index=False)
         )
 
-    def mask_relativistic(
+    def mask_SSA_boundary(
+        self,
+        tau_th_crit:float = 1.0
+    )->BoolGrid:
+        """
+            tau_th_crit:float critical value of tau_th
+        """
+        tau_th = FloatGrid(self.tau_th.values)
+        return tau_th.nearest_values(tau_th_crit)
+
+    def mask_SSA_thin(
+        self,
+        tau_th_crit:float = 1.0
+    )->BoolGrid:
+        """
+            tau_th_crit:float critical value of tau_th
+        """
+        tau_th = FloatGrid(self.tau_th.values)
+        return tau_th.less_than(tau_th_crit)
+
+    def mask_Theta_boundary(
         self,
         theta_crit:float = 1.0
     )->BoolGrid:
         """
             theta_crit: critical value of theta for relativistic
         """
-        theta = self.theta.values
-        row_indices = np.argmin(
-            np.abs(theta - theta_crit),
-            axis=0
-        )
-        column_indices = np.arange(theta.shape[1])
-        mask = np.zeros_like(
-            theta,
-            dtype=bool,
-        )
+        theta = FloatGrid(self.theta.values)
+        return theta.nearest_values(theta_crit)
 
-        mask[row_indices, column_indices] = True
-
-        return BoolGrid(mask)
+    def mask_nonrelativistic(
+        self,
+        theta_crit:float = 1.0
+    ):
+        return FloatGrid(self.theta.values).less_than(theta_crit)
 
     def mask_outof_plotrange(
         self,
@@ -516,36 +611,6 @@ class ChevalierGrid:
             | (fnu_grid.values >= plotranges.y.max )
         )
 
-    def plot_relativistic_boundary(
-        self,
-        ax:Axes,
-        phi_grid:FloatGrid,
-        fnu_grid:FloatGrid,
-        is_relativistic: BoolGrid,
-        style:plot_utils.LineStyle,
-    ):
-        phi_boundary = phi_grid.values[is_relativistic.values]
-        fnu_boundary = fnu_grid.values[is_relativistic.values]
-        ax.plot(
-            phi_boundary,
-            fnu_boundary,
-            **style.to_kwargs()
-        )
-        textpos = plot_utils.LineLabel.log10(
-            log10x = np.log10(phi_boundary),
-            log10y = np.log10(fnu_boundary)
-        )
-
-        ax.text(
-            *textpos,
-            r"$\Theta=1$",
-            ha="left",
-            va="top",
-            fontsize=32,
-            color=style.color
-        )
-        return
-
     def plot_main_contour(
         self,
         ax:Axes,
@@ -559,86 +624,64 @@ class ChevalierGrid:
         fnu_peak = FloatGrid(self.fnu_peak.to_value_in(fnu_unit))
 
         contourconfs = plotconf.contours
-        a_wind_unit = contourconfs.a_wind.unit
-        beta_unit = contourconfs.beta_sh.unit
-        a_wind_grid = FloatGrid(self.a_wind.to_value_in(a_wind_unit))
-        beta_sh_grid = FloatGrid(self.beta_sh.to_value_in(beta_unit))
 
         out_of_plotrange = self.mask_outof_plotrange(
             phi_grid=phi_peak,
             fnu_grid=fnu_peak,
             plotranges=plotranges
         )
+        ssa_boundary = self.mask_SSA_boundary()
+        is_ssa_thin = self.mask_SSA_thin()
+        relativistic_boundary = self.mask_Theta_boundary()
+        is_nonrelativistic = self.mask_nonrelativistic()
+
+        invisible = out_of_plotrange.take_or([
+            is_ssa_thin,
+            is_nonrelativistic
+        ])
 
         phi_masked = phi_peak.masking(out_of_plotrange)
         fnu_masked = fnu_peak.masking(out_of_plotrange)
-        a_masked = a_wind_grid.masking(out_of_plotrange)
-        b_masked = beta_sh_grid.masking(out_of_plotrange)
 
-        if not (
-            phi_masked.shape
-            == fnu_masked.shape
-            == a_masked.shape
-            == b_masked.shape
-        ):
-            raise ValueError(
-                "等高線に使用するグリッドのshapeが"
-                "一致していません. "
-                f"phi_peak={phi_masked.shape}, "
-                f"fnu_peak={fnu_masked.shape}, "
-                f"a_wind={a_masked.shape}, "
-                f"beta_sh={b_masked.shape}"
-            )
-
-        contour_a_wind = ax.contour(
-            phi_masked.values,
-            fnu_masked.values,
-            a_masked.values,
-            levels=(
-                contourconfs.a_wind.levels
-                .levels(a_masked.values)
-            ),
-            **contourconfs.a_wind.style.to_kwargs(),
+        a_wind_contour = ChevalierContour(
+            z_quantitygrid=self.a_wind,
+            mask_invisible=invisible,
+            contourconf=contourconfs.a_wind
         )
-        quantity_conf = contourconfs.a_wind.build_quantity_label()
-        label_kwargs = contourconfs.a_wind.label.to_kwargs()
-        label_kwargs["fmt"] = quantity_conf.to_text
-        ax.clabel(
-            contour_a_wind,
-            **label_kwargs
+        ca = a_wind_contour.plot(
+            ax=ax,
+            phi_visible=phi_masked,
+            fnu_visible=fnu_masked
         )
 
-        contour_beta_sh = ax.contour(
-            phi_masked.values,
-            fnu_masked.values,
-            b_masked.values,
-            levels=(
-                contourconfs.beta_sh.levels
-                .levels(b_masked.values)
-            ),
-            **contourconfs.beta_sh.style.to_kwargs(),
+        betash_contour = ChevalierContour(
+            z_quantitygrid=self.beta_sh,
+            mask_invisible=invisible,
+            contourconf=contourconfs.beta_sh
         )
-        quantity_conf = contourconfs.beta_sh.build_quantity_label()
-        label_kwargs = contourconfs.beta_sh.label.to_kwargs()
-        label_kwargs["fmt"] = quantity_conf.to_text
-        ax.clabel(
-            contour_beta_sh,
-            **label_kwargs
+        cb = betash_contour.plot(
+            ax=ax,
+            phi_visible=phi_masked,
+            fnu_visible=fnu_masked
         )
 
         rela_boundary = RelativisticBoundary.build(
             phi_plot=phi_masked,
             fnu_plot=fnu_masked,
-            is_relativistic=self.mask_relativistic(),
+            is_relativistic=relativistic_boundary,
             style=plotconf.styles.relativistic_boundary
         )
-
         rela_boundary.plot(ax)
 
-        return (
-                contour_a_wind,
-                contour_beta_sh,
-            )
+        thin_boundary = OpticallythinBoundary.build(
+            phi_plot=phi_masked,
+            fnu_plot=fnu_masked,
+            is_optically_thick=ssa_boundary,
+            style=plotconf.styles.thin_boundary,
+        ) 
+        thin_boundary.plot(ax)
+
+        return (ca,cb)
 
     def plot_colormaps(
         self,

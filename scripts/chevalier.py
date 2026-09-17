@@ -43,7 +43,6 @@ def main():
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
     grids = ChevalierGrid.from_csv(args.model_table)
-    thin_limit = grids.build_optically_thin_boundary()
     df_obs_long = LongformatLightcurve.from_csv(args.obslc)
 
     freqs = [5.5,9.0]
@@ -80,13 +79,6 @@ def main():
         grids.plot_main_contour(
             ax,
             plotconf=plotconf,
-            phi_unit=phi_unit,
-            fnu_unit=fnu_unit,
-            plotranges=ranges
-        )
-        thin_limit.plot(
-            ax,
-            style=plotconf.styles.thin_boundary,
             phi_unit=phi_unit,
             fnu_unit=fnu_unit,
             plotranges=ranges

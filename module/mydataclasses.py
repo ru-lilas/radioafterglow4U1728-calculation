@@ -157,6 +157,68 @@ class BoolGrid:
     def __invert__(self)->Self:
         return self.inverted()
 
+    def take_and(
+        self,
+        boolgrids: list[Self],
+    ) -> Self:
+        grids = [self, *boolgrids]
+
+        if any(
+            grid.values.shape != self.values.shape
+            for grid in grids
+        ):
+            shapes = [
+                grid.values.shape
+                for grid in grids
+            ]
+            raise ValueError(
+                "すべてのBoolGridのshapeが"
+                "一致している必要があります: "
+                f"shapes={shapes}"
+            )
+
+        result = np.logical_and.reduce(
+            [grid.values for grid in grids]
+        )
+
+        return type(self)(
+            values=np.asarray(
+                result,
+                dtype=np.bool_,
+            )
+        )
+    def take_or(
+        self,
+        boolgrids: list[Self],
+    ) -> Self:
+        grids = [self, *boolgrids]
+
+        if any(
+            grid.values.shape != self.values.shape
+            for grid in grids
+        ):
+            shapes = [
+                grid.values.shape
+                for grid in grids
+            ]
+            raise ValueError(
+                "すべてのBoolGridのshapeが"
+                "一致している必要があります: "
+                f"shapes={shapes}"
+            )
+
+        result = np.logical_or.reduce(
+            [grid.values for grid in grids]
+        )
+
+        return type(self)(
+            values=np.asarray(
+                result,
+                dtype=np.bool_,
+            )
+        )
+
+
 @dataclass(frozen=True, slots=True)
 class FloatGrid:
     values: NDArray[np.float64]| np.ma.MaskedArray
@@ -193,6 +255,39 @@ class FloatGrid:
                     val,
                 )
             )
+
+    def nearest_values(
+        self,
+        value_crit: float
+    )->BoolGrid:
+        values = self.values   
+        row_indices = np.argmin(
+            np.abs(values - value_crit),
+            axis=0
+        )
+        column_indices = np.arange(values.shape[1])
+        mask = np.zeros_like(
+            values,
+            dtype=bool,
+        )
+        mask[row_indices, column_indices] = True
+        return BoolGrid(mask)
+
+    def less_than(
+        self,
+        value_crit: float
+    )->BoolGrid:
+        return BoolGrid(
+            values=self.values < value_crit
+        )
+
+    def greater_than(
+        self,
+        value_crit: float
+    )->BoolGrid:
+        return BoolGrid(
+            values=self.values > value_crit
+        )
 
     def find_nonmonotonic_lines(
         self,
