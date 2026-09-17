@@ -56,10 +56,10 @@ class OpticallythinBoundaryPlotConfig(YAMLReadable):
 @dataclass(frozen=True,slots=True)
 class ChevalierMetadataConfig:
     fontsize: float
-    eps_b:  plot_utils.QuantityLabel
-    eps_th: plot_utils.QuantityLabel
-    mue_mu: plot_utils.QuantityLabel
-    distance: plot_utils.QuantityLabel
+    eps_b:  plot_utils.MetadataConfig
+    eps_th: plot_utils.MetadataConfig
+    mue_mu: plot_utils.MetadataConfig
+    distance: plot_utils.MetadataConfig
 
 @dataclass(frozen=True, slots=True)
 class PlotConfig(YAMLReadable):
@@ -109,10 +109,10 @@ class ChevalierMetadata:
         ax:Axes,
         conf:ChevalierMetadataConfig
     )->None:
-        txt_epsb = conf.eps_b.to_text(self.eps_b)
-        txt_epsth = conf.eps_th.to_text(self.eps_th)
-        txt_muemu = conf.mue_mu.to_text(self.mue_mu)
-        txt_distance = conf.distance.to_text(self.distance.value_in(conf.distance.unit))
+        txt_epsb = conf.eps_b.label_format.to_text(self.eps_b)
+        txt_epsth = conf.eps_th.label_format.to_text(self.eps_th)
+        txt_muemu = conf.mue_mu.label_format.to_text(self.mue_mu)
+        txt_distance = conf.distance.label_format.to_text(self.distance.value_in(conf.distance.unit))
 
         strings = [
             txt_epsb,
@@ -235,7 +235,6 @@ class OpticallythinBoundary:
     ):
         df = self.to_df(phi_unit=phi_unit,fnu_unit=fnu_unit)
         df_selected = self.select_theta_range(df,theta_range)
-        print(df_selected.to_string())
 
 @dataclass(frozen=True,slots=True)
 class RelativisticBoundary:
@@ -597,7 +596,7 @@ class ChevalierGrid:
             a_masked.values,
             levels=(
                 contourconfs.a_wind.levels
-                .to_nparray(a_masked.values)
+                .levels(a_masked.values)
             ),
             **contourconfs.a_wind.style.to_kwargs(),
         )
@@ -615,7 +614,7 @@ class ChevalierGrid:
             b_masked.values,
             levels=(
                 contourconfs.beta_sh.levels
-                .to_nparray(b_masked.values)
+                .levels(b_masked.values)
             ),
             **contourconfs.beta_sh.style.to_kwargs(),
         )

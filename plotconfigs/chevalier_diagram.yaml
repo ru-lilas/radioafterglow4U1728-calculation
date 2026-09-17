@@ -33,14 +33,22 @@ contours:
     levels:
       start: null
       stop: null
-      num: 5
+      num: null
+      scale: "log"
+      values:
+        - 1.0e+04
+        - 1.0e+05
+        - 1.0e+06
+        - 1.0e+07
+        - 1.0e+08
+        - 1.0e+09
     label:
       inline: true
       inline_spacing: 5
       fontsize: 16
     label_format:
       prefix: 'A_{\mathrm{w}}'
-      fmt: ".1e"
+      fmt: ".0e"
       unit: '\mathrm{g\,cm^{-1}}'
   beta_sh:
     style:
@@ -49,7 +57,14 @@ contours:
     levels:
       start: null
       stop: null
-      num: 5
+      num: null
+      scale: "linear"
+      values:
+        - 0.20
+        - 0.30
+        - 0.40
+        - 0.50
+        - 0.60
     label:
       inline: true
       inline_spacing: 5
@@ -95,21 +110,29 @@ metadata:
   fontsize: 16
   eps_b:
     show: true
-    prefix: '\varepsilon_{\mathrm{B}}'
-    fmt: '.1e'
     unit: ""
+    label_format:
+      prefix: '\varepsilon_{\mathrm{B}}'
+      fmt: '.1e'
+      unit: ""
   eps_th:
     show: true
-    prefix: '\varepsilon_{\mathrm{th}}'
-    fmt: '.2f'
     unit: ""
+    label_format:
+      prefix: '\varepsilon_{\mathrm{th}}'
+      fmt: '.2f'
+      unit: ""
   mue_mu:
     show: true
-    prefix: '\mu_{\mathrm{e}}/\mu'
-    fmt: '.1f'
     unit: ""
+    label_format:
+      prefix: '\mu_{\mathrm{e}}/\mu'
+      fmt: '.1f'
+      unit: ""
   distance:
     show: true
-    prefix: 'D'
-    fmt: '.1f'
-    unit: "\mathrm{kpc}"
+    unit: "kpc"
+    label_format:
+      prefix: 'D'
+      fmt: '.1f'
+      unit: '\mathrm{kpc}'

@@ -43,7 +43,6 @@ def main():
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
     grids = ChevalierGrid.from_csv(args.model_table)
-    grids.turning_point()
     thin_limit = grids.build_optically_thin_boundary()
     df_obs_long = LongformatLightcurve.from_csv(args.obslc)
 
@@ -62,7 +61,7 @@ def main():
         df_obs_nu.peak
         for df_obs_nu in dfs_obs_nu
     ]
-    #
+
     plotconf = PlotConfig.from_yaml(args.plotconfig)
     phi_unit = plotconf.layout.axes.x.label.unit
     fnu_unit=plotconf.layout.axes.y.label.unit

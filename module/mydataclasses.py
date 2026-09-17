@@ -387,3 +387,28 @@ class FloatVector(MyVector):
                     val,
                 )
             )
+
+@dataclass(frozen=True, slots=True)
+class NDArraySpace:
+    start: float
+    stop: float
+    num: int
+
+    def linspace(self) -> NDArray[np.float64]:
+        return np.linspace(
+            start=self.start,
+            stop=self.stop,
+            num=self.num,
+        )
+
+    def geomspace(self) -> NDArray[np.float64]:
+        if self.start <= 0.0 or self.stop <= 0.0:
+            raise ValueError(
+                "対数間隔の配列生成には"
+                "正の値が必要です"
+            )
+        return np.geomspace(
+            start=self.start,
+            stop=self.stop,
+            num=self.num,
+        )

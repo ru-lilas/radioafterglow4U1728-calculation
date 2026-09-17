@@ -8,7 +8,7 @@ from matplotlib.ticker import LogLocator
 from matplotlib.colorbar import Colorbar
 from numpy.typing import NDArray
 from module import dataframe_utils
-from module.mydataclasses import FloatGrid, QuantityData, QuantityGrid, ValueArray, YAMLReadable
+from module.mydataclasses import FloatGrid, NDArraySpace, QuantityData, QuantityGrid, ValueArray, YAMLReadable
 from module.utilities import build_nparray
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
@@ -396,26 +396,107 @@ class RectangleStyle(Style):
 
 @dataclass(frozen=True, slots=True)
 class ContourLevelConfigure:
-    start: float|None
-    stop: float|None
-    num: int
+    start: float|None = None
+    stop: float|None = None
+    num: int|None = None
+    scale: Literal["linear","log"] = "log"
+    values: list[float] | None = None
 
-    def to_nparray(self,grid:FloatArray):
-        if self.start is None:
-            start_compensated:float = grid.min()
-        else:
-            start_compensated = self.start
-    
-        if self.stop is None:
-            stop_compensated:float = grid.max()
-        else:
-            stop_compensated = self.stop
-
-        return np.geomspace(
-            start=start_compensated,
-            stop=stop_compensated,
-            num=self.num
+    def start_value(
+        self,
+        grid:NDArray[np.float64]
+    )->float:
+        return (
+            grid.min()
+            if self.start is None
+            else self.start
         )
+
+    def stop_value(
+        self,
+        grid:NDArray[np.float64]
+    )->float:
+        return (
+            grid.max()
+            if self.stop is None
+            else self.stop
+        )
+
+    def build_levels_auto(
+        self,
+        grid_values:NDArray[np.float64]
+    )->NDArray[np.float64]:
+        if self.num is None:
+            raise ValueError(
+                "valuesを指定しない場合は"
+                "numが必要です"
+            )
+        start = self.start_value(grid_values)
+        stop = self.stop_value(grid_values)
+        space = NDArraySpace(
+            start,
+            stop,
+            self.num
+        )
+
+        if self.scale=="linear":
+            levels = space.linspace() 
+        elif self.scale=="log":
+            levels = space.geomspace()
+        else:
+            raise ValueError(
+                f"未対応のscaleが設定されています: {self.scale}"
+            )
+
+        return levels
+
+    @staticmethod
+    def grid_values(
+        grid:FloatArray
+    )->NDArray[np.float64]:
+        grid_values = np.asarray(
+            np.ma.compressed(grid),
+            dtype=np.float64,
+        )
+        grid_values = grid_values[
+            np.isfinite(grid_values)
+        ]
+        if grid_values.size==0:
+            raise ValueError(
+                "等高線levelを決められません"
+            )
+        else:
+            return grid_values
+
+    def levels(self,grid:FloatArray):
+        grid_values = self.grid_values(grid)
+        if self.values is not None:
+            levels = np.asarray(
+                self.values,
+                dtype=np.float64
+            )
+        else:
+            levels = self.build_levels_auto(
+                grid_values
+            )
+
+        levels = np.unique(levels)
+
+        # gridの範囲外にあるlevelを除外
+        in_grid_range = (
+            (grid_values.min() <= levels)
+            & (levels <= grid_values.max())
+        )
+        levels = levels[in_grid_range]
+
+        if levels.size == 0:
+            raise ValueError(
+                "gridの範囲内に等高線levelがありません: "
+                f"grid=[{grid_values.min()}, "
+                f"{grid_values.max()}]"
+            )
+
+        return levels
 
 @dataclass(frozen=True,slots=True)
 class ContourStyle(Style):
@@ -478,19 +559,8 @@ class ColormapPlot:
 @dataclass(frozen=True, slots=True)
 class MetadataConfig:
     show: bool
-    prefix: str
-    fmt: str
-    unit: str|None
-
-    def format_value(
-        self,
-        value:float
-    )->str:
-        return format_value(
-            value=value,
-            prefix=self.prefix,
-            fmt=self.fmt
-        )
+    unit: str
+    label_format:QuantityLabel
 
 class LineLabel:
     @staticmethod
