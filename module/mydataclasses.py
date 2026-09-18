@@ -598,3 +598,20 @@ class IndexGrid:
             self.values[mask.values],
             dtype=np.int64,
         )
+
+@dataclass(frozen=True,slots=True)
+class QuantityList:
+    values: list[float]
+    unit: str
+
+    def to_QuantityData_list(
+        self,
+    )->list[QuantityData]:
+        return [
+            QuantityData(
+                value=value,
+                unit=self.unit
+            )
+            for value in self.values
+        ]
+

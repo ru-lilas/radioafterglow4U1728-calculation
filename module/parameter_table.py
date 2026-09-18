@@ -49,6 +49,7 @@ class ModelParameterNames(StrEnum):
     PHI_UNIT = auto()
     LNU_UNIT = auto()
     FNU_UNIT = auto()
+    NU_UNIT = auto()
 
 class ModelColumnNames(StrEnum):
     PHI_TH_THIN = auto()
@@ -70,6 +71,7 @@ class ModelColumnNames(StrEnum):
     PHI_PEAK_THIN = auto()
     FNU_PEAK_THIN = auto()
     LNU_PEAK_THIN = auto()
+    NU = auto()
 
 class ModelOpticallythinColumnNames(StrEnum):
     PHI_TH_THIN = auto()
@@ -348,9 +350,6 @@ class ModelParameterTable:
             ModelColumnNames.BETA_SH: beta_sh.ravel(),
             ModelColumnNames.A_SYN: a_syn.to_value_in(a_wind_unit).ravel(),
             ModelColumnNames.A_WIND: a_wind.to_value_in(a_wind_unit).ravel(),
-            ModelColumnNames.PHI_TH_THIN: phi_th_thin.to_value_in(phi_unit).ravel(),
-            ModelColumnNames.TAU_TH_THIN: tau_th_thin.values.ravel(),
-            ModelColumnNames.LNU_TH_THIN: lnu_th_thin.to_value_in(lnu_unit).ravel(),
             ModelColumnNames.PHI_PEAK_THIN: phi_peak_thin.to_value_in(phi_unit).ravel(),
             ModelColumnNames.LNU_PEAK_THIN: lnu_peak_thin.to_value_in(lnu_unit).ravel(),
             ModelColumnNames.FNU_PEAK_THIN: fnu_peak_thin.to_value_in(fnu_unit).ravel(),

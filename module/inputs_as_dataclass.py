@@ -15,6 +15,7 @@ from module.mydataclasses import (
     QuantityArray1D,
     QuantityArrayBase,
     QuantityData,
+    QuantityList,
     YAMLReadable,
     ValueArray
 )
@@ -78,6 +79,9 @@ class Chi2FittingConfigure:
     def n_model(self):
         return len(self.free_parameters)
 
+@dataclass(frozen=True)
+class CandidateModelsSelection:
+    observation_frequencies: QuantityList
 
 # @dataclass(frozen=True,slots=True)
 # class ModelParameterGrid:
@@ -218,10 +222,16 @@ class ModelParameters:
             ).to_mep(),
             distance= self.distance
         )
+@dataclass(frozen=True)
+class Units:
+    phi_unit: str
+    fnu_unit: str
 
 @dataclass(frozen=True)
 class GeneralInputs(YAMLReadable):
+    units: Units
     model_parameters: ModelParameters
+    candidate_models_selection: CandidateModelsSelection
     chi2fitting: Chi2FittingConfigure
     burster_property: ObservedBursterProperty
 

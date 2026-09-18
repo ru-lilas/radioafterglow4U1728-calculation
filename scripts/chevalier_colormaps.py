@@ -12,7 +12,7 @@ from module.chevalier import (
 from module.inputs_as_dataclass import GeneralInputs, ModelParameterTable
 from module.mydataclasses import QuantityData
 from module.observation import LongformatLightcurve
-from module.utils import FileWriter
+from module.utils import FileReader, FileWriter
 
 def parse_args()->argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -44,7 +44,8 @@ def main():
     outpath:Path = args.output
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
-    grids = ChevalierGrid.from_csv(args.model_table)
+    df_model = FileReader.table_from_csv(args.model_table,idx="index")
+    grids = ChevalierGrid.from_df(df_model)
     df_obs_long = LongformatLightcurve.from_csv(args.obslc)
 
     freqs = [5.5,9.0]

@@ -1,3 +1,8 @@
+units:
+  phi_unit: &phi_unit "GHz min"
+  fnu_unit: &fnu_unit "mJy"
+  nu_unit: &nu_unit "GHz"
+
 model_parameters:
   phi_th:
     values:
@@ -5,7 +10,7 @@ model_parameters:
       stop: 2.0
       num: 256
       scale: "log"
-    unit: "GHz min"
+    unit: *phi_unit
   theta0:
     start: 3.0
     stop: 8.0
@@ -19,6 +24,13 @@ model_parameters:
     value: 5.0
     unit: "kpc"
 
+candidate_models_selection:
+  observation_frequencies:
+    values:
+      - 5.5
+      - 9.0
+    unit: *nu_unit
+
 chi2fitting:
   free_parameters:
     - a_wind
@@ -26,7 +38,7 @@ chi2fitting:
   sampling:
     nu: &nu
       value: 9.0
-      unit: "GHz"
+      unit: *nu_unit
     timewindow:
       min: 0.0
       max: 16.0
@@ -39,7 +51,7 @@ chi2fitting:
         num: 256
         scale: "log"
       unit: "s"
-    fnu_unit: "mJy"
+    fnu_unit: *fnu_unit
     nu: *nu
 
 burster_property:

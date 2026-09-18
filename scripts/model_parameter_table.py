@@ -35,15 +35,6 @@ def main():
 
     df = model_table.to_df(peak_table)
 
-    model_table.view_df(
-        df,
-        [
-            "theta",
-            "phi_peak_thin",
-            "fnu_peak_thin"
-
-        ]
-    )
     FileWriter.df_to_csv(
         path=args.output,
         df = df,

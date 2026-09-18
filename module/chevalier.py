@@ -419,7 +419,6 @@ class BoolianMap:
         )
         return mesh
 
-
 @dataclass(frozen=True,slots=True)
 class ChevalierGrid:
     metadata: ChevalierMetadata
@@ -437,12 +436,10 @@ class ChevalierGrid:
     is_ssa_thin: BoolGrid
     
     @classmethod
-    def from_csv(
+    def from_df(
         cls,
-        path:Path
+        df:pd.DataFrame
     )->Self:
-        df = FileReader.table_from_csv(path,idx="index")
-        df = df.sort_index()
         metadata = ChevalierMetadata.from_attrs(df.attrs)
         phi_unit = metadata.phi_unit
         fnu_unit = metadata.fnu_unit
@@ -798,3 +795,21 @@ class ChevalierGrid:
         )
 
         return self.index.select(in_observation_range)
+
+    def df_modelcandidates(
+        self,
+        df: pd.DataFrame,
+        obs: ChevalierComponent,
+        phi_unit: str,
+        fnu_unit: str,
+    )->pd.DataFrame:
+        model_indices = self.allowed_modelindex(
+            obs,
+            phi_unit = phi_unit,
+            fnu_unit = fnu_unit,
+        )
+        df_candidates:pd.DataFrame = df.loc[model_indices]
+        df_candidates[ModelColumnNames.NU] = obs.nu.value
+        df_candidates.attrs[ModelParameterNames.NU_UNIT] = obs.nu.unit
+
+        return df_candidates
