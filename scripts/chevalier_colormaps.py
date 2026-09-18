@@ -109,9 +109,10 @@ def main():
             plotranges=ranges
         )
         style_obs_ranges = plotconf.styles.obs_ranges.to_stylelist()
-        for (colormap,ax) in zip(colormaps,axes.flat):
-            colormap.plot(fig,ax)
-            for i,obs_range in enumerate(obs_ranges):
+        for i,obs_range in enumerate(obs_ranges):
+            # boolmap_in_obsrange = grids
+            for (colormap,ax) in zip(colormaps,axes.flat):
+                colormap.plot(fig,ax)
                 obs_range.plot_range(
                     ax,
                     style=style_obs_ranges[i],

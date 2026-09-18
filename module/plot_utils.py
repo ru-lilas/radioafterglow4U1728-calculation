@@ -3,8 +3,9 @@ from functools import cached_property
 from typing import Any, Literal, Self
 from dacite import from_dict
 from matplotlib.cm import ScalarMappable
-from matplotlib.colors import Normalize
+from matplotlib.colors import Normalize,ListedColormap
 from matplotlib.ticker import LogLocator
+from matplotlib import colormaps
 from matplotlib.colorbar import Colorbar
 from numpy.typing import NDArray
 from module import dataframe_utils
@@ -21,6 +22,15 @@ from module.types import FloatArray, ValueScale,FloatPair
 
 PlotScale = Literal["linear","log"]
 AxisDirection = Literal["x","y"]
+
+bool_cmap = ListedColormap(
+    [
+        (0.0, 0.0, 0.0, 0.0),  # False: 透明
+        (0.12, 0.47, 0.71, 0.5),  # True
+    ],
+    name="boolian",
+)
+colormaps.register(bool_cmap)
 
 def format_value(
     value: float,

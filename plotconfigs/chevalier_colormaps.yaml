@@ -163,6 +163,20 @@ colormaps:
         prefix: '$A_{\mathrm{w}}$'
         unit: "g cm-1"
         fontsize: 32
+  allowed:
+    cmap: boolian
+    shading: auto
+    vmin: 0
+    vmax: 1
+    norm:
+      type: linear
+    colorbar:
+      <<: *colorbar_tmp
+      show: false
+      label:
+        prefix: '$A_{\mathrm{syn}}$'
+        unit: "g cm-1"
+        fontsize: 32
 metadata:
   fontsize: 24
   eps_b:
