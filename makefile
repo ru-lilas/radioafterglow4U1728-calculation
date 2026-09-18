@@ -31,7 +31,6 @@ OUTDIR := $(FIGDIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)
 FIGOUTDIR := $(FIGDIR)/$(SCENARIO_TAG)/$(SAMPLING_TAG)
 PATH_PHYSICAL_PARAMETERS := $(DATADIR)/$(PARAMETER_DIR)/$(PHYSICAL_PARAMETERS)
 FILEPATH_INPUT := $(DATADIR)/$(RUN_DIR)/input.$(EXTENTION_YAML)
-FILEPATH_INTEGRAL_TABLE := $(DATADIR)/$(INTEGRAL_TABLE).$(EXTENTION_CSV)
 FILEPATH_PEAK_TABLE := $(DATADIR)/peak_table.$(EXTENTION_CSV)
 FILEPATH_PARAMETER_TABLE := $(DATADIR)/$(RUN_DIR)/.$(EXTENTION_YAML)
 FILEPATH_CHI2TEST := $(PARAMETER_DIR)/$(CHI2TEST_SUMMARY).$(EXTENTION_CSV)
@@ -45,6 +44,7 @@ FILEPATH_CHEVALIER_PDF := $(FIGDIR)/$(RUN_DIR)/chevalier_diagram.$(EXTENTION_PDF
 FILEPATH_CHEVALIER_COLORMAP_PDF := $(FIGDIR)/$(RUN_DIR)/chevalier_colormap.$(EXTENTION_PDF)
 FILEPATH_CHI2 := $(DATADIR)/$(RUN_DIR)/chi2.$(EXTENTION_CSV)
 FILEPATH_MINIMUM_CHI2_LC := $(DATADIR)/$(RUN_DIR)/minimum_chi2_lc.$(EXTENTION_CSV)
+
 FILEPATH_CANDIDATE_MODELS := $(DATADIR)/$(RUN_DIR)/$(CANDIDATE_MODELS).$(EXTENTION_CSV)
 FILEPATH_MODEL_PARAMETER_TABLE := $(DATADIR)/$(RUN_DIR)/$(MODEL_PARAMETER_TABLE).$(EXTENTION_CSV)
 
@@ -109,56 +109,20 @@ $(FILEPATH_CHEVALIER_PDF): \
 		--plotconfig plotconfigs/chevalier_diagram.yaml \
 		--obslc $(FILEPATH_OBSLC) \
 		--output $@
-#
-lc: $(FILEPATH_LC_EST)
 
-$(FILEPATH_LC_EST): \
+#=== datafiles ===#
+lc: \
 	$(FILEPATH_INPUT) \
-	$(DATADIR)/$(RUN_DIR)/estimation.csv \
-	$(FILEPATH_INTEGRAL_TABLE) \
-	$(FILEPATH_CHI2) \
-	$(FILEPATH_OBSLC) \
-	scripts/extract_minimum_chi2_binnedlightcurve.py
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--input $< \
-		--minchi2 $(FILEPATH_CHI2) \
-		--allowing $(DATADIR)/$(RUN_DIR)/estimation.csv \
-		--integral_table $(FILEPATH_INTEGRAL_TABLE) \
-		--obslc $(FILEPATH_OBSLC) \
-		--output $@
-
-lc_raw: $(FILEPATH_MINIMUM_CHI2_LC)
-
-$(FILEPATH_MINIMUM_CHI2_LC): \
-	$(FILEPATH_INPUT) \
-	$(DATADIR)/$(RUN_DIR)/estimation.csv \
-	$(FILEPATH_INTEGRAL_TABLE) \
-	$(FILEPATH_CHI2) \
-	$(FILEPATH_OBSLC) \
-	scripts/extract_minimum_chi2_lightcurve.py
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--input $< \
-		--minchi2 $(FILEPATH_CHI2) \
-		--allowing $(DATADIR)/$(RUN_DIR)/estimation.csv \
-		--integral_table $(FILEPATH_INTEGRAL_TABLE) \
-		--obslc $(FILEPATH_OBSLC) \
-		--output $@
-
-chi2: $(FILEPATH_CHI2)
-
-$(FILEPATH_CHI2): \
-	$(FILEPATH_INPUT) \
-	$(DATADIR)/$(RUN_DIR)/estimation.csv \
+	$(FILEPATH_CANDIDATE_MODELS) \
 	$(FILEPATH_INTEGRAL_TABLE) \
 	$(FILEPATH_OBSLC) \
-	scripts/find_minimum_chi2_model.py
+	scripts/compute_lightcurve_$(CANDIDATE_MODELS).$(EXTENTION_PY)
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		--input $< \
-		--allowing $(DATADIR)/$(RUN_DIR)/estimation.csv \
-		--integral_table $(FILEPATH_INTEGRAL_TABLE) \
+		--$(CANDIDATE_MODELS) $(FILEPATH_CANDIDATE_MODELS) \
+		--integral_table $(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE) \
 		--obslc $(FILEPATH_OBSLC) \
 		--output $@
-
 
 candidates: $(FILEPATH_CANDIDATE_MODELS)
 $(FILEPATH_CANDIDATE_MODELS): \

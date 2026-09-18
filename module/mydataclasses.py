@@ -111,6 +111,30 @@ class QuantityArray:
         )
 
 @dataclass(frozen=True, slots=True)
+class VectorBase:
+    values:NDArray
+    def __post_init__(self) -> None:
+        if self.values.ndim != 1:
+            raise ValueError(
+                "valuesは1次元配列でなければなりません. "
+                f"shape={self.values.shape}"
+            )
+            
+@dataclass(frozen=True, slots=True)
+class IntVector(VectorBase):
+    values:NDArray[np.int64]
+
+    @classmethod
+    def from_df(
+        cls,
+        df:pd.DataFrame,
+        index_name:str
+    )->Self:
+        return cls(
+            values = np.asarray(df[index_name],dtype=np.int64)
+        )
+
+@dataclass(frozen=True, slots=True)
 class QuantityArray1D(QuantityArray):
     def __post_init__(self) -> None:
         if self.values.ndim != 1:
@@ -118,6 +142,18 @@ class QuantityArray1D(QuantityArray):
                 "valuesは1次元配列でなければなりません. "
                 f"shape={self.values.shape}"
             )
+
+    @classmethod
+    def from_df(
+        cls,
+        df:pd.DataFrame,
+        column:str,
+        unit:str,
+    )->Self:
+        return cls(
+            values=df[column].to_numpy(dtype=np.float64),
+            unit=unit
+        )
 
 
 @dataclass(frozen=True, slots=True)

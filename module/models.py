@@ -3,12 +3,13 @@
 
 from functools import cached_property
 from pathlib import Path
-from typing import Self
+from typing import Self,Hashable,Any
 import astropy.units as u
 from matplotlib.axes import Axes
 from module import plot_utils, quantity_converter
 import numpy as np
 import pandas as pd
+from enum import StrEnum, auto
 from dataclasses import dataclass
 from module.mydataclasses import QuantityArray, QuantityData, QuantityArray1D
 from module.types import FloatArray, FloatArray1D, FloatArrayLike, FloatGrid
@@ -36,6 +37,45 @@ log10_2 = np.log10(2.0)
 log10_3 = np.log10(3.0)
 TWO_TO_FIVE:float = 2**5
 THREE_TO_SEVEN = 3**7
+
+class MetadataNames(StrEnum):
+    PHI_TH = auto()
+    THETA0 = auto()
+    EPS_B = auto()
+    EPS_TH = auto()
+    MU_E_MU = auto()
+    DISTANCE_VALUE = auto()
+    DISTANCE_UNIT = auto()
+    A_WIND_UNIT = auto()
+    PHI_UNIT = auto()
+    LNU_UNIT = auto()
+    FNU_UNIT = auto()
+    NU_UNIT = auto()
+
+class ColumnNames(StrEnum):
+    MODEL_INDEX = auto()
+    PHI_TH = auto()
+    THETA0 = auto()
+    PHI_TH_THIN = auto()
+    PHI_PEAK = auto()
+    FNU_PEAK = auto()
+    THETA = auto()
+    THETA_THIN = auto()
+    IS_SSA_THICK = auto()
+    A_SYN = auto()
+    A_WIND = auto()
+    BETA_SH = auto()
+    PHI_A = auto()
+    PHI_THETA = auto()
+    TAU_THETA = auto()
+    LNU_THETA = auto()
+    DOPPLER_DELTA = auto()
+    TAU_TH_THIN = auto()
+    LNU_TH_THIN = auto()
+    PHI_PEAK_THIN = auto()
+    FNU_PEAK_THIN = auto()
+    LNU_PEAK_THIN = auto()
+    NU = auto()
 
 @dataclass(frozen=True,slots=True)
 class ElectronTemperature:
@@ -738,3 +778,33 @@ def doppler_delta(
     beta_sh:FloatArrayLike
 ):
     return quantity_converter.beta_into_doppler_delta(beta_sh)
+
+@dataclass(frozen=True,slots=True)
+class ModelMetadata:
+    eps_b: float
+    eps_th: float
+    mue_mu: float
+    distance: QuantityData
+    phi_unit: str
+    lnu_unit: str
+    fnu_unit: str
+    a_wind_unit: str
+
+    @classmethod
+    def from_attrs(
+        cls,
+        attrs:dict[Hashable,Any]
+    )->Self:
+        return cls(
+            eps_b = attrs[MetadataNames.EPS_B],
+            eps_th = attrs[MetadataNames.EPS_TH],
+            mue_mu = attrs[MetadataNames.MU_E_MU],
+            distance = QuantityData(
+                value=attrs[MetadataNames.DISTANCE_VALUE],
+                unit =attrs[MetadataNames.DISTANCE_UNIT]
+            ),
+            a_wind_unit = attrs[MetadataNames.A_WIND_UNIT],
+            phi_unit = attrs[MetadataNames.PHI_UNIT],
+            lnu_unit = attrs[MetadataNames.LNU_UNIT],
+            fnu_unit = attrs[MetadataNames.FNU_UNIT],
+        )

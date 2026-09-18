@@ -37,21 +37,9 @@ class SynchrotronPeakColumns(StrEnum):
     XM_PEAK = auto()
     LAMBDA_PEAK = auto()
 
-class ModelParameterNames(StrEnum):
+class ModelColumnNames(StrEnum):
     PHI_TH = auto()
     THETA0 = auto()
-    EPS_B = auto()
-    EPS_TH = auto()
-    MU_E_MU = auto()
-    DISTANCE_VALUE = auto()
-    DISTANCE_UNIT = auto()
-    A_WIND_UNIT = auto()
-    PHI_UNIT = auto()
-    LNU_UNIT = auto()
-    FNU_UNIT = auto()
-    NU_UNIT = auto()
-
-class ModelColumnNames(StrEnum):
     PHI_TH_THIN = auto()
     PHI_PEAK = auto()
     FNU_PEAK = auto()
@@ -337,8 +325,8 @@ class ModelParameterTable:
         )
 
         df = pd.DataFrame({
-            ModelParameterNames.PHI_TH: grid.phi_th.to_value_in(phi_unit).ravel(),
-            ModelParameterNames.THETA0: grid.theta0.values.ravel(),
+            models.MetadataNames.PHI_TH: grid.phi_th.to_value_in(phi_unit).ravel(),
+            models.MetadataNames.THETA0: grid.theta0.values.ravel(),
             ModelColumnNames.THETA: theta.values.ravel(),
             ModelColumnNames.THETA_THIN: theta_thin_val.ravel(),
             ModelColumnNames.IS_SSA_THICK: (grid.theta0.values < theta_thin_val).ravel(),
@@ -354,15 +342,15 @@ class ModelParameterTable:
             ModelColumnNames.LNU_PEAK_THIN: lnu_peak_thin.to_value_in(lnu_unit).ravel(),
             ModelColumnNames.FNU_PEAK_THIN: fnu_peak_thin.to_value_in(fnu_unit).ravel(),
         })
-        df.attrs[ModelParameterNames.EPS_B] = self.eps_b
-        df.attrs[ModelParameterNames.EPS_TH] = self.eps_th
-        df.attrs[ModelParameterNames.MU_E_MU] = models.MolecularWeightRatio.from_mep(self.mep)
-        df.attrs[ModelParameterNames.DISTANCE_VALUE] = self.distance.value
-        df.attrs[ModelParameterNames.DISTANCE_UNIT] = self.distance.unit
-        df.attrs[ModelParameterNames.A_WIND_UNIT] = a_wind_unit
-        df.attrs[ModelParameterNames.PHI_UNIT] = phi_unit
-        df.attrs[ModelParameterNames.LNU_UNIT] = lnu_unit
-        df.attrs[ModelParameterNames.FNU_UNIT] = fnu_unit
+        df.attrs[models.MetadataNames.EPS_B] = self.eps_b
+        df.attrs[models.MetadataNames.EPS_TH] = self.eps_th
+        df.attrs[models.MetadataNames.MU_E_MU] = models.MolecularWeightRatio.from_mep(self.mep)
+        df.attrs[models.MetadataNames.DISTANCE_VALUE] = self.distance.value
+        df.attrs[models.MetadataNames.DISTANCE_UNIT] = self.distance.unit
+        df.attrs[models.MetadataNames.A_WIND_UNIT] = a_wind_unit
+        df.attrs[models.MetadataNames.PHI_UNIT] = phi_unit
+        df.attrs[models.MetadataNames.LNU_UNIT] = lnu_unit
+        df.attrs[models.MetadataNames.FNU_UNIT] = fnu_unit
 
         return df
 

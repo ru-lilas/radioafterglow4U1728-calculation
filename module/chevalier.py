@@ -23,11 +23,9 @@ from module.mydataclasses import (
 from module.observation import ChevalierComponent
 from module.plot_utils import AxesConfig, AxesRange, AxisConfig, AxisRange, ColorbarConfigure, ColormapConfigure, ColormapPlot, ContourStyle, LegendStyle, MetadataConfig
 from module.types import FloatArray, FloatPair
-from module.parameter_table import ModelParameterNames,ModelColumnNames
-from enum import StrEnum, auto
+from module.parameter_table import ModelColumnNames
+from module import models
 from matplotlib.axes import Axes
-from module.compute_lightcurve import AllowningParameters
-from module.utils import FileReader
 
 @dataclass(frozen=True,slots=True)
 class ContourConfigures:
@@ -81,7 +79,7 @@ class ColormapPlotConfig(YAMLReadable):
     legend: LegendStyle
 
 @dataclass(frozen=True,slots=True)
-class ChevalierMetadata:
+class ChevalierMetadata(models.ModelMetadata):
     eps_b: float
     eps_th: float
     mue_mu: float
@@ -90,25 +88,6 @@ class ChevalierMetadata:
     lnu_unit: str
     fnu_unit: str
     a_wind_unit: str
-
-    @classmethod
-    def from_attrs(
-        cls,
-        attrs:dict[Hashable,Any]
-    )->Self:
-        return cls(
-            eps_b = attrs[ModelParameterNames.EPS_B],
-            eps_th = attrs[ModelParameterNames.EPS_TH],
-            mue_mu = attrs[ModelParameterNames.MU_E_MU],
-            distance = QuantityData(
-                value=attrs[ModelParameterNames.DISTANCE_VALUE],
-                unit =attrs[ModelParameterNames.DISTANCE_UNIT]
-            ),
-            a_wind_unit = attrs[ModelParameterNames.A_WIND_UNIT],
-            phi_unit = attrs[ModelParameterNames.PHI_UNIT],
-            lnu_unit = attrs[ModelParameterNames.LNU_UNIT],
-            fnu_unit = attrs[ModelParameterNames.FNU_UNIT],
-        )
 
     def plot(
         self,
@@ -467,12 +446,12 @@ class ChevalierGrid:
             phi_th = QuantityGrid.from_df(
                 df=df,
                 unit=phi_unit,
-                column=ModelParameterNames.PHI_TH
+                column=ModelColumnNames.PHI_TH
             ),
             theta0 = QuantityGrid.from_df(
                 df=df,
                 unit="",
-                column=ModelParameterNames.THETA0
+                column=ModelColumnNames.THETA0
             ),
             theta = QuantityGrid.from_df(
                 df=df,
@@ -810,6 +789,6 @@ class ChevalierGrid:
         )
         df_candidates:pd.DataFrame = df.loc[model_indices]
         df_candidates[ModelColumnNames.NU] = obs.nu.value
-        df_candidates.attrs[ModelParameterNames.NU_UNIT] = obs.nu.unit
+        df_candidates.attrs[models.MetadataNames.NU_UNIT] = obs.nu.unit
 
         return df_candidates

@@ -2,13 +2,13 @@ from collections.abc import Mapping
 from pathlib import Path
 from dataclasses import dataclass, fields
 from typing import Self, cast, Any, Hashable
-
+from numpy.typing import NDArray
 from matplotlib.figure import Figure
 from matplotlib.patches import StepPatch
 from module import plot_utils
 from module import models,dataframe_utils
 from module.models import PhaseParameter, ThermalSynchrotronUtils, calculate_xm
-from module.mydataclasses import QuantityArray, QuantityArray1D, QuantityData
+from module.mydataclasses import IntVector, QuantityArray, QuantityArray1D, QuantityData, QuantityGrid
 from module.mystatistics import CalculateChiSquared, MinimumChiSquared
 from module.plot_utils import LineStyle, MetadataConfig
 from module.types import FloatArray, FloatArray1D, FloatGrid
@@ -21,6 +21,9 @@ from enum import StrEnum, auto
 from matplotlib.axes import Axes
 from cattrs import Converter
 from module import inputs_as_dataclass
+from module.models import (
+    MetadataNames
+)
 
 DATACLASS_CONVERTER = Converter()
 
@@ -194,190 +197,278 @@ class LightcurveMetadata:
         }
 
 @dataclass(frozen=True,slots=True)
-class AllowningParameters:
-    a_wind: QuantityArray
-    beta_sh: FloatArray
-    phi_peak: QuantityArray
-    fnu_peak: QuantityArray
-    phi_theta: QuantityArray
-    lnu_theta: QuantityArray
-    tau_theta: FloatArray
-    doppler_delta: FloatArray
-    eps_b: float
-    eps_th: float
-    mu: float
-    mu_e: float
-    distance: QuantityData
+class CandidateModelRows:
+    model_index: NDArray[np.float64]
+    nu: QuantityData
 
-    def __post_init__(self) -> None:
-        arrays = {
-            ParameterNames.A_WIND: self.a_wind.values,
-            ParameterNames.BETA_SH: self.beta_sh,
-            ParameterNames.PHI_PEAK: self.phi_peak.values,
-            ParameterNames.FNU_PEAK: self.fnu_peak.values,
-            ParameterNames.PHI_THETA: self.phi_theta.values,
-            ParameterNames.LNU_THETA: self.lnu_theta.values,
-            ParameterNames.TAU_THETA: self.tau_theta,
-        }
+# @dataclass(frozen=True,slots=True)
+# class CandidateModelParameterGrid:
+#     metadata: CandidateModelRows
+#     a_wind: QuantityArray
+#     beta_sh: FloatArray
+#     phi_peak: QuantityArray
+#     fnu_peak: QuantityArray
+#     phi_theta: QuantityArray
+#     lnu_theta: QuantityArray
+#     tau_theta: FloatArray
+#     doppler_delta: FloatArray
+#     eps_b: float
+#     eps_th: float
+#     mu: float
+#     mu_e: float
+#     distance: QuantityData
+#
+#     def __post_init__(self) -> None:
+#         arrays = {
+#             ParameterNames.A_WIND: self.a_wind.values,
+#             ParameterNames.BETA_SH: self.beta_sh,
+#             ParameterNames.PHI_PEAK: self.phi_peak.values,
+#             ParameterNames.FNU_PEAK: self.fnu_peak.values,
+#             ParameterNames.PHI_THETA: self.phi_theta.values,
+#             ParameterNames.LNU_THETA: self.lnu_theta.values,
+#             ParameterNames.TAU_THETA: self.tau_theta,
+#         }
+#
+#         for name, array in arrays.items():
+#             if array.ndim != 1:
+#                 raise ValueError(
+#                     f"{name}は1次元でなければなりません. "
+#                     f"shape={array.shape}"
+#                 )
+#
+#         sizes = {
+#             name: array.size
+#             for name, array in arrays.items()
+#         }
+#
+#         if len(set(sizes.values())) != 1:
+#             raise ValueError(
+#                 "推定パラメータの配列長が一致していません. "
+#                 f"{sizes}"
+#             )
+#
+#     @classmethod
+#     def from_csv(
+#         cls,
+#         path: Path
+#     )->Self:
+#         df = FileReader.table_from_csv(path)
+#         metadata = df.attrs
+#         return cls(
+#             a_wind = QuantityArray(
+#                 values = dataframe_utils.extract_column_as_ndarray(
+#                     df,
+#                     ParameterNames.A_WIND
+#                 ),
+#                 unit = metadata[ParameterNames.A_WIND_UNIT],
+#             ),
+#             beta_sh = dataframe_utils.extract_column_as_ndarray(
+#                 df,
+#                 ParameterNames.BETA_SH
+#             ),
+#             phi_peak = QuantityArray(
+#                 values = dataframe_utils.extract_column_as_ndarray(
+#                     df,
+#                     ParameterNames.PHI_PEAK
+#                 ),
+#                 unit = metadata[ParameterNames.PHI_UNIT]
+#             ),
+#             phi_theta = QuantityArray(
+#                 values = dataframe_utils.extract_column_as_ndarray(
+#                     df,
+#                     ParameterNames.PHI_THETA
+#                 ),
+#                 unit = metadata[ParameterNames.PHI_UNIT]
+#             ),
+#             lnu_theta = QuantityArray(
+#                 values = dataframe_utils.extract_column_as_ndarray(
+#                     df,
+#                     ParameterNames.LNU_THETA
+#                 ),
+#                 unit = metadata[ParameterNames.LNU_UNIT]
+#             ),
+#             tau_theta = dataframe_utils.extract_column_as_ndarray(
+#                     df,
+#                     ParameterNames.TAU_THETA
+#             ),
+#             doppler_delta = dataframe_utils.extract_column_as_ndarray(
+#                 df,
+#                 ParameterNames.DOPPLER_DELTA
+#             ),
+#             fnu_peak = QuantityArray(
+#                 values = dataframe_utils.extract_column_as_ndarray(
+#                     df,
+#                     ParameterNames.FNU_PEAK
+#                 ),
+#                 unit = metadata[ParameterNames.FNU_UNIT]
+#             ),
+#             eps_b = metadata[ParameterNames.EPS_B],
+#             eps_th = metadata[ParameterNames.EPS_TH],
+#             mu = metadata[ParameterNames.MU],
+#             mu_e = metadata[ParameterNames.MU_E],
+#             distance = QuantityData(
+#                 value = metadata[ParameterNames.DISTANCE_VALUE],
+#                 unit = metadata[ParameterNames.DISTANCE_UNIT],
+#             )
+#         )
+#
+#     def to_df(
+#         self,
+#         phi_unit,
+#         fnu_unit,
+#         lnu_unit
+#     )->pd.DataFrame:
+#         a_wind = self.a_wind
+#         df = pd.DataFrame({
+#             ParameterNames.A_WIND: a_wind.values,
+#             ParameterNames.BETA_SH: self.beta_sh,
+#             ParameterNames.PHI_PEAK: self.phi_peak.to_value_in(phi_unit),
+#             ParameterNames.FNU_PEAK: self.fnu_peak.to_value_in(fnu_unit),
+#             ParameterNames.PHI_THETA: self.phi_theta.to_value_in(phi_unit),
+#             ParameterNames.LNU_THETA: self.lnu_theta.to_value_in(lnu_unit),
+#             ParameterNames.TAU_THETA: self.tau_theta,
+#             ParameterNames.DOPPLER_DELTA: self.doppler_delta,
+#         })
+#         df.attrs[ParameterNames.EPS_B] = self.eps_b
+#         df.attrs[ParameterNames.EPS_TH] = self.eps_th
+#         df.attrs[ParameterNames.MU] = self.mu
+#         df.attrs[ParameterNames.MU_E] = self.mu_e
+#         df.attrs[ParameterNames.DISTANCE_VALUE] = self.distance.value
+#         df.attrs[ParameterNames.DISTANCE_UNIT] = self.distance.unit
+#         df.attrs[ParameterNames.PHI_UNIT] = phi_unit
+#         df.attrs[ParameterNames.FNU_UNIT] = fnu_unit
+#         df.attrs[ParameterNames.LNU_UNIT] = lnu_unit
+#         df.attrs[ParameterNames.A_WIND_UNIT] = a_wind.unit
+#         return df
+#
+#     def extract_bestfit(
+#         self,
+#         minchi2:MinimumChiSquared
+#     )->ChevalierParameters:
+#         idx = minchi2.index
+#         chi2 = minchi2.value
+#         a_wind_arr = self.a_wind
+#         phi_peak_arr = self.phi_peak
+#         phi_theta_arr = self.phi_theta
+#         lnu_theta_arr = self.lnu_theta
+#         fnu_peak_arr = self.fnu_peak
+#         a_wind = QuantityData(
+#             value = a_wind_arr.values[idx],
+#             unit = a_wind_arr.unit
+#         )
+#         phi_peak = QuantityData(
+#             value = phi_peak_arr.values[idx],
+#             unit = phi_peak_arr.unit
+#         )
+#         phi_theta = QuantityData(
+#             value = phi_theta_arr.values[idx],
+#             unit = phi_theta_arr.unit
+#         )
+#         lnu_theta = QuantityData(
+#             value = lnu_theta_arr.values[idx],
+#             unit = lnu_theta_arr.unit
+#         )
+#         fnu_peak = QuantityData(
+#             value = fnu_peak_arr.values[idx],
+#             unit = fnu_peak_arr.unit
+#         )
+#         return ChevalierParameters(
+#             a_wind = a_wind,
+#             beta_sh = self.beta_sh[idx],
+#             phi_peak = phi_peak,
+#             phi_theta = phi_theta,
+#             lnu_theta = lnu_theta,
+#             tau_theta = self.tau_theta[idx],
+#             doppler_delta= self.doppler_delta[idx],
+#             eps_b=self.eps_b,
+#             eps_th = self.eps_th,
+#             mu = self.mu,
+#             mu_e = self.mu_e,
+#             distance=self.distance,
+#             chi2=chi2
+#         )
+#
+@dataclass(frozen=True,slots=True)
+class CandidateModelLightcurveConfig:
+    pass
 
-        for name, array in arrays.items():
-            if array.ndim != 1:
-                raise ValueError(
-                    f"{name}は1次元でなければなりません. "
-                    f"shape={array.shape}"
-                )
+@dataclass(frozen=True,slots=True)
+class CandidateModelMetadata(models.ModelMetadata):
+    pass
 
-        sizes = {
-            name: array.size
-            for name, array in arrays.items()
-        }
-
-        if len(set(sizes.values())) != 1:
-            raise ValueError(
-                "推定パラメータの配列長が一致していません. "
-                f"{sizes}"
-            )
+@dataclass(frozen=True,slots=True)
+class CandidateModelParameters:
+    metadata: CandidateModelMetadata
+    model_index: IntVector
+    phi_th: QuantityArray1D
+    theta0: QuantityArray1D
+    theta:  QuantityArray1D
+    tau_th: QuantityArray1D
+    lnu_th: QuantityArray1D
+    a_wind: QuantityArray1D
+    beta_sh: QuantityArray1D
 
     @classmethod
-    def from_csv(
+    def from_df(
         cls,
-        path: Path
+        df:pd.DataFrame
     )->Self:
-        df = FileReader.table_from_csv(path)
-        metadata = df.attrs
+        metadata = CandidateModelMetadata.from_attrs(df.attrs)
+        phi_unit = metadata.phi_unit
+        fnu_unit = metadata.fnu_unit
+        lnu_unit = metadata.lnu_unit
+        a_wind_unit = metadata.a_wind_unit
+
+        def import_qa_from_the_df(
+            column: str,
+            unit: str
+        )->QuantityArray1D:
+            return QuantityArray1D.from_df(df,column,unit)
+
         return cls(
-            a_wind = QuantityArray(
-                values = dataframe_utils.extract_column_as_ndarray(
-                    df,
-                    ParameterNames.A_WIND
-                ),
-                unit = metadata[ParameterNames.A_WIND_UNIT],
-            ),
-            beta_sh = dataframe_utils.extract_column_as_ndarray(
+            metadata = metadata,
+            model_index = IntVector.from_df(
                 df,
-                ParameterNames.BETA_SH
+                index_name=models.ColumnNames.MODEL_INDEX
             ),
-            phi_peak = QuantityArray(
-                values = dataframe_utils.extract_column_as_ndarray(
-                    df,
-                    ParameterNames.PHI_PEAK
-                ),
-                unit = metadata[ParameterNames.PHI_UNIT]
+            phi_th = import_qa_from_the_df(
+                column=models.ColumnNames.PHI_TH,
+                unit=phi_unit
             ),
-            phi_theta = QuantityArray(
-                values = dataframe_utils.extract_column_as_ndarray(
-                    df,
-                    ParameterNames.PHI_THETA
-                ),
-                unit = metadata[ParameterNames.PHI_UNIT]
+            theta0 = import_qa_from_the_df(
+                column=models.ColumnNames.THETA0,
+                unit=""
             ),
-            lnu_theta = QuantityArray(
-                values = dataframe_utils.extract_column_as_ndarray(
-                    df,
-                    ParameterNames.LNU_THETA
-                ),
-                unit = metadata[ParameterNames.LNU_UNIT]
+            theta = import_qa_from_the_df(
+                column=models.ColumnNames.THETA,
+                unit=""
             ),
-            tau_theta = dataframe_utils.extract_column_as_ndarray(
-                    df,
-                    ParameterNames.TAU_THETA
+            tau_th = import_qa_from_the_df(
+                column=models.ColumnNames.TAU_THETA,
+                unit=""
             ),
-            doppler_delta = dataframe_utils.extract_column_as_ndarray(
-                df,
-                ParameterNames.DOPPLER_DELTA
+            lnu_th = import_qa_from_the_df(
+                column=models.ColumnNames.LNU_THETA,
+                unit=lnu_unit
             ),
-            fnu_peak = QuantityArray(
-                values = dataframe_utils.extract_column_as_ndarray(
-                    df,
-                    ParameterNames.FNU_PEAK
-                ),
-                unit = metadata[ParameterNames.FNU_UNIT]
+            a_wind = import_qa_from_the_df(
+                column=models.ColumnNames.A_WIND,
+                unit=a_wind_unit
             ),
-            eps_b = metadata[ParameterNames.EPS_B],
-            eps_th = metadata[ParameterNames.EPS_TH],
-            mu = metadata[ParameterNames.MU],
-            mu_e = metadata[ParameterNames.MU_E],
-            distance = QuantityData(
-                value = metadata[ParameterNames.DISTANCE_VALUE],
-                unit = metadata[ParameterNames.DISTANCE_UNIT],
-            )
+            beta_sh = import_qa_from_the_df(
+                column=models.ColumnNames.BETA_SH,
+                unit=""
+            ),
         )
 
-    def to_df(
-        self,
-        phi_unit,
-        fnu_unit,
-        lnu_unit
-    )->pd.DataFrame:
-        a_wind = self.a_wind
-        df = pd.DataFrame({
-            ParameterNames.A_WIND: a_wind.values,
-            ParameterNames.BETA_SH: self.beta_sh,
-            ParameterNames.PHI_PEAK: self.phi_peak.to_value_in(phi_unit),
-            ParameterNames.FNU_PEAK: self.fnu_peak.to_value_in(fnu_unit),
-            ParameterNames.PHI_THETA: self.phi_theta.to_value_in(phi_unit),
-            ParameterNames.LNU_THETA: self.lnu_theta.to_value_in(lnu_unit),
-            ParameterNames.TAU_THETA: self.tau_theta,
-            ParameterNames.DOPPLER_DELTA: self.doppler_delta,
-        })
-        df.attrs[ParameterNames.EPS_B] = self.eps_b
-        df.attrs[ParameterNames.EPS_TH] = self.eps_th
-        df.attrs[ParameterNames.MU] = self.mu
-        df.attrs[ParameterNames.MU_E] = self.mu_e
-        df.attrs[ParameterNames.DISTANCE_VALUE] = self.distance.value
-        df.attrs[ParameterNames.DISTANCE_UNIT] = self.distance.unit
-        df.attrs[ParameterNames.PHI_UNIT] = phi_unit
-        df.attrs[ParameterNames.FNU_UNIT] = fnu_unit
-        df.attrs[ParameterNames.LNU_UNIT] = lnu_unit
-        df.attrs[ParameterNames.A_WIND_UNIT] = a_wind.unit
-        return df
-
-    def extract_bestfit(
-        self,
-        minchi2:MinimumChiSquared
-    )->ChevalierParameters:
-        idx = minchi2.index
-        chi2 = minchi2.value
-        a_wind_arr = self.a_wind
-        phi_peak_arr = self.phi_peak
-        phi_theta_arr = self.phi_theta
-        lnu_theta_arr = self.lnu_theta
-        fnu_peak_arr = self.fnu_peak
-        a_wind = QuantityData(
-            value = a_wind_arr.values[idx],
-            unit = a_wind_arr.unit
-        )
-        phi_peak = QuantityData(
-            value = phi_peak_arr.values[idx],
-            unit = phi_peak_arr.unit
-        )
-        phi_theta = QuantityData(
-            value = phi_theta_arr.values[idx],
-            unit = phi_theta_arr.unit
-        )
-        lnu_theta = QuantityData(
-            value = lnu_theta_arr.values[idx],
-            unit = lnu_theta_arr.unit
-        )
-        fnu_peak = QuantityData(
-            value = fnu_peak_arr.values[idx],
-            unit = fnu_peak_arr.unit
-        )
-        return ChevalierParameters(
-            a_wind = a_wind,
-            beta_sh = self.beta_sh[idx],
-            phi_peak = phi_peak,
-            phi_theta = phi_theta,
-            lnu_theta = lnu_theta,
-            tau_theta = self.tau_theta[idx],
-            doppler_delta= self.doppler_delta[idx],
-            eps_b=self.eps_b,
-            eps_th = self.eps_th,
-            mu = self.mu,
-            mu_e = self.mu_e,
-            distance=self.distance,
-            chi2=chi2
-        )
+@dataclass(frozen=True,slots=True)
+class CandidateModelLightcurveGrid:
+    config: CandidateModelLightcurveConfig
+    metadata: CandidateModelMetadata
+    t: QuantityGrid
+    lnu: QuantityGrid
+    fnu_flare: QuantityGrid
+    fnu_tot: QuantityGrid
 
 @dataclass(frozen=True, slots=True)
 class BinnedBestfitLightcurve:
@@ -554,611 +645,611 @@ class BinnedBestfitLightcurve:
             string
         )
 
-@dataclass(frozen=True,slots=True)
-class BinnedCalculationLightcurve:
-    estimated_params: AllowningParameters
-    nu: QuantityData
-    units: UnitMetadata
-    t_center: FloatArray
-    t_left: FloatArray
-    t_right: FloatArray
-    fnu: QuantityArray
-
-    @property
-    def bin_edges(self):
-        return np.concatenate(
-            (
-                self.t_left,
-                np.array([self.t_right[-1]]),
-            )
-        )
-
-    @property
-    def bin_edges_quantity(self):
-        return QuantityArray(
-            values=self.bin_edges,
-            unit=self.units.t_unit
-        )
-
-    @property
-    def t_left_quantity(self)->QuantityArray:
-        return QuantityArray(
-            values = self.t_left,
-            unit = self.units.t_unit
-        )
-
-    @property
-    def t_right_quantity(self)->QuantityArray:
-        return QuantityArray(
-            values = self.t_right,
-            unit = self.units.t_unit
-        )
-
-    @property
-    def t_center_quantity(self)->QuantityArray:
-        return QuantityArray(
-            values = self.t_center,
-            unit = self.units.t_unit
-        )
-
-    def fnu_total(
-        self,
-        persistent: QuantityArray,
-        persistent_err: QuantityArray
-    )->QuantityArray:
-        fnu_unit = self.units.fnu_unit
-        fnu_net = self.fnu.to_value_in(fnu_unit)
-        fnu_per = persistent.to_value_in(fnu_unit)
-        fnu_per_err = persistent_err.to_value_in(fnu_unit)
-
-        if not (
-            self.t_center.size
-            == fnu_per.size
-            == fnu_per_err.size
-        ):
-            raise ValueError(
-                "計算光度曲線と定常放射の配列の長さが一致しません."
-            )
-
-        return QuantityArray(
-            values = fnu_net + fnu_per,
-            unit = fnu_unit
-        )
-
-    def extract(
-        self,
-        minchi2: MinimumChiSquared,
-        persistent: QuantityArray,
-        persistent_err: QuantityArray
-    )->BinnedBestfitLightcurve:
-        params_best = self.estimated_params.extract_bestfit(minchi2)
-        idx = minchi2.index
-        fnu_best = QuantityArray(
-            values = self.fnu.values[idx],
-            unit = self.fnu.unit
-        )
-        return BinnedBestfitLightcurve(
-            params = params_best,
-            nu=self.nu,
-            fnu_net=fnu_best,
-            fnu_persistent=persistent,
-            fnu_persistent_err=persistent_err,
-            t_center=self.t_center_quantity,
-            t_right=self.t_right_quantity,
-            t_left=self.t_left_quantity
-        )
-
-@dataclass(frozen=True, slots=True)
-class CalculationLightcurve:
-    metadata: LightcurveMetadata
-    t: QuantityArray1D
-    fnu: QuantityArray1D
-
-    @classmethod
-    def from_csv(
-        cls,
-        path:Path
-    )->Self:
-        df = FileReader.table_from_csv(
-            path=path,
-        )
-        metadata = ensure_string_keys(df.attrs)
-        params = ChevalierParameters.from_dict(metadata)
-        t_unit = metadata[LcColumns.T_UNIT]
-        fnu_unit = metadata[LcColumns.FNU_UNIT]
-        nu = QuantityData(
-            value = metadata[LcColumns.NU_VALUE],
-            unit = metadata[LcColumns.NU_UNIT]
-        )
-        fnu_net = QuantityArray1D(
-                values = dataframe_processors.convert_ndarray(
-                            df,LcColumns.FNU_NET
-                        ),
-                unit = fnu_unit
-        )
-        t = QuantityArray1D(
-                values = dataframe_processors.convert_ndarray(
-                            df,LcColumns.T
-                        ),
-                unit = t_unit
-        )
-        return cls(
-            metadata=LightcurveMetadata(
-                params = params,
-                nu = nu
-            ),
-            t = t,
-            fnu=fnu_net
-        )
-
-    def to_df(
-        self
-    )->pd.DataFrame:
-        t = self.t
-        fnu = self.fnu
-        df = pd.DataFrame({
-            LcColumns.T: t.values,
-            LcColumns.FNU_NET: fnu.values
-        })
-        df.attrs[LcColumns.T_UNIT] = t.unit
-        df.attrs[LcColumns.FNU_UNIT] = fnu.unit
-        df.attrs.update(self.metadata.as_dict)
-        return df
-
-    def dump(
-        self,
-        path: Path
-    )->None:
-        df = self.to_df()
-        return FileWriter.df_to_csv(
-            path=path,
-            df=df,
-            save_attrs=True
-        )
-
-    def fnu_total(
-        self,
-        fnu_bg:QuantityData
-    )->QuantityArray1D:
-        fnu_net = self.fnu
-        fnu_unit = fnu_net.unit
-        return QuantityArray1D(
-            values = fnu_net.to_value_in(fnu_unit) + fnu_bg.value_in(fnu_unit),
-            unit = fnu_unit
-        )
-
-    def plot(
-        self,
-        ax:Axes,
-        style:plot_utils.LineStyle,
-        *,
-        fnu_bg: QuantityData,
-        t_unit: str,
-        fnu_unit: str
-    ):
-        t = self.t.to_value_in(t_unit)
-        fnu_tot = self.fnu_total(fnu_bg=fnu_bg).to_value_in(fnu_unit)
-        ax.plot(
-            t,fnu_tot,
-            **style.to_kwargs()
-        )
-
-@dataclass(frozen=True, slots=True)
-class CalculationLightcurves:
-    params: AllowningParameters
-    nu: QuantityData
-    t: QuantityArray
-    fnu: QuantityArray
-
-    def __post_init__(self)->None:
-        t_arr = self.t.values
-        fnu_grid = self.fnu.values
-
-        if t_arr.ndim != 1:
-            raise ValueError(
-                "tは1次元配列でなければなりません. "
-                f"shape={t_arr.shape}"
-            )
-
-        if fnu_grid.ndim != 2:
-            raise ValueError(
-                "fnuは2次元配列でなければなりません. "
-                f"shape={fnu_grid.shape}"
-            )
-
-        num_times = t_arr.size
-        num_flux_times = fnu_grid.shape[1]
-
-        if num_times != num_flux_times:
-            raise ValueError(
-                "tの要素数とfnuの列数が一致していません. "
-                f"t={t_arr.shape}, "
-                f"fnu={fnu_grid.shape}"
-            )
-
-        return
-
-    @staticmethod
-    def _make_bin_edges(
-        t_obs_value: FloatArray,
-        width: float,
-        drop_incomplete_bin: bool,
-    )-> FloatArray:
-        start = t_obs_value[0]
-        stop = t_obs_value[-1]
-        duration = t_obs_value[-1] - t_obs_value[0]
-
-        n_bin = int(np.floor(duration/(width)))
-
-        t_edge:FloatArray = (
-            t_obs_value[0]
-            + width * np.arange(n_bin + 1, dtype=np.float64)
-        )
-
-        if (
-                not drop_incomplete_bin
-                and not np.isclose(t_edge[-1],t_obs_value[-1])
-        ):
-            t_edge = np.append(t_edge, t_obs_value[-1])
-        else:
-            pass
-        return t_edge
-
-    @staticmethod
-    def validate_time_coverage(
-        t_model: QuantityArray,
-        binning: observation.Binning,
-    ) -> None:
-        t_model_arr = t_model.values
-
-        if t_model_arr.size < 2:
-            raise ValueError(
-                "理論光度曲線には2点以上の時刻が必要です."
-            )
-
-        if (
-            binning.t_left[0] < t_model_arr[0]
-            and not np.isclose(
-                binning.t_left[0],
-                t_model_arr[0],
-            )
-        ):
-            raise ValueError(
-                "理論光度曲線が最初の観測binを覆っていません."
-            )
-
-        if (
-            binning.t_right[-1] > t_model_arr[-1]
-            and not np.isclose(
-                binning.t_right[-1],
-                t_model_arr[-1],
-            )
-        ):
-            raise ValueError(
-                "理論光度曲線が最後の観測binを覆っていません."
-            )
-    def with_zero_boundary(
-        self
-    )->Self:
-        """
-            配列の左端に時刻ゼロでの境界条件を挿入する
-        """
-        t_values = self.t.values
-        fnu_values = self.fnu.values
-
-        if t_values[0] == 0.0:
-            return self
-
-        if t_values[0] < 0.0:
-            raise ValueError(
-                "計算光度曲線に負の時刻が含まれています."
-                f"t_min={t_values[0]}"
-            )
-
-
-        return type(self)(
-            params=self.params,
-            t=QuantityArray(
-                values=np.concatenate((
-                    np.array([0.0], dtype=np.float64),
-                    t_values,
-                )),
-                unit=self.t.unit,
-            ),
-            fnu=QuantityArray(
-                values=np.concatenate((
-                    np.zeros(
-                        (fnu_values.shape[0], 1),
-                        dtype=np.float64,
-                    ),
-                    fnu_values,
-                ), axis=1),
-                unit=self.fnu.unit,
-            ),
-            nu=self.nu,
-        )
-
-    def bin_average(
-        self,
-        bin_config: observation.Binning,
-        drop_incomplete_bin: bool = True
-    )->BinnedCalculationLightcurve:
-
-        ## 計算光度曲線が観測の時間範囲を覆っているかcheck
-        t = self.t
-        fnu = self.fnu
-        self.validate_time_coverage(t,bin_config)
-
-        t_unit = bin_config.t_unit
-        fnu_unit = fnu.unit
-
-        width = bin_config.bin_width
-        t_model = t.to_value_in(t_unit)
-        fnu_model = fnu.to_value_in(fnu_unit)
-
-        if np.any(np.diff(t_model) <= 0.0):
-            raise ValueError(
-                "計算データの時刻配列が単調増加でありません."
-            )
-
-
-        t_center = bin_config.t_center
-        t_left = bin_config.t_left
-        t_right = bin_config.t_right
-        num_bins = t_center.size
-
-        if not (
-            t_left.size
-            == t_right.size
-            == num_bins
-        ):
-            raise ValueError(
-                "観測binの配列長が一致しません."
-            )
-
-         # 計算時間範囲に完全に含まれるbin
-        covered = (
-            (t_left >= t_model[0])
-            & (t_right <= t_model[-1])
-        )
-
-        if drop_incomplete_bin:
-            t_center = t_center[covered]
-            t_left = t_left[covered]
-            t_right = t_right[covered]
-
-            if t_center.size == 0:
-                raise ValueError(
-                    "計算時間範囲に完全に含まれるbinがありません."
-                )
-
-        def interpolate_flux(
-            t_evaluate: FloatArray,
-        ) -> FloatGrid:
-            """
-            全モデルについて、指定時刻で線形補間する
-
-            Returns
-            -------
-            shape: (M, len(t_evaluate))
-            """
-            right_index = np.searchsorted(
-                t_model,
-                t_evaluate,
-                side="left",
-            )
-
-            # t_modelの範囲内であることは上で検証済み
-            right_index = np.clip(
-                right_index,
-                1,
-                t_model.size - 1,
-            )
-            left_index = right_index - 1
-
-            t0 = t_model[left_index]
-            t1 = t_model[right_index]
-
-            fraction = (
-                (t_evaluate - t0)
-                / (t1 - t0)
-            )
-
-            fnu0 = fnu_model[:, left_index]
-            fnu1 = fnu_model[:, right_index]
-
-            return (
-                fnu0
-                + (fnu1 - fnu0)
-                * fraction[np.newaxis, :]
-            )
-
-        # shapeはいずれも(M, B)
-        fnu_left = interpolate_flux(t_left)
-        fnu_right = interpolate_flux(t_right)
-
-        fnu_average_by_bin: list[FloatArray] = []
-
-        for i, (left, right) in enumerate(
-            zip(t_left, t_right, strict=True)
-        ):
-            inside = (
-                (t_model > left)
-                & (t_model < right)
-            )
-
-            # shape: (K_i,)
-            t_bin = np.concatenate((
-                np.array([left], dtype=np.float64),
-                t_model[inside],
-                np.array([right], dtype=np.float64),
-            ))
-
-            # shape: (M, K_i)
-            fnu_bin = np.concatenate(
-                (
-                    fnu_left[:, i:i + 1],
-                    fnu_model[:, inside],
-                    fnu_right[:, i:i + 1],
-                ),
-                axis=1,
-            )
-
-            # 時間軸axis=1について積分
-            # shape: (M,)
-            flux_integral = np.trapezoid(
-                fnu_bin,
-                x=t_bin,
-                axis=1,
-            )
-
-            fnu_average_by_bin.append(
-                flux_integral / (right - left)
-            )
-
-        # (B個の(M,)配列) -> (M, B)
-        fnu_average = QuantityArray(
-            values = np.stack(
-                fnu_average_by_bin,
-                axis=1,
-            ),
-            unit = fnu_unit
-        )
-
-        return BinnedCalculationLightcurve(
-            estimated_params=self.params,
-            units=UnitMetadata(
-                t_unit=t_unit,
-                fnu_unit=str(fnu_unit),
-            ),
-            nu = self.nu,
-            t_center=t_center,
-            t_left=t_left,
-            t_right=t_right,
-            fnu=fnu_average,
-        )
-
-    def extract_bestfit_lc(
-        self,
-        minchi2:MinimumChiSquared
-    )->CalculationLightcurve:
-        params = self.params.extract_bestfit(minchi2)
-        idx = minchi2.index
-        t = QuantityArray1D(
-            values = self.t.values,
-            unit = self.t.unit
-        )
-        fnu_best = QuantityArray1D(
-            values = self.fnu.values[idx],
-            unit = self.fnu.unit
-        )
-        return CalculationLightcurve(
-            metadata = LightcurveMetadata(
-                params = params,
-                nu = self.nu
-            ),
-            t = t,
-            fnu = fnu_best
-        )
-
-def compute(
-    config: inputs_as_dataclass.ModelConfigure,
-    params: AllowningParameters,
-    integral_table : models.ThermalSynchrotronTable
-)->CalculationLightcurves:
-    t = config.time.quantity_array
-    nu = QuantityData.from_Quantity(config.nu.quantity)
-    phi = models.PhaseParameter.from_time_given_nu(
-        t = t,
-        nu = nu
-    )
-    xm = models.DimensionlessFrequency.from_phi(
-        phi = phi,
-        phi_theta = models.PhaseParameter(
-            values = params.phi_theta.values,
-            unit = params.phi_theta.unit
-        )
-    )
-    lambda_theta = models.DimensionlessLuminosity.from_xm(
-        xm = xm,
-        tau_theta_array = params.tau_theta,
-        integral_table = integral_table
-    )
-    lnu = lambda_theta.to_lnu(
-        lnu_theta = params.lnu_theta
-    )
-    fnu_src = models.SourceframeSpecificFlux.from_lnu(
-        lnu = lnu,
-        distance = params.distance
-    )
-    fnu_obs = fnu_src.to_observerframe(
-        doppler_factor = params.doppler_delta
-    )
-    lc = CalculationLightcurves(
-        params = params,
-        nu = nu,
-        t = t,
-        fnu = fnu_obs
-    )
-    return lc.with_zero_boundary()
-
-@dataclass(frozen=True, slots=True)
-class LightcurveStyleConfig:
-    model_binned: plot_utils.LineStyle
-    model: plot_utils.LineStyle
-    observation: plot_utils.ScatterStyle
-    persistent: plot_utils.LineStyle
-
-@dataclass(frozen=True, slots=True)
-class PlotConfig:
-    layout: plot_utils.PlotLayoutConfig
-    styles: LightcurveStyleConfig
-    metadata: dict[str,MetadataConfig]
-
-    @classmethod
-    def from_yaml(
-        cls,
-        path: Path
-    )->Self:
-        dict_data = FileReader.yaml_safe(path)
-        return DATACLASS_CONVERTER.structure(
-            dict_data,
-            cls
-        )
-
-    def make_metadata_strings(
-        self,
-        params: ChevalierParameters,
-    ) -> list[str]:
-
-        config = self.metadata
-        field_names = {field.name for field in fields(params)}
-
-        result: list[str] = []
-
-        for key, metadata_config in config.items():
-            if key not in field_names:
-                raise KeyError(
-                    f"{key!r} is not a field of {type(params).__name__}"
-                )
-
-            if not metadata_config.show:
-                continue
-
-            value = getattr(params, key)
-
-            if isinstance(value,QuantityData):
-                if metadata_config.unit is None:
-                    raise ValueError(
-                        f"物理量の単位が指定されていません {key!r}"
-                    )
-                else:
-                    numeric_value = value.value_in(metadata_config.unit)
-                    str_element = f"{metadata_config.format_value(numeric_value)} {metadata_config.unit}"
-            else:
-                numeric_value = value
-                str_element = f"{metadata_config.format_value(numeric_value)}"
-
-            result.append(str_element)
-
-        return result
+# @dataclass(frozen=True,slots=True)
+# class BinnedCalculationLightcurve:
+#     estimated_params: CandidateModelParameterGrid
+#     nu: QuantityData
+#     units: UnitMetadata
+#     t_center: FloatArray
+#     t_left: FloatArray
+#     t_right: FloatArray
+#     fnu: QuantityArray
+#
+#     @property
+#     def bin_edges(self):
+#         return np.concatenate(
+#             (
+#                 self.t_left,
+#                 np.array([self.t_right[-1]]),
+#             )
+#         )
+#
+#     @property
+#     def bin_edges_quantity(self):
+#         return QuantityArray(
+#             values=self.bin_edges,
+#             unit=self.units.t_unit
+#         )
+#
+#     @property
+#     def t_left_quantity(self)->QuantityArray:
+#         return QuantityArray(
+#             values = self.t_left,
+#             unit = self.units.t_unit
+#         )
+#
+#     @property
+#     def t_right_quantity(self)->QuantityArray:
+#         return QuantityArray(
+#             values = self.t_right,
+#             unit = self.units.t_unit
+#         )
+#
+#     @property
+#     def t_center_quantity(self)->QuantityArray:
+#         return QuantityArray(
+#             values = self.t_center,
+#             unit = self.units.t_unit
+#         )
+#
+#     def fnu_total(
+#         self,
+#         persistent: QuantityArray,
+#         persistent_err: QuantityArray
+#     )->QuantityArray:
+#         fnu_unit = self.units.fnu_unit
+#         fnu_net = self.fnu.to_value_in(fnu_unit)
+#         fnu_per = persistent.to_value_in(fnu_unit)
+#         fnu_per_err = persistent_err.to_value_in(fnu_unit)
+#
+#         if not (
+#             self.t_center.size
+#             == fnu_per.size
+#             == fnu_per_err.size
+#         ):
+#             raise ValueError(
+#                 "計算光度曲線と定常放射の配列の長さが一致しません."
+#             )
+#
+#         return QuantityArray(
+#             values = fnu_net + fnu_per,
+#             unit = fnu_unit
+#         )
+#
+#     def extract(
+#         self,
+#         minchi2: MinimumChiSquared,
+#         persistent: QuantityArray,
+#         persistent_err: QuantityArray
+#     )->BinnedBestfitLightcurve:
+#         params_best = self.estimated_params.extract_bestfit(minchi2)
+#         idx = minchi2.index
+#         fnu_best = QuantityArray(
+#             values = self.fnu.values[idx],
+#             unit = self.fnu.unit
+#         )
+#         return BinnedBestfitLightcurve(
+#             params = params_best,
+#             nu=self.nu,
+#             fnu_net=fnu_best,
+#             fnu_persistent=persistent,
+#             fnu_persistent_err=persistent_err,
+#             t_center=self.t_center_quantity,
+#             t_right=self.t_right_quantity,
+#             t_left=self.t_left_quantity
+#         )
+#
+# @dataclass(frozen=True, slots=True)
+# class CalculationLightcurve:
+#     metadata: LightcurveMetadata
+#     t: QuantityArray1D
+#     fnu: QuantityArray1D
+#
+#     @classmethod
+#     def from_csv(
+#         cls,
+#         path:Path
+#     )->Self:
+#         df = FileReader.table_from_csv(
+#             path=path,
+#         )
+#         metadata = ensure_string_keys(df.attrs)
+#         params = ChevalierParameters.from_dict(metadata)
+#         t_unit = metadata[LcColumns.T_UNIT]
+#         fnu_unit = metadata[LcColumns.FNU_UNIT]
+#         nu = QuantityData(
+#             value = metadata[LcColumns.NU_VALUE],
+#             unit = metadata[LcColumns.NU_UNIT]
+#         )
+#         fnu_net = QuantityArray1D(
+#                 values = dataframe_processors.convert_ndarray(
+#                             df,LcColumns.FNU_NET
+#                         ),
+#                 unit = fnu_unit
+#         )
+#         t = QuantityArray1D(
+#                 values = dataframe_processors.convert_ndarray(
+#                             df,LcColumns.T
+#                         ),
+#                 unit = t_unit
+#         )
+#         return cls(
+#             metadata=LightcurveMetadata(
+#                 params = params,
+#                 nu = nu
+#             ),
+#             t = t,
+#             fnu=fnu_net
+#         )
+#
+#     def to_df(
+#         self
+#     )->pd.DataFrame:
+#         t = self.t
+#         fnu = self.fnu
+#         df = pd.DataFrame({
+#             LcColumns.T: t.values,
+#             LcColumns.FNU_NET: fnu.values
+#         })
+#         df.attrs[LcColumns.T_UNIT] = t.unit
+#         df.attrs[LcColumns.FNU_UNIT] = fnu.unit
+#         df.attrs.update(self.metadata.as_dict)
+#         return df
+#
+#     def dump(
+#         self,
+#         path: Path
+#     )->None:
+#         df = self.to_df()
+#         return FileWriter.df_to_csv(
+#             path=path,
+#             df=df,
+#             save_attrs=True
+#         )
+#
+#     def fnu_total(
+#         self,
+#         fnu_bg:QuantityData
+#     )->QuantityArray1D:
+#         fnu_net = self.fnu
+#         fnu_unit = fnu_net.unit
+#         return QuantityArray1D(
+#             values = fnu_net.to_value_in(fnu_unit) + fnu_bg.value_in(fnu_unit),
+#             unit = fnu_unit
+#         )
+#
+#     def plot(
+#         self,
+#         ax:Axes,
+#         style:plot_utils.LineStyle,
+#         *,
+#         fnu_bg: QuantityData,
+#         t_unit: str,
+#         fnu_unit: str
+#     ):
+#         t = self.t.to_value_in(t_unit)
+#         fnu_tot = self.fnu_total(fnu_bg=fnu_bg).to_value_in(fnu_unit)
+#         ax.plot(
+#             t,fnu_tot,
+#             **style.to_kwargs()
+#         )
+#
+# @dataclass(frozen=True, slots=True)
+# class CalculationLightcurves:
+#     params: CandidateModelParameterGrid
+#     nu: QuantityData
+#     t: QuantityArray
+#     fnu: QuantityArray
+#
+#     def __post_init__(self)->None:
+#         t_arr = self.t.values
+#         fnu_grid = self.fnu.values
+#
+#         if t_arr.ndim != 1:
+#             raise ValueError(
+#                 "tは1次元配列でなければなりません. "
+#                 f"shape={t_arr.shape}"
+#             )
+#
+#         if fnu_grid.ndim != 2:
+#             raise ValueError(
+#                 "fnuは2次元配列でなければなりません. "
+#                 f"shape={fnu_grid.shape}"
+#             )
+#
+#         num_times = t_arr.size
+#         num_flux_times = fnu_grid.shape[1]
+#
+#         if num_times != num_flux_times:
+#             raise ValueError(
+#                 "tの要素数とfnuの列数が一致していません. "
+#                 f"t={t_arr.shape}, "
+#                 f"fnu={fnu_grid.shape}"
+#             )
+#
+#         return
+#
+#     @staticmethod
+#     def _make_bin_edges(
+#         t_obs_value: FloatArray,
+#         width: float,
+#         drop_incomplete_bin: bool,
+#     )-> FloatArray:
+#         start = t_obs_value[0]
+#         stop = t_obs_value[-1]
+#         duration = t_obs_value[-1] - t_obs_value[0]
+#
+#         n_bin = int(np.floor(duration/(width)))
+#
+#         t_edge:FloatArray = (
+#             t_obs_value[0]
+#             + width * np.arange(n_bin + 1, dtype=np.float64)
+#         )
+#
+#         if (
+#                 not drop_incomplete_bin
+#                 and not np.isclose(t_edge[-1],t_obs_value[-1])
+#         ):
+#             t_edge = np.append(t_edge, t_obs_value[-1])
+#         else:
+#             pass
+#         return t_edge
+#
+#     @staticmethod
+#     def validate_time_coverage(
+#         t_model: QuantityArray,
+#         binning: observation.Binning,
+#     ) -> None:
+#         t_model_arr = t_model.values
+#
+#         if t_model_arr.size < 2:
+#             raise ValueError(
+#                 "理論光度曲線には2点以上の時刻が必要です."
+#             )
+#
+#         if (
+#             binning.t_left[0] < t_model_arr[0]
+#             and not np.isclose(
+#                 binning.t_left[0],
+#                 t_model_arr[0],
+#             )
+#         ):
+#             raise ValueError(
+#                 "理論光度曲線が最初の観測binを覆っていません."
+#             )
+#
+#         if (
+#             binning.t_right[-1] > t_model_arr[-1]
+#             and not np.isclose(
+#                 binning.t_right[-1],
+#                 t_model_arr[-1],
+#             )
+#         ):
+#             raise ValueError(
+#                 "理論光度曲線が最後の観測binを覆っていません."
+#             )
+#     def with_zero_boundary(
+#         self
+#     )->Self:
+#         """
+#             配列の左端に時刻ゼロでの境界条件を挿入する
+#         """
+#         t_values = self.t.values
+#         fnu_values = self.fnu.values
+#
+#         if t_values[0] == 0.0:
+#             return self
+#
+#         if t_values[0] < 0.0:
+#             raise ValueError(
+#                 "計算光度曲線に負の時刻が含まれています."
+#                 f"t_min={t_values[0]}"
+#             )
+#
+#
+#         return type(self)(
+#             params=self.params,
+#             t=QuantityArray(
+#                 values=np.concatenate((
+#                     np.array([0.0], dtype=np.float64),
+#                     t_values,
+#                 )),
+#                 unit=self.t.unit,
+#             ),
+#             fnu=QuantityArray(
+#                 values=np.concatenate((
+#                     np.zeros(
+#                         (fnu_values.shape[0], 1),
+#                         dtype=np.float64,
+#                     ),
+#                     fnu_values,
+#                 ), axis=1),
+#                 unit=self.fnu.unit,
+#             ),
+#             nu=self.nu,
+#         )
+#
+#     def bin_average(
+#         self,
+#         bin_config: observation.Binning,
+#         drop_incomplete_bin: bool = True
+#     )->BinnedCalculationLightcurve:
+#
+#         ## 計算光度曲線が観測の時間範囲を覆っているかcheck
+#         t = self.t
+#         fnu = self.fnu
+#         self.validate_time_coverage(t,bin_config)
+#
+#         t_unit = bin_config.t_unit
+#         fnu_unit = fnu.unit
+#
+#         width = bin_config.bin_width
+#         t_model = t.to_value_in(t_unit)
+#         fnu_model = fnu.to_value_in(fnu_unit)
+#
+#         if np.any(np.diff(t_model) <= 0.0):
+#             raise ValueError(
+#                 "計算データの時刻配列が単調増加でありません."
+#             )
+#
+#
+#         t_center = bin_config.t_center
+#         t_left = bin_config.t_left
+#         t_right = bin_config.t_right
+#         num_bins = t_center.size
+#
+#         if not (
+#             t_left.size
+#             == t_right.size
+#             == num_bins
+#         ):
+#             raise ValueError(
+#                 "観測binの配列長が一致しません."
+#             )
+#
+#          # 計算時間範囲に完全に含まれるbin
+#         covered = (
+#             (t_left >= t_model[0])
+#             & (t_right <= t_model[-1])
+#         )
+#
+#         if drop_incomplete_bin:
+#             t_center = t_center[covered]
+#             t_left = t_left[covered]
+#             t_right = t_right[covered]
+#
+#             if t_center.size == 0:
+#                 raise ValueError(
+#                     "計算時間範囲に完全に含まれるbinがありません."
+#                 )
+#
+#         def interpolate_flux(
+#             t_evaluate: FloatArray,
+#         ) -> FloatGrid:
+#             """
+#             全モデルについて、指定時刻で線形補間する
+#
+#             Returns
+#             -------
+#             shape: (M, len(t_evaluate))
+#             """
+#             right_index = np.searchsorted(
+#                 t_model,
+#                 t_evaluate,
+#                 side="left",
+#             )
+#
+#             # t_modelの範囲内であることは上で検証済み
+#             right_index = np.clip(
+#                 right_index,
+#                 1,
+#                 t_model.size - 1,
+#             )
+#             left_index = right_index - 1
+#
+#             t0 = t_model[left_index]
+#             t1 = t_model[right_index]
+#
+#             fraction = (
+#                 (t_evaluate - t0)
+#                 / (t1 - t0)
+#             )
+#
+#             fnu0 = fnu_model[:, left_index]
+#             fnu1 = fnu_model[:, right_index]
+#
+#             return (
+#                 fnu0
+#                 + (fnu1 - fnu0)
+#                 * fraction[np.newaxis, :]
+#             )
+#
+#         # shapeはいずれも(M, B)
+#         fnu_left = interpolate_flux(t_left)
+#         fnu_right = interpolate_flux(t_right)
+#
+#         fnu_average_by_bin: list[FloatArray] = []
+#
+#         for i, (left, right) in enumerate(
+#             zip(t_left, t_right, strict=True)
+#         ):
+#             inside = (
+#                 (t_model > left)
+#                 & (t_model < right)
+#             )
+#
+#             # shape: (K_i,)
+#             t_bin = np.concatenate((
+#                 np.array([left], dtype=np.float64),
+#                 t_model[inside],
+#                 np.array([right], dtype=np.float64),
+#             ))
+#
+#             # shape: (M, K_i)
+#             fnu_bin = np.concatenate(
+#                 (
+#                     fnu_left[:, i:i + 1],
+#                     fnu_model[:, inside],
+#                     fnu_right[:, i:i + 1],
+#                 ),
+#                 axis=1,
+#             )
+#
+#             # 時間軸axis=1について積分
+#             # shape: (M,)
+#             flux_integral = np.trapezoid(
+#                 fnu_bin,
+#                 x=t_bin,
+#                 axis=1,
+#             )
+#
+#             fnu_average_by_bin.append(
+#                 flux_integral / (right - left)
+#             )
+#
+#         # (B個の(M,)配列) -> (M, B)
+#         fnu_average = QuantityArray(
+#             values = np.stack(
+#                 fnu_average_by_bin,
+#                 axis=1,
+#             ),
+#             unit = fnu_unit
+#         )
+#
+#         return BinnedCalculationLightcurve(
+#             estimated_params=self.params,
+#             units=UnitMetadata(
+#                 t_unit=t_unit,
+#                 fnu_unit=str(fnu_unit),
+#             ),
+#             nu = self.nu,
+#             t_center=t_center,
+#             t_left=t_left,
+#             t_right=t_right,
+#             fnu=fnu_average,
+#         )
+#
+#     def extract_bestfit_lc(
+#         self,
+#         minchi2:MinimumChiSquared
+#     )->CalculationLightcurve:
+#         params = self.params.extract_bestfit(minchi2)
+#         idx = minchi2.index
+#         t = QuantityArray1D(
+#             values = self.t.values,
+#             unit = self.t.unit
+#         )
+#         fnu_best = QuantityArray1D(
+#             values = self.fnu.values[idx],
+#             unit = self.fnu.unit
+#         )
+#         return CalculationLightcurve(
+#             metadata = LightcurveMetadata(
+#                 params = params,
+#                 nu = self.nu
+#             ),
+#             t = t,
+#             fnu = fnu_best
+#         )
+
+# def compute(
+#     config: inputs_as_dataclass.ModelConfigure,
+#     params: CandidateModelParameterGrid,
+#     integral_table : models.ThermalSynchrotronTable
+# )->CalculationLightcurves:
+#     t = config.time.quantity_array
+#     nu = QuantityData.from_Quantity(config.nu.quantity)
+#     phi = models.PhaseParameter.from_time_given_nu(
+#         t = t,
+#         nu = nu
+#     )
+#     xm = models.DimensionlessFrequency.from_phi(
+#         phi = phi,
+#         phi_theta = models.PhaseParameter(
+#             values = params.phi_theta.values,
+#             unit = params.phi_theta.unit
+#         )
+#     )
+#     lambda_theta = models.DimensionlessLuminosity.from_xm(
+#         xm = xm,
+#         tau_theta_array = params.tau_theta,
+#         integral_table = integral_table
+#     )
+#     lnu = lambda_theta.to_lnu(
+#         lnu_theta = params.lnu_theta
+#     )
+#     fnu_src = models.SourceframeSpecificFlux.from_lnu(
+#         lnu = lnu,
+#         distance = params.distance
+#     )
+#     fnu_obs = fnu_src.to_observerframe(
+#         doppler_factor = params.doppler_delta
+#     )
+#     lc = CalculationLightcurves(
+#         params = params,
+#         nu = nu,
+#         t = t,
+#         fnu = fnu_obs
+#     )
+#     return lc.with_zero_boundary()
+#
+# @dataclass(frozen=True, slots=True)
+# class LightcurveStyleConfig:
+#     model_binned: plot_utils.LineStyle
+#     model: plot_utils.LineStyle
+#     observation: plot_utils.ScatterStyle
+#     persistent: plot_utils.LineStyle
+#
+# @dataclass(frozen=True, slots=True)
+# class PlotConfig:
+#     layout: plot_utils.PlotLayoutConfig
+#     styles: LightcurveStyleConfig
+#     metadata: dict[str,MetadataConfig]
+#
+#     @classmethod
+#     def from_yaml(
+#         cls,
+#         path: Path
+#     )->Self:
+#         dict_data = FileReader.yaml_safe(path)
+#         return DATACLASS_CONVERTER.structure(
+#             dict_data,
+#             cls
+#         )
+#
+#     def make_metadata_strings(
+#         self,
+#         params: ChevalierParameters,
+#     ) -> list[str]:
+#
+#         config = self.metadata
+#         field_names = {field.name for field in fields(params)}
+#
+#         result: list[str] = []
+#
+#         for key, metadata_config in config.items():
+#             if key not in field_names:
+#                 raise KeyError(
+#                     f"{key!r} is not a field of {type(params).__name__}"
+#                 )
+#
+#             if not metadata_config.show:
+#                 continue
+#
+#             value = getattr(params, key)
+#
+#             if isinstance(value,QuantityData):
+#                 if metadata_config.unit is None:
+#                     raise ValueError(
+#                         f"物理量の単位が指定されていません {key!r}"
+#                     )
+#                 else:
+#                     numeric_value = value.value_in(metadata_config.unit)
+#                     str_element = f"{metadata_config.format_value(numeric_value)} {metadata_config.unit}"
+#             else:
+#                 numeric_value = value
+#                 str_element = f"{metadata_config.format_value(numeric_value)}"
+#
+#             result.append(str_element)
+#
+#         return result

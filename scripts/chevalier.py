@@ -44,7 +44,6 @@ def main():
 
     df_model = FileReader.table_from_csv(args.model_table,idx="index")
     grids = ChevalierGrid.from_df(df_model)
-    grids = ChevalierGrid.from_df(args.model_table)
     df_obs_long = LongformatLightcurve.from_csv(args.obslc)
 
     freqs = [5.5,9.0]
