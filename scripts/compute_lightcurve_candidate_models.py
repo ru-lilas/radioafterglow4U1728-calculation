@@ -13,7 +13,7 @@ from module.mystatistics import CalculateChiSquared
 from module.observation import LongformatLightcurve
 from module.utils import FileReader, FileWriter
 from module.synchrotron_numerical_table import ThermalSynchrotronIntegrals
-from module.compute_lightcurve import CandidateModelParameters
+from module.compute_lightcurve import CandidateModelParameters, PhaseParameterGrid
 
 def parse_args()->argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -48,10 +48,18 @@ def parse_args()->argparse.Namespace:
 def main():
     args = parse_args()
 
+    conf_lc = GeneralInputs.from_yaml(args.input).model_lightcurves
+    t_array = conf_lc.time.to_QuantityArray1D()
     table = ThermalSynchrotronIntegrals.from_csv(args.integral_table)
     df_models = FileReader.table_from_csv(args.candidate_models)
     models = CandidateModelParameters.from_df(df_models)
-    print(models)
+    nu_array = models.nu
+
+    phi_grid = PhaseParameterGrid.build(
+        t=t_array,
+        nu=nu_array
+    )
+    print(phi_grid.values)
     # estimated_params = CandidateModelParameters.from_csv(args.estimated)
     # config = GeneralInputs.from_yaml(args.input)
     # config_model = config.chi2fitting.model

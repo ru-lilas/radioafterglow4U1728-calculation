@@ -3,11 +3,11 @@ import numpy as np
 from pathlib import Path
 from numpy.typing import NDArray
 import pandas as pd
-from .types import ValueScale,FloatArray
+from .types import FloatArray1D, ValueScale,FloatArray
 import astropy.units as u
 from module.utils import FileReader
 from cattrs import Converter
-from typing import Any, Self
+from typing import Any, Literal, Self
 DATACLASS_CONVERTER = Converter()
 
 class YAMLReadable:
@@ -109,6 +109,14 @@ class QuantityArray:
             self.quantity.to_value(unit),
             dtype=np.float64
         )
+
+    @property
+    def astropy_unit(self)->u.Unit|u.UnitBase:
+        unit = self.quantity.unit
+        if isinstance(unit,u.Unit|u.UnitBase):
+            return unit
+        else:
+            raise ValueError("u.Unitまたはu.UnitBaseへ変換できません.")
 
 @dataclass(frozen=True, slots=True)
 class VectorBase:
@@ -460,6 +468,19 @@ class QuantityGrid(QuantityArray):
                 f"shape={self.values.shape}"
             )
     @classmethod
+    def from_1DArrays(
+        cls,
+        row: QuantityArray1D,
+        column: QuantityArray1D,
+    )->Self:
+        return cls(
+            values = np.outer(
+                row.values,column.values
+            ),
+            unit = (row.astropy_unit*column.astropy_unit).to_string()
+        )
+
+    @classmethod
     def from_df(
         cls,
         df:pd.DataFrame,
@@ -583,6 +604,32 @@ class NDArraySpace:
             start=self.start,
             stop=self.stop,
             num=self.num,
+        )
+
+@dataclass(frozen=True, slots=True)
+class FloatArray1DSpace(NDArraySpace):
+    scale: ValueScale
+
+    def to_FloatArray1D(self):
+        if self.scale=="linear":
+            return FloatArray1D(self.linspace())
+        elif self.scale=="log":
+            return FloatArray1D(self.geomspace())
+        else:
+            raise ValueError(
+                f"未対応のscaleです:{self.scale}"
+            )
+
+
+@dataclass(frozen=True, slots=True)
+class QuantityArray1DSpace:
+    values: FloatArray1DSpace
+    unit: str
+
+    def to_QuantityArray1D(self):
+        return QuantityArray1D(
+            values = self.values.to_FloatArray1D().values,
+            unit = self.unit
         )
 
 @dataclass(frozen=True, slots=True)

@@ -390,16 +390,49 @@ class CandidateModelRows:
 #
 @dataclass(frozen=True,slots=True)
 class CandidateModelLightcurveConfig:
-    pass
+    phi: models.PhaseParameter
 
 @dataclass(frozen=True,slots=True)
-class CandidateModelMetadata(models.ModelMetadata):
-    pass
+class CandidateModelMetadata:
+    eps_b: float
+    eps_th: float
+    mu_e_mu: float
+    distance_value: float
+    distance_unit: str
+    phi_unit: str
+    lnu_unit: str
+    fnu_unit: str
+    a_wind_unit: str
+    nu_unit: str
+
+    @classmethod
+    def from_df_attrs(
+        cls,
+        df:pd.DataFrame
+    )->Self:
+        return cls(
+            **ensure_string_keys(df.attrs)
+        )
+
+@dataclass(frozen=True,slots=True)
+class PhaseParameterGrid(QuantityGrid):
+
+    @classmethod
+    def build(
+        cls,     
+        t: QuantityArray1D,
+        nu: QuantityArray1D
+    )->Self:
+        return cls.from_1DArrays(
+            row=nu,
+            column=t
+        )
 
 @dataclass(frozen=True,slots=True)
 class CandidateModelParameters:
     metadata: CandidateModelMetadata
     model_index: IntVector
+    nu: QuantityArray1D
     phi_th: QuantityArray1D
     theta0: QuantityArray1D
     theta:  QuantityArray1D
@@ -413,10 +446,11 @@ class CandidateModelParameters:
         cls,
         df:pd.DataFrame
     )->Self:
-        metadata = CandidateModelMetadata.from_attrs(df.attrs)
+        metadata = CandidateModelMetadata.from_df_attrs(df)
         phi_unit = metadata.phi_unit
         fnu_unit = metadata.fnu_unit
         lnu_unit = metadata.lnu_unit
+        nu_unit = metadata.nu_unit
         a_wind_unit = metadata.a_wind_unit
 
         def import_qa_from_the_df(
@@ -430,6 +464,10 @@ class CandidateModelParameters:
             model_index = IntVector.from_df(
                 df,
                 index_name=models.ColumnNames.MODEL_INDEX
+            ),
+            nu = import_qa_from_the_df(
+                column=models.ColumnNames.NU,
+                unit=nu_unit
             ),
             phi_th = import_qa_from_the_df(
                 column=models.ColumnNames.PHI_TH,
@@ -465,6 +503,7 @@ class CandidateModelParameters:
 class CandidateModelLightcurveGrid:
     config: CandidateModelLightcurveConfig
     metadata: CandidateModelMetadata
+    phi: QuantityGrid
     t: QuantityGrid
     lnu: QuantityGrid
     fnu_flare: QuantityGrid

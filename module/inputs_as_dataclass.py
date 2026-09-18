@@ -13,6 +13,7 @@ from module import electron_temperature, models,synchrotron_scaling_values,quant
 from module.mydataclasses import (
     QuantityArray,
     QuantityArray1D,
+    QuantityArray1DSpace,
     QuantityArrayBase,
     QuantityData,
     QuantityList,
@@ -222,16 +223,21 @@ class ModelParameters:
             ).to_mep(),
             distance= self.distance
         )
-@dataclass(frozen=True)
+@dataclass(frozen=True,slots=True)
 class Units:
     phi_unit: str
     fnu_unit: str
+
+@dataclass(frozen=True,slots=True)
+class ModelLightcurveConfig:
+    time: QuantityArray1DSpace
 
 @dataclass(frozen=True)
 class GeneralInputs(YAMLReadable):
     units: Units
     model_parameters: ModelParameters
     candidate_models_selection: CandidateModelsSelection
+    model_lightcurves: ModelLightcurveConfig
     chi2fitting: Chi2FittingConfigure
     burster_property: ObservedBursterProperty
 
