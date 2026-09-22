@@ -1,4 +1,5 @@
 from dataclasses import dataclass, replace
+from os import wait
 import numpy as np
 from pathlib import Path
 from numpy.typing import NDArray
@@ -111,12 +112,13 @@ class QuantityArray:
         )
 
     @property
-    def astropy_unit(self)->u.Unit|u.UnitBase:
+    def astropy_unit(self)->u.UnitBase:
         unit = self.quantity.unit
-        if isinstance(unit,u.Unit|u.UnitBase):
+        if isinstance(unit,u.UnitBase):
             return unit
         else:
-            raise ValueError("u.Unitまたはu.UnitBaseへ変換できません.")
+            raise TypeError("u.Unitまたはu.UnitBaseへ変換できません.")
+
 
 @dataclass(frozen=True, slots=True)
 class VectorBase:
@@ -161,6 +163,13 @@ class QuantityArray1D(QuantityArray):
         return cls(
             values=df[column].to_numpy(dtype=np.float64),
             unit=unit
+        )
+
+    def decompose(
+        self,
+    )->FloatArray1D:
+        return FloatArray1D(
+            values = self.quantity.decompose()
         )
 
 
@@ -274,9 +283,29 @@ class FloatGrid:
                 f"shape={self.values.shape}"
             )
 
+    @classmethod
+    def from_1DArrays(
+        cls,
+        row: FloatArray1D,
+        column: FloatArray1D,
+    )->Self:
+        return cls(
+            values = np.outer(
+                row.values,column.values
+            ),
+        )
+
     @property
     def shape(self):
         return self.values.shape
+
+    @property
+    def ln(self):
+        return type(self)(values=np.log(self.values))
+
+    @property
+    def log10(self):
+        return type(self)(values=np.log10(self.values))
 
     def masking(
         self,
@@ -503,13 +532,48 @@ class QuantityGrid(QuantityArray):
             unit=unit
         )
 
+    @classmethod
+    def from_FloatGrid(
+        cls,
+        grid: FloatGrid,
+        row_quantity: QuantityArray1D
+    ):
+        return cls.from_Quantity(
+            grid.values*row_quantity.quantity[:,None]
+        )
+
     def to_FloatGrid(
         self,
         unit:str
     )->FloatGrid:
         return FloatGrid(self.to_value_in(unit))
 
-
+    def divide_by_column(
+        self,
+        column: QuantityArray1D,
+        *,
+        decompose: bool
+    ) -> Self|FloatGrid:
+        quantity = self.quantity/self.quantity[:,None]
+        if decompose:
+            return FloatGrid(
+                values = quantity.decompose()
+            )
+        else:
+            return type(self)(
+                values = quantity.value,
+                unit = (
+                    self.astropy_unit/column.astropy_unit
+                ).to_string()
+            )
+    def decompose_by_column(
+        self,
+        column: QuantityArray1D,
+    ) -> FloatGrid:
+        quantity = self.quantity/column.quantity[:,None]
+        return FloatGrid(
+            values = np.asarray(quantity.decompose().value,dtype=np.float64)
+        )
 
 
 @dataclass(frozen=True,slots=True)

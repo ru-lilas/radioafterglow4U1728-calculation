@@ -6,6 +6,8 @@ from numpy.typing import NDArray
 import numpy as np
 import pandas as pd
 from module import synchrotron_function
+from module.mydataclasses import FloatGrid
+from module.types import FloatArray1D
 from module.utils import FileReader, FileWriter
 from enum import StrEnum, auto
 
@@ -74,6 +76,30 @@ class ThermalSynchrotronIntegrals:
             self.xm_ref,
             self.ip_ref
         )
+
+@dataclass(frozen=True, slots=True)
+class DimensionlessThermalLuminosityGrid(FloatGrid):
+
+    @classmethod
+    def build(
+        cls,
+        tau_th_vector: FloatArray1D,
+        xm_grid: FloatGrid,
+        table: ThermalSynchrotronIntegrals
+    )->Self:
+        xm = xm_grid.values
+        ln_xm = np.log(xm)
+        tau_th = tau_th_vector.values[:,None]
+        ip = table.ip(xm)
+        optical_depth = tau_th * ip / xm
+        ln_lambda_syn = (
+            2.0*ln_xm
+            + np.log(-np.expm1(-optical_depth))
+        )
+        return cls(
+            np.exp(ln_lambda_syn)
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class DimensionlessThermalPeak:

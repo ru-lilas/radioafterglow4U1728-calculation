@@ -394,7 +394,6 @@ class ThermalSynchrotronLuminosity(QuantityArray):
         )
         return cls.from_Quantity(quantities)
 
-
 @dataclass(frozen=True,slots=True)
 class MolecularWeightRatio:
     value: float

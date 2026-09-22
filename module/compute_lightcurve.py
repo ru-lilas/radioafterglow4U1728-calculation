@@ -5,13 +5,13 @@ from typing import Self, cast, Any, Hashable
 from numpy.typing import NDArray
 from matplotlib.figure import Figure
 from matplotlib.patches import StepPatch
-from module import plot_utils
+from module import plot_utils, quantity_converter
 from module import models,dataframe_utils
 from module.models import PhaseParameter, ThermalSynchrotronUtils, calculate_xm
-from module.mydataclasses import IntVector, QuantityArray, QuantityArray1D, QuantityData, QuantityGrid
+from module.mydataclasses import IntVector, QuantityArray, QuantityArray1D, QuantityData, QuantityGrid,FloatGrid
 from module.mystatistics import CalculateChiSquared, MinimumChiSquared
 from module.plot_utils import LineStyle, MetadataConfig
-from module.types import FloatArray, FloatArray1D, FloatGrid
+from module.types import FloatArray, FloatArray1D
 import astropy.units as u
 import numpy as np
 import pandas as pd
@@ -414,6 +414,13 @@ class CandidateModelMetadata:
             **ensure_string_keys(df.attrs)
         )
 
+    @property
+    def distance(self):
+        return QuantityData(
+            value = self.distance_value,
+            unit = self.distance_unit
+        )
+
 @dataclass(frozen=True,slots=True)
 class PhaseParameterGrid(QuantityGrid):
 
@@ -428,6 +435,64 @@ class PhaseParameterGrid(QuantityGrid):
             column=t
         )
 
+    def to_xm(
+        self,
+        phi_th: QuantityArray1D
+    )->FloatGrid:
+        return self.decompose_by_column(phi_th)
+
+    def to_ln_xm(
+        self,
+        phi_th: QuantityArray1D
+    )->FloatGrid:
+        return self.decompose_by_column(phi_th).ln
+
+    def to_log10_xm(
+        self,
+        phi_th: QuantityArray1D
+    )->FloatGrid:
+        return self.decompose_by_column(phi_th).log10
+
+@dataclass(frozen=True,slots=True)
+class SpecificLuminosityGrid(QuantityGrid):
+    @classmethod
+    def build(
+        cls,
+        lambda_grid: FloatGrid,
+        lnu_th: QuantityArray1D
+    )->Self:
+        return cls.from_FloatGrid(
+            grid=lambda_grid,
+            row_quantity=lnu_th
+        )
+
+@dataclass(frozen=True,slots=True)
+class ObserverframeSpecificFluxGrid(QuantityGrid):
+    pass
+
+@dataclass(frozen=True,slots=True)
+class SourceframeSpecificFluxGrid(QuantityGrid):
+    @classmethod
+    def from_lnu(
+        cls,
+        lnu: QuantityGrid,
+        distance: QuantityData
+    )->Self:
+        fnu = quantity_converter.lnu_into_fnu(
+            lnu = lnu.quantity,
+            distance = distance.quantity
+        )
+        return cls.from_Quantity(fnu)
+
+    def to_observerframe(
+        self,
+        doppler_factor:QuantityArray1D
+    )->ObserverframeSpecificFluxGrid:
+        return ObserverframeSpecificFluxGrid(
+            values = self.values * (doppler_factor.values[:,None])**3,
+            unit = self.unit
+        )
+
 @dataclass(frozen=True,slots=True)
 class CandidateModelParameters:
     metadata: CandidateModelMetadata
@@ -440,6 +505,7 @@ class CandidateModelParameters:
     lnu_th: QuantityArray1D
     a_wind: QuantityArray1D
     beta_sh: QuantityArray1D
+    doppler_delta: QuantityArray1D
 
     @classmethod
     def from_df(
@@ -497,13 +563,16 @@ class CandidateModelParameters:
                 column=models.ColumnNames.BETA_SH,
                 unit=""
             ),
+            doppler_delta = import_qa_from_the_df(
+                column=models.ColumnNames.DOPPLER_DELTA,
+                unit=""
+            ),
         )
 
 @dataclass(frozen=True,slots=True)
 class CandidateModelLightcurveGrid:
     config: CandidateModelLightcurveConfig
     metadata: CandidateModelMetadata
-    phi: QuantityGrid
     t: QuantityGrid
     lnu: QuantityGrid
     fnu_flare: QuantityGrid

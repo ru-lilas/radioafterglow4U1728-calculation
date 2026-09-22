@@ -12,8 +12,15 @@ from module.inputs_as_dataclass import GeneralInputs
 from module.mystatistics import CalculateChiSquared
 from module.observation import LongformatLightcurve
 from module.utils import FileReader, FileWriter
-from module.synchrotron_numerical_table import ThermalSynchrotronIntegrals
-from module.compute_lightcurve import CandidateModelParameters, PhaseParameterGrid
+from module.synchrotron_numerical_table import DimensionlessThermalLuminosityGrid, ThermalSynchrotronIntegrals
+from module.compute_lightcurve import (
+    CandidateModelParameters,
+    ObserverframeSpecificFluxGrid,
+    PhaseParameterGrid,
+    SpecificLuminosityGrid,
+    SourceframeSpecificFluxGrid,
+    ObserverframeSpecificFluxGrid
+    )
 
 def parse_args()->argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -59,7 +66,27 @@ def main():
         t=t_array,
         nu=nu_array
     )
-    print(phi_grid.values)
+    xm_grid = phi_grid.to_xm(models.phi_th)
+    ln_xm_grid = phi_grid.to_ln_xm(models.phi_th)
+    log10_xm_grid = phi_grid.to_log10_xm(models.phi_th)
+    print(log10_xm_grid)
+    lambda_th = DimensionlessThermalLuminosityGrid.build(
+        tau_th_vector=models.tau_th.decompose(),
+        xm_grid=xm_grid,
+        table=table
+    )
+    lnu = SpecificLuminosityGrid.from_FloatGrid(
+        grid=lambda_th,
+        row_quantity=models.lnu_th
+    )
+    fnu_src = SourceframeSpecificFluxGrid.from_lnu(
+        lnu = lnu,
+        distance = models.metadata.distance
+    )
+    fnu_obs = fnu_src.to_observerframe(
+        models.doppler_delta
+    )
+    print(fnu_obs.to_value_in("mJy"))
     # estimated_params = CandidateModelParameters.from_csv(args.estimated)
     # config = GeneralInputs.from_yaml(args.input)
     # config_model = config.chi2fitting.model
