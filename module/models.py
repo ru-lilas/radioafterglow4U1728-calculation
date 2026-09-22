@@ -121,13 +121,13 @@ class PhaseParameter(QuantityArray):
         nu: QuantityData
     )->Self:
         phi = t.quantity*nu.quantity
-        return cls.from_Quantity(phi)
+        return cls.from_quantity(phi)
 
     def to_time(
         self,
         nu: QuantityData
     )->QuantityArray:
-        return QuantityArray.from_Quantity(
+        return QuantityArray.from_quantity(
             nu*self.quantity
         )
 
@@ -219,7 +219,7 @@ class WindParameterNormalization:
     def synchrotron(
         theta:FloatArray
     )->QuantityArray:
-        return QuantityArray.from_Quantity(
+        return QuantityArray.from_quantity(
             A_CYC/theta**4
         )
 
@@ -235,12 +235,12 @@ class NormalizedWindParameter(PhaseParameter):
         a_wind_q = a_wind.quantity
         a_norm_q = a_norm.quantity
         phi_a = np.sqrt((a_wind_q/a_norm_q))
-        return cls.from_Quantity(phi_a)
+        return cls.from_quantity(phi_a)
 
     def to_a_wind(
         self,
     )->QuantityArray:
-        return QuantityArray.from_Quantity(
+        return QuantityArray.from_quantity(
             self.phi_a.quantity*self.a_norm.quantity
         )
 
@@ -255,7 +255,7 @@ class ThermalSynchrotronPhase(PhaseParameter):
         eps_b:float,
         phi_a:NormalizedWindParameter,
     )->Self:
-        return cls.from_Quantity(
+        return cls.from_quantity(
             1.5*phi_a.quantity*np.sqrt(eps_b)
         )
 
@@ -276,13 +276,13 @@ class ThermalSynchrotronPhase(PhaseParameter):
             *np.sqrt(TWO_TO_FIVE*eps_th*mep/(THREE_TO_SEVEN*theta0_val)),
             u.dimensionless_unscaled
         )
-        return cls.from_Quantity(phi_th_thin_inv**(-1))
+        return cls.from_quantity(phi_th_thin_inv**(-1))
 
     def to_phiA(
         self,
         eps_b:float,
     )->NormalizedWindParameter:
-        return NormalizedWindParameter.from_Quantity(
+        return NormalizedWindParameter.from_quantity(
             2.0*self.quantity/(3.0*np.sqrt(eps_b))
         )
 
@@ -296,7 +296,7 @@ class WindParameter(QuantityArray):
         phi_th:ThermalSynchrotronPhase
     )->Self:
         phi_val = phi_th.decompose()
-        return cls.from_Quantity(
+        return cls.from_quantity(
             4.0*a_syn.quantity*phi_val**2/(9.0*eps_b)
         )
 
@@ -392,7 +392,7 @@ class ThermalSynchrotronLuminosity(QuantityArray):
             * theta.values
             * mec2
         )
-        return cls.from_Quantity(quantities)
+        return cls.from_quantity(quantities)
 
 @dataclass(frozen=True,slots=True)
 class MolecularWeightRatio:
@@ -430,7 +430,7 @@ def calculate_lnu_theta(
     mep:float,
     a:FloatArray
 )->QuantityArray:
-    return QuantityArray.from_Quantity(
+    return QuantityArray.from_quantity(
         192*np.pi**3*eps_b*mep*a**2*mec2/eps_th
     )
 
@@ -593,7 +593,7 @@ class SourceframeSpecificFlux(QuantityArray):
             lnu = lnu.quantity,
             distance = distance.quantity
         )
-        return cls.from_Quantity(fnu)
+        return cls.from_quantity(fnu)
 
     def to_observerframe(
         self,

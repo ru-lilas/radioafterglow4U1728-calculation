@@ -85,7 +85,7 @@ class QuantityArray:
     unit: str
 
     @classmethod
-    def from_Quantity(
+    def from_quantity(
         cls,
         quantity:Any
     )->Self:
@@ -538,7 +538,7 @@ class QuantityGrid(QuantityArray):
         grid: FloatGrid,
         row_quantity: QuantityArray1D
     ):
-        return cls.from_Quantity(
+        return cls.from_quantity(
             grid.values*row_quantity.quantity[:,None]
         )
 

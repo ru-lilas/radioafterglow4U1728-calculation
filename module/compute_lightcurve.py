@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 from pathlib import Path
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, replace
 from typing import Self, cast, Any, Hashable
 from numpy.typing import NDArray
 from matplotlib.figure import Figure
@@ -468,7 +468,12 @@ class SpecificLuminosityGrid(QuantityGrid):
 
 @dataclass(frozen=True,slots=True)
 class ObserverframeSpecificFluxGrid(QuantityGrid):
-    pass
+    def add_bg(
+        self,
+        fnu_bg:QuantityData
+    )->Self:
+        q = self.quantity + fnu_bg.quantity
+        return type(self).from_quantity(q)
 
 @dataclass(frozen=True,slots=True)
 class SourceframeSpecificFluxGrid(QuantityGrid):
@@ -482,7 +487,7 @@ class SourceframeSpecificFluxGrid(QuantityGrid):
             lnu = lnu.quantity,
             distance = distance.quantity
         )
-        return cls.from_Quantity(fnu)
+        return cls.from_quantity(fnu)
 
     def to_observerframe(
         self,
@@ -573,10 +578,10 @@ class CandidateModelParameters:
 class CandidateModelLightcurveGrid:
     config: CandidateModelLightcurveConfig
     metadata: CandidateModelMetadata
-    t: QuantityGrid
-    lnu: QuantityGrid
-    fnu_flare: QuantityGrid
-    fnu_tot: QuantityGrid
+    t: QuantityArray1D
+    lnu: SpecificLuminosityGrid
+    fnu_flare: ObserverframeSpecificFluxGrid
+    fnu_tot: ObserverframeSpecificFluxGrid
 
 @dataclass(frozen=True, slots=True)
 class BinnedBestfitLightcurve:

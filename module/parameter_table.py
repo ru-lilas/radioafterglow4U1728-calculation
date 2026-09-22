@@ -259,7 +259,7 @@ class ModelParameterTable:
     )->QuantityArray:
         distance = self.distance.quantity
         fnu_peak = doppler_delta**3 * lnu_peak.quantity / (4.0*np.pi*distance**2)
-        return QuantityArray.from_Quantity(
+        return QuantityArray.from_quantity(
             quantity = fnu_peak
         )
 
