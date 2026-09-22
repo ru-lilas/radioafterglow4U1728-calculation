@@ -4,10 +4,11 @@ from typing import Any, Literal, Self
 from dacite import from_dict
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize,ListedColormap
+from matplotlib.lines import Line2D
 from matplotlib.ticker import LogLocator
 from matplotlib import colormaps
 from matplotlib.colorbar import Colorbar
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 from module import dataframe_utils
 from module.mydataclasses import FloatGrid, NDArraySpace, QuantityData, QuantityGrid, ValueArray, YAMLReadable
 from module.utilities import build_nparray
@@ -612,3 +613,18 @@ class LineLabel:
 @dataclass(frozen=True, slots=True)
 class LegendStyle(Style):
     fontsize: int
+
+@dataclass(frozen=True, slots=True)
+class Plotter:
+    ax: Axes
+
+    def line(
+        self,
+        x:ArrayLike,
+        y:ArrayLike,
+        style: LineStyle
+    )->list[Line2D]:
+        return self.ax.plot(
+            x,y,
+            **style.to_kwargs()
+        )
