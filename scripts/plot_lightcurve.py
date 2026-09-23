@@ -11,7 +11,8 @@ import numpy as np
 import pandas as pd
 from module import plot_utils,observation
 from module.observation import LongformatLightcurve
-from module.compute_lightcurve import BinnedBestfitLightcurve, CalculationLightcurve,PlotConfig
+from module.compute_lightcurve import BinnedBestfitLightcurve, CalculationLightcurve, CandidateModelFitResults,PlotConfig
+from module.utils import FileReader
 
 def parse_args()->argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -22,12 +23,7 @@ def parse_args()->argparse.Namespace:
         required=True
     )
     parser.add_argument(
-        "--calclc",
-        type=Path,
-        required=True
-    )
-    parser.add_argument(
-        "--calclc_raw",
+        "--candidate_binned_lightcurves",
         type=Path,
         required=True
     )
@@ -53,57 +49,57 @@ def main():
     outpath:Path = args.output
     outpath.parent.mkdir(parents=True,exist_ok=True)
 
-    lc = BinnedBestfitLightcurve.from_csv(
-        args.calclc
-    )
-    lc_raw = CalculationLightcurve.from_csv(args.calclc_raw)
     conf = GeneralInputs.from_yaml(args.input)
     conf_plot = PlotConfig.from_yaml(args.plotconfig)
     obslc_long = LongformatLightcurve.from_csv(args.obslc)
-    obslc_nu = obslc_long.extract_lightcurve(conf.chi2fitting.sampling.nu)
-    with PdfPages(outpath) as pdf:
-        fig,ax = plot_utils.create_configured_axes(conf_plot.layout)
-        fig.set_layout_engine("constrained")
 
-        t_unit = conf_plot.layout.axes.x.label.unit
-        fnu_unit = conf_plot.layout.axes.y.label.unit
-        if (t_unit is None) or (fnu_unit is None):
-            raise ValueError(
-                "unitが設定されていません."
-            )
-        fnu_bg = QuantityData(
-            value = obslc_nu.fnu_persistent.values[0],
-            unit = fnu_unit
-        )
-        metadata_string = conf_plot.make_metadata_strings(lc.params)
-        lc.plot_metadata(fig,", ".join(metadata_string))
-        lc.plot_step(
-            ax,
-            conf_plot.styles.model_binned,
+    cand_lcs = CandidateModelFitResults.from_df_long(
+        FileReader.table_from_csv(args.candidate_binned_lightcurves)
+    )
+
+    with PdfPages(outpath) as pdf:
+        plotter = plot_utils.Plotter.from_config(conf_plot.layout)
+
+        t_unit,fnu_unit = conf_plot.units
+
+        lc = cand_lcs.models[0].lightcurve
+        lc.plot(
+            plotter,
+            style=conf_plot.styles.model_binned,
             t_unit=t_unit,
             fnu_unit=fnu_unit
         )
-        lc_raw.plot(
-            ax,
-            style=conf_plot.styles.model,
-            fnu_bg=fnu_bg,
+        obslc = obslc_long.select_frequency(
+            nu = lc.nu,
+            unit = lc.nu.unit
+        )
+        obslc.plot(
+            plotter,
+            style=conf_plot.styles.observation,
             t_unit = t_unit,
             fnu_unit = fnu_unit
         )
-        obslc_nu.plot(
-            ax,
-            style=conf_plot.styles.observation,
-            t_unit=t_unit,
-            fnu_unit=fnu_unit
-        )
-        obslc_nu.plot_persistent(
-            ax,
+        obslc.plot_persistent(
+            plotter,
             style=conf_plot.styles.persistent,
-            t_unit=t_unit,
-            fnu_unit=fnu_unit
+            t_unit = t_unit,
+            fnu_unit = fnu_unit
         )
-        pdf.savefig(fig)
-        plt.close(fig)
+        cand_lcs.metadata.plot(
+            plotter,
+            style=conf_plot.metadata
+        )
+        # metadata_string = conf_plot.make_metadata_strings(lc.params)
+        # lc.plot_metadata(fig,", ".join(metadata_string))
+        # lc_raw.plot(
+        #     ax,
+        #     style=conf_plot.styles.model,
+        #     fnu_bg=fnu_bg,
+        #     t_unit = t_unit,
+        #     fnu_unit = fnu_unit
+        # )
+        pdf.savefig(plotter.fig)
+        plt.close(plotter.fig)
     #
     return
 

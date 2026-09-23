@@ -9,7 +9,7 @@ from module import plot_utils, quantity_converter
 from module import models,dataframe_utils
 from module import mystatistics
 from module.models import PhaseParameter, ThermalSynchrotronUtils, calculate_xm
-from module.mydataclasses import IntVector, QuantityArray, QuantityArray1D, QuantityData, QuantityGrid,FloatGrid
+from module.mydataclasses import IntVector, QuantityArray, QuantityArray1D, QuantityData, QuantityGrid,FloatGrid, YAMLReadable
 from module.mystatistics import CalculateChiSquared, MinimumChiSquared
 from module.plot_utils import LineStyle, MetadataConfig
 from module.types import FloatArray, FloatArray1D
@@ -809,10 +809,32 @@ class BinnedBestfitLightcurve:
             string
         )
 
+@dataclass(frozen=True,slots=True)
+class LightcurveMetadataConfig:
+    fontsize: float
+    eps_b:  plot_utils.MetadataConfig
+    eps_th: plot_utils.MetadataConfig
+    mue_mu: plot_utils.MetadataConfig
+    distance: plot_utils.MetadataConfig
+    a_wind: plot_utils.MetadataConfig
+    beta_sh: plot_utils.MetadataConfig
 
 @dataclass(frozen=True,slots=True)
 class CandidateModelLightcurveMetadata(CandidateModelMetadata):
     t_unit: str
+
+    def plot(
+        self,
+        plotter:plot_utils.Plotter,
+        style: LightcurveMetadataConfig
+    ):
+        strings = [
+            style.eps_b.label_format.to_text(self.eps_b),
+            style.eps_th.label_format.to_text(self.eps_th),
+            style.mue_mu.label_format.to_text(self.mu_e_mu),
+            style.distance.label_format.to_text(self.distance.value_in(self.distance.unit)),
+        ]
+        plotter.title(strings,style.fontsize)
 
 @dataclass(frozen=True,slots=True)
 class CandidateModelBinnedLightcurve:
@@ -1087,6 +1109,40 @@ class CandidateModelTotalLightcurve:
     fnu_total: QuantityArray1D
 
     @classmethod
+    def from_df(
+        cls,
+        candidate_model_index:int,
+        metadata:CandidateModelLightcurveMetadata,
+        df:pd.DataFrame
+    ):
+        nu_arr = QuantityArray1D.from_df(
+            df,models.ColumnNames.NU,metadata.nu_unit
+        )
+        return cls(
+            metadata = metadata,
+            candidate_model_index=candidate_model_index,
+            t_center = QuantityArray1D.from_df(
+                df,models.ColumnNames.T_CENTER,metadata.t_unit
+            ),
+            t_left = QuantityArray1D.from_df(
+                df,models.ColumnNames.T_LEFT,metadata.t_unit
+            ),
+            t_right = QuantityArray1D.from_df(
+                df,models.ColumnNames.T_RIGHT,metadata.t_unit
+            ),
+            nu = nu_arr.index(0),
+            fnu_flare = QuantityArray1D.from_df(
+                df,models.ColumnNames.FNU_FLARE,metadata.fnu_unit
+            ),
+            fnu_bg = QuantityArray1D.from_df(
+                df,models.ColumnNames.FNU_BG,metadata.fnu_unit
+            ),
+            fnu_total = QuantityArray1D.from_df(
+                df,models.ColumnNames.FNU_TOTAL,metadata.fnu_unit
+            ),
+        )
+
+    @classmethod
     def from_binned_lightcurve(
         cls,
         lightcurve: CandidateModelBinnedLightcurve,
@@ -1115,6 +1171,38 @@ class CandidateModelTotalLightcurve:
             fnu_flare=lightcurve.fnu_flare,
             fnu_bg=fnu_bg,
             fnu_total=fnu_total,
+        )
+
+    @property
+    def bin_edges(self):
+        t_unit = self.t_left.unit
+        t_left = self.t_left.to_value_in(t_unit)
+        t_right = self.t_right.to_value_in(t_unit)
+        bin_edges = np.concatenate(
+            (
+                t_left,
+                np.array([t_right[-1]]),
+            )
+        )
+        return QuantityArray(
+            values=bin_edges,
+            unit=t_unit
+        )
+
+    def plot(
+        self,
+        plotter: plot_utils.Plotter,
+        style: LineStyle,
+        *,
+        t_unit: str,
+        fnu_unit: str
+    )->StepPatch:
+        bin_edges_q = self.bin_edges
+        return plotter.step(
+            values=self.fnu_total.to_value_in(fnu_unit),
+            edges=bin_edges_q.to_value_in(t_unit),
+            style=style,
+            baseline=self.fnu_bg.to_value_in(fnu_unit)[0]
         )
 
 @dataclass(frozen=True, slots=True)
@@ -1198,6 +1286,53 @@ class CandidateModelFitResult:
         })
         df.attrs.update({**asdict(metadata)})
         return df
+
+@dataclass(frozen=True, slots=True)
+class CandidateModelFitResults:
+    metadata: CandidateModelLightcurveMetadata
+    models: tuple[CandidateModelFitResult,...]
+
+    @classmethod
+    def from_df_long(
+        cls,
+        df_long:pd.DataFrame
+    )->Self:
+        metadata = CandidateModelLightcurveMetadata.from_df_attrs(df_long)
+        lightcurves = []
+        for cand_idx,df in df_long.groupby(
+                models.ColumnNames.CANDIDATE_MODEL_INDEX
+            ):
+            if not isinstance(cand_idx,int):
+                raise TypeError(
+                    "indexの型が不正です."
+                )
+
+            lc = CandidateModelTotalLightcurve.from_df(
+                candidate_model_index=cand_idx,
+                metadata=metadata,
+                df=df
+            )
+            chi2_arr = QuantityArray1D.from_df(
+                df,models.ChiSquaredParameters.CHI_SQUARED,""
+            )
+            ndof_arr = QuantityArray1D.from_df(
+                df,models.ChiSquaredParameters.N_DOF,""
+            )
+            lightcurves.append(
+                CandidateModelFitResult(
+                    lightcurve = lc,
+                    chi2 = chi2_arr.values[0],
+                    ndof = ndof_arr.values[0]
+                )
+            )
+        return cls(
+            metadata=metadata,
+            models=tuple(lightcurves)
+        )
+
+    @property
+    def n_candidates(self):
+        return len(self.models)
 
 # @dataclass(frozen=True,slots=True)
 # class BinnedCalculationLightcurve:
@@ -1746,18 +1881,25 @@ class CalculationLightcurve:
 #     )
 #     return lc.with_zero_boundary()
 #
-# @dataclass(frozen=True, slots=True)
-# class LightcurveStyleConfig:
-#     model_binned: plot_utils.LineStyle
-#     model: plot_utils.LineStyle
-#     observation: plot_utils.ScatterStyle
-#     persistent: plot_utils.LineStyle
+@dataclass(frozen=True, slots=True)
+class LightcurveStyleConfig:
+    model_binned: plot_utils.LineStyle
+    model: plot_utils.LineStyle
+    observation: plot_utils.ScatterStyle
+    persistent: plot_utils.LineStyle
 #
-# @dataclass(frozen=True, slots=True)
-# class PlotConfig:
-#     layout: plot_utils.PlotLayoutConfig
-#     styles: LightcurveStyleConfig
-#     metadata: dict[str,MetadataConfig]
+@dataclass(frozen=True, slots=True)
+class PlotConfig(YAMLReadable):
+    layout: plot_utils.PlotLayoutConfig
+    styles: LightcurveStyleConfig
+    metadata: LightcurveMetadataConfig
+
+    @property
+    def units(self)->tuple[str,str]:
+        return (
+            self.layout.axes.x.label.unit,
+            self.layout.axes.y.label.unit
+        )
 #
 #     @classmethod
 #     def from_yaml(

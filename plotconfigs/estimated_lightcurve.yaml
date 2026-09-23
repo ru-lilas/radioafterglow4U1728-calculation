@@ -120,50 +120,46 @@ layout:
       width: 1.0
       pad: 10.0
 metadata:
-  # nu: &metadata_tmp
-  #   show: true
-  #   prefix: '$\nu$'
-  #   fmt: '.1f'
-  #   unit: "GHz"
-  a_wind:
-    show: true
-    prefix: '$A_{\mathrm{w}}$'
-    fmt: '.1e'
-    unit: "g cm-1"
-  beta_sh:
-    show: true
-    prefix: '$\beta_{\mathrm{sh}}$'
-    fmt: '.2f'
-    unit: null
+  fontsize: 24
   eps_b:
     show: true
-    prefix: '$\varepsilon_{\mathrm{B}}$'
-    fmt: '.1e'
-    unit: null
+    unit: ""
+    label_format:
+      prefix: '\varepsilon_{\mathrm{B}}'
+      fmt: '.1e'
+      unit: ""
   eps_th:
     show: true
-    prefix: '$\varepsilon_{\mathrm{th}}$'
-    fmt: '.2f'
-    unit: null
+    unit: ""
+    label_format:
+      prefix: '\varepsilon_{\mathrm{th}}'
+      fmt: '.2f'
+      unit: ""
   distance:
     show: true
-    prefix: '$D$'
-    fmt: '.1f'
     unit: "kpc"
-  mu:
+    label_format:
+      prefix: 'D'
+      fmt: '.1f'
+      unit: '\mathrm{kpc}'
+  mue_mu:
     show: true
-    prefix: '$\mu$'
-    fmt: '.1f'
-    unit: null
-  mu_e:
+    unit: ""
+    label_format:
+      prefix: '\mu_{\mathrm{e}}/\mu'
+      fmt: '.1f'
+      unit: ""
+  a_wind:
     show: true
-    prefix: '$\mu_e$'
-    fmt: '.1f'
-    unit: null
-  chi2:
+    unit: "g cm-1"
+    label_format:
+      prefix: 'A_{\mathrm{w}}'
+      fmt: '.1e'
+      unit: '\mathrm{g/cm}'
+  beta_sh: 
     show: true
-    prefix: '$\chi^2$'
-    fmt: '.1f'
-    unit: null
-
-
+    unit: ""
+    label_format:
+      prefix: '\beta_{\mathrm{sh}}'
+      fmt: '.1f'
+      unit: ''

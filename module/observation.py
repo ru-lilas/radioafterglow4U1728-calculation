@@ -374,7 +374,7 @@ class ObservedLightcurve:
 
     def plot(
         self,
-        ax: Axes,
+        plotter: plot_utils.Plotter,
         style: plot_utils.ScatterStyle,
         *,
         t_unit: str,
@@ -396,28 +396,17 @@ class ObservedLightcurve:
         fnu = fnu_quantity.to_value_in(fnu_unit)
         fnu_err = fnu_err_quantity.to_value_in(fnu_unit)
 
-        ax.scatter(
-            t,fnu,
-            marker=style.marker,
-            s=style.markersize,
-            c=style.markerfacecolor,
-            alpha=style.alpha,
-            edgecolors=style.markeredgecolor,
-            linewidths=style.markeredgewidth
-        )
-        ax.errorbar(
-            t,fnu,
+        plotter.errorbar(
+            x=t,
+            y=fnu,
             yerr=fnu_err,
-            ls=style.linestyle,
-            color=style.markeredgecolor,
-            capsize=style.capsize,
-            capthick=style.capthick
+            style=style
         )
         return
 
     def plot_persistent(
         self,
-        ax: Axes,
+        plotter:plot_utils.Plotter,
         style: plot_utils.LineStyle,
         *,
         t_unit: str,
@@ -429,9 +418,9 @@ class ObservedLightcurve:
         )
         t = t_quantity.to_value_in(t_unit)
         fnu_per = self.fnu_background.to_value_in(fnu_unit)
-        return ax.plot(
+        return plotter.line(
             t,fnu_per,
-            **style.to_kwargs(),
+            style=style
         )
 
     @property

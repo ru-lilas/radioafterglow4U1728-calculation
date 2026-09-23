@@ -287,6 +287,7 @@ def create_configured_axes(
     fig, ax = plt.subplots(
         figsize=config.figure.figsize,
         dpi=config.figure.dpi,
+        layout=config.figure.layout_engine
     )
     AxesConfigurator.apply(ax,config.axes)
 
@@ -617,7 +618,20 @@ class LegendStyle(Style):
 
 @dataclass(frozen=True, slots=True)
 class Plotter:
+    fig: Figure
     ax: Axes
+
+    @classmethod
+    def from_config(
+        cls,
+        config: PlotLayoutConfig,
+    ) -> Self:
+        fig, ax = create_configured_axes(config)
+
+        return cls(
+            fig=fig,
+            ax=ax,
+        )
 
     def line(
         self,
@@ -632,15 +646,50 @@ class Plotter:
 
     def step(
         self,
-        ax: Axes,
+        values: ArrayLike,
+        edges: ArrayLike,
         style: LineStyle,
         *,
-        x: ArrayLike,
-        y: ArrayLike,
         baseline:float = 0.0
     )->StepPatch:
-        return ax.stairs(
-            x,y,
+        return self.ax.stairs(
+            values,edges,
             baseline=baseline,
             **style.to_kwargs(),
+        )
+
+    def errorbar(
+        self,
+        x: ArrayLike,
+        y: ArrayLike,
+        yerr: ArrayLike,
+        style: ScatterStyle
+    ):
+        self.ax.errorbar(
+            x,y,
+            yerr=yerr,
+            ls=style.linestyle,
+            color=style.markeredgecolor,
+            capsize=style.capsize,
+            capthick=style.capthick
+        )
+        self.ax.scatter(
+            x,y,
+            marker=style.marker,
+            s=style.markersize,
+            c=style.markerfacecolor,
+            alpha=style.alpha,
+            edgecolors=style.markeredgecolor,
+            linewidths=style.markeredgewidth
+        )
+        return
+
+    def title(
+        self,
+        strings: list[str],
+        fontsize: float
+    ):
+        self.ax.set_title(
+            ", ".join(strings),
+            fontsize=fontsize
         )
