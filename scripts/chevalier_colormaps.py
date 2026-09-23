@@ -51,7 +51,7 @@ def main():
     freqs = [5.5,9.0]
     nu_unit = "GHz"
     dfs_obs_nu = [
-        df_obs_long.extract_lightcurve(
+        df_obs_long.select_frequency(
             QuantityData(
                 value = nu,
                 unit = nu_unit

@@ -49,7 +49,7 @@ def main():
 
     obs_freqs = selection_conf.observation_frequencies.to_QuantityData_list()
     dfs_obs_nu = [
-        df_obs_long.extract_lightcurve(nu)
+        df_obs_long.select_frequency(nu,unit=nu.unit)
         for nu in obs_freqs
     ]
 

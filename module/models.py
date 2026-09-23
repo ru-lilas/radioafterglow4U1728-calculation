@@ -51,8 +51,10 @@ class MetadataNames(StrEnum):
     LNU_UNIT = auto()
     FNU_UNIT = auto()
     NU_UNIT = auto()
+    T_UNIT = auto()
 
 class ColumnNames(StrEnum):
+    CANDIDATE_MODEL_INDEX = auto()
     MODEL_INDEX = auto()
     PHI_TH = auto()
     THETA0 = auto()
@@ -76,6 +78,10 @@ class ColumnNames(StrEnum):
     FNU_PEAK_THIN = auto()
     LNU_PEAK_THIN = auto()
     NU = auto()
+    T = auto()
+    FNU_OBS_FRAME = auto()
+    LNU = auto()
+    FNU_SRC_FRAME = auto()
 
 @dataclass(frozen=True,slots=True)
 class ElectronTemperature:

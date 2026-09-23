@@ -1,6 +1,6 @@
 from collections.abc import Mapping
 from pathlib import Path
-from dataclasses import dataclass, fields, replace
+from dataclasses import asdict, dataclass, fields, replace
 from typing import Self, cast, Any, Hashable
 from numpy.typing import NDArray
 from matplotlib.figure import Figure
@@ -470,7 +470,7 @@ class SpecificLuminosityGrid(QuantityGrid):
 class ObserverframeSpecificFluxGrid(QuantityGrid):
     def add_bg(
         self,
-        fnu_bg:QuantityData
+        fnu_bg:QuantityArray1D
     )->Self:
         q = self.quantity + fnu_bg.quantity
         return type(self).from_quantity(q)
@@ -576,12 +576,62 @@ class CandidateModelParameters:
 
 @dataclass(frozen=True,slots=True)
 class CandidateModelLightcurveGrid:
-    config: CandidateModelLightcurveConfig
     metadata: CandidateModelMetadata
+    model_index: IntVector
+    nu: QuantityArray1D
     t: QuantityArray1D
     lnu: SpecificLuminosityGrid
-    fnu_flare: ObserverframeSpecificFluxGrid
-    fnu_tot: ObserverframeSpecificFluxGrid
+    fnu_src_frame: SourceframeSpecificFluxGrid
+    fnu_obs_frame: ObserverframeSpecificFluxGrid
+
+    def to_df(self) -> pd.DataFrame:
+        metadata = self.metadata
+        model_index = self.model_index.values
+        t = self.t.quantity
+        nu = self.nu.to_value_in(metadata.nu_unit)
+        fnu = self.fnu_obs_frame.to_value_in(metadata.fnu_unit)
+        lnu = self.lnu.to_value_in(metadata.lnu_unit)
+        fnu_src_frame = self.fnu_src_frame.to_value_in(metadata.fnu_unit)
+
+        n_model = model_index.size
+        n_time = t.size
+
+        if fnu.shape != (n_model, n_time):
+            raise ValueError(
+                "fnu shape must be "
+                f"({n_model}, {n_time}), "
+                f"but got {fnu.shape}"
+            )
+
+        candidate_model_index = np.arange(n_model)
+
+        df = pd.DataFrame({
+            models.ColumnNames.CANDIDATE_MODEL_INDEX: np.repeat(
+                candidate_model_index,
+                n_time,
+            ),
+            models.ColumnNames.NU: np.tile(
+                nu,
+                n_time,
+            ),
+            models.ColumnNames.MODEL_INDEX: np.repeat(
+                model_index,
+                n_time,
+            ),
+            models.ColumnNames.T: np.tile(
+                t.value,
+                n_model,
+            ),
+            models.ColumnNames.FNU_OBS_FRAME: fnu.ravel(),
+            models.ColumnNames.FNU_SRC_FRAME: fnu_src_frame.ravel(),
+            models.ColumnNames.LNU: lnu.ravel()
+        })
+        df.attrs = {
+            models.MetadataNames.T_UNIT: self.t.unit,
+            **asdict(metadata)
+        }
+
+        return df
 
 @dataclass(frozen=True, slots=True)
 class BinnedBestfitLightcurve:
@@ -852,11 +902,10 @@ class BinnedBestfitLightcurve:
 #             t_left=self.t_left_quantity
 #         )
 #
-# @dataclass(frozen=True, slots=True)
-# class CalculationLightcurve:
-#     metadata: LightcurveMetadata
-#     t: QuantityArray1D
-#     fnu: QuantityArray1D
+@dataclass(frozen=True, slots=True)
+class CalculationLightcurve:
+    t: QuantityArray1D
+    fnu: QuantityArray1D
 #
 #     @classmethod
 #     def from_csv(

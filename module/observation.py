@@ -6,7 +6,7 @@ from matplotlib.lines import Line2D
 from matplotlib import patches as pltpatch
 from numpy.typing import NDArray
 from module import dataframe_processors, dataframe_utils, mystatistics
-from module.mydataclasses import GridRange, QuantityData,QuantityArray
+from module.mydataclasses import GridRange, QuantityArray1D, QuantityData,QuantityArray
 from module.types import BoolGrid, FloatArray, FloatGrid
 import numpy as np
 import pandas as pd
@@ -221,8 +221,8 @@ class ObservedLightcurve:
         )
 
     @property
-    def fnu_persistent(self):
-        return QuantityArray(
+    def fnu_background(self):
+        return QuantityArray1D(
             values = dataframe_processors.convert_ndarray(
                 self.df,
                 column=Columns.BG
@@ -230,8 +230,8 @@ class ObservedLightcurve:
             unit=self.metadata.fnu_unit
         )
     @property
-    def fnu_persistent_err(self):
-        return QuantityArray(
+    def fnu_background_err(self):
+        return QuantityArray1D(
             values = dataframe_processors.convert_ndarray(
                 self.df,
                 column=Columns.BG_ERR
@@ -428,7 +428,7 @@ class ObservedLightcurve:
             unit = self.metadata.t_unit
         )
         t = t_quantity.to_value_in(t_unit)
-        fnu_per = self.fnu_persistent.to_value_in(fnu_unit)
+        fnu_per = self.fnu_background.to_value_in(fnu_unit)
         return ax.plot(
             t,fnu_per,
             **style.to_kwargs(),
@@ -519,7 +519,12 @@ class LongformatLightcurve:
 
         return lightcurves
 
-    def extract_lightcurve(self,nu:QuantityData)->ObservedLightcurve:
-        nu_value = nu.value_in("GHz")
+    def select_frequency(
+        self,
+        nu:QuantityData,
+        *,
+        unit:str
+    )->ObservedLightcurve:
+        nu_value = nu.value_in(unit)
         lcs = self.group_by_frequency()
         return lcs[nu_value]

@@ -52,7 +52,7 @@ n_parameter = len(conf_fitting.free_parameters)
 conf_sampling = conf_fitting.sampling
 
 obslc_general = observation.LongformatLightcurve.from_csv(path_obslc)
-obslc = obslc_general.extract_lightcurve(conf_sampling.nu.value)
+obslc = obslc_general.select_frequency(conf_sampling.nu.value)
 
 obslc_selected = obslc.select_timewindow(conf_sampling.timewindow)
 n_data = len(obslc_selected.df)

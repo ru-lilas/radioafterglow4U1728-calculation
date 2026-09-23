@@ -9,11 +9,13 @@ from pathlib import Path
 from module import compute_lightcurve
 from module import mystatistics
 from module.inputs_as_dataclass import GeneralInputs
+from module.mydataclasses import QuantityData
 from module.mystatistics import CalculateChiSquared
 from module.observation import LongformatLightcurve
 from module.utils import FileReader, FileWriter
 from module.synchrotron_numerical_table import DimensionlessThermalLuminosityGrid, ThermalSynchrotronIntegrals
 from module.compute_lightcurve import (
+    CandidateModelLightcurveGrid,
     CandidateModelParameters,
     ObserverframeSpecificFluxGrid,
     PhaseParameterGrid,
@@ -69,7 +71,6 @@ def main():
     xm_grid = phi_grid.to_xm(models.phi_th)
     ln_xm_grid = phi_grid.to_ln_xm(models.phi_th)
     log10_xm_grid = phi_grid.to_log10_xm(models.phi_th)
-    print(log10_xm_grid)
     lambda_th = DimensionlessThermalLuminosityGrid.build(
         tau_th_vector=models.tau_th.decompose(),
         xm_grid=xm_grid,
@@ -79,14 +80,35 @@ def main():
         grid=lambda_th,
         row_quantity=models.lnu_th
     )
-    fnu_src = SourceframeSpecificFluxGrid.from_lnu(
+    fnu_src_frame = SourceframeSpecificFluxGrid.from_lnu(
         lnu = lnu,
         distance = models.metadata.distance
     )
-    fnu_obs = fnu_src.to_observerframe(
+    fnu_obs_frame = fnu_src_frame.to_observerframe(
         models.doppler_delta
     )
-    print(fnu_obs.to_value_in("mJy"))
+    lc = CandidateModelLightcurveGrid(
+        metadata = models.metadata,
+        model_index=models.model_index,
+        nu=nu_array,
+        t=t_array,
+        lnu=lnu,
+        fnu_src_frame=fnu_src_frame,
+        fnu_obs_frame=fnu_obs_frame
+    )
+    FileWriter.df_to_csv(
+        path=args.output,
+        df=lc.to_df(),
+    )
+    #
+    # for i,nu in enumerate(nu_array.quantity):
+    #     lc_obs = obslc_long.select_frequency(
+    #         nu = QuantityData.from_Quantity(nu),
+    #         unit = "GHz"
+    #     )
+    #     fnu_bg = lc_obs.fnu_background
+    #     fnu_bg_err = lc_obs.fnu_background_err
+
     # estimated_params = CandidateModelParameters.from_csv(args.estimated)
     # config = GeneralInputs.from_yaml(args.input)
     # config_model = config.chi2fitting.model
