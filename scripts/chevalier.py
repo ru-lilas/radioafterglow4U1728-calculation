@@ -53,7 +53,8 @@ def main():
             QuantityData(
                 value = nu,
                 unit = nu_unit
-            )
+            ),
+            unit=nu_unit
         )
         for nu in freqs
     ]

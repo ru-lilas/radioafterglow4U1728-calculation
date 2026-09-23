@@ -104,6 +104,7 @@ class LightcurveMetadata:
     distance: plot_utils.MetadataComponent
     a_wind: plot_utils.MetadataComponent
     beta_sh: plot_utils.MetadataComponent
+    nu: plot_utils.MetadataComponent
 
     def plot(
         self,
@@ -116,6 +117,7 @@ class LightcurveMetadata:
         self.distance.add_strings(strings)
         self.a_wind.add_strings(strings)
         self.beta_sh.add_strings(strings)
+        self.nu.add_strings(strings)
         plotter.title(strings,self.fontsize)
 
 

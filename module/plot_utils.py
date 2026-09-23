@@ -1,5 +1,6 @@
 from dataclasses import asdict, dataclass
 from functools import cached_property
+import math
 from typing import Any, Literal, Self
 from dacite import from_dict
 from matplotlib.cm import ScalarMappable
@@ -636,20 +637,7 @@ class LegendStyle(Style):
 
 @dataclass(frozen=True, slots=True)
 class Plotter:
-    fig: Figure
     ax: Axes
-
-    @classmethod
-    def from_config(
-        cls,
-        config: PlotLayoutConfig,
-    ) -> Self:
-        fig, ax = create_configured_axes(config)
-
-        return cls(
-            fig=fig,
-            ax=ax,
-        )
 
     def line(
         self,
@@ -710,4 +698,61 @@ class Plotter:
         self.ax.set_title(
             ", ".join(strings),
             fontsize=fontsize
+        )
+
+@dataclass(frozen=True, slots=True)
+class PlotLayout:
+    fig: Figure
+    plotters: tuple[Plotter, ...]
+
+    @classmethod
+    def create(
+        cls,
+        layout_config: MultiPlotLayoutConfig,
+        n_plots: int,
+        max_ncols: int = 3,
+    ) -> Self:
+        ncols = min(n_plots, max_ncols)
+        nrows = math.ceil(n_plots / ncols)
+        figsize_base=layout_config.figure.figsize
+
+        fig, axes = plt.subplots(
+            nrows=nrows,
+            ncols=ncols,
+            figsize=(figsize_base[0]*ncols,figsize_base[1]*nrows),
+            dpi=layout_config.figure.dpi,
+            sharex=layout_config.subplots.sharex,
+            sharey=layout_config.subplots.sharey,
+            layout=layout_config.figure.layout_engine,
+            squeeze=False,
+        )
+
+        for ax in axes.flat:
+            AxesConfigurator.apply(
+                ax,
+                layout_config.axes,
+            )
+
+        if layout_config.subplots.hide_shared_labels:
+            if layout_config.subplots.sharex:
+                for ax in axes[:-1, :].flat:
+                    ax.set_xlabel("")
+
+            if layout_config.subplots.sharey:
+                for ax in axes[:, 1:].flat:
+                    ax.set_ylabel("")
+
+        axes_flat = axes.ravel()
+
+        for ax in axes_flat[n_plots:]:
+            ax.set_visible(False)
+
+        plotters = tuple(
+            Plotter(ax=ax)
+            for ax in axes_flat[:n_plots]
+        )
+
+        return cls(
+            fig=fig,
+            plotters=plotters,
         )

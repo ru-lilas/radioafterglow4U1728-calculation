@@ -25,6 +25,7 @@ class LightcurveMetadataConfig:
     distance: plot_utils.MetadataConfig
     a_wind: plot_utils.MetadataConfig
     beta_sh: plot_utils.MetadataConfig
+    nu: plot_utils.MetadataConfig
 
     def build_component(
         self,
@@ -56,11 +57,15 @@ class LightcurveMetadataConfig:
                 quantity=metadata_quantities.beta_sh,
                 config=self.beta_sh
             ),
+            nu=plot_utils.MetadataComponent(
+                quantity=metadata_quantities.nu,
+                config=self.nu
+            ),
         )
 
 @dataclass(frozen=True, slots=True)
 class PlotConfig(YAMLReadable):
-    layout: plot_utils.PlotLayoutConfig
+    layout: plot_utils.MultiPlotLayoutConfig
     styles: lightcurve_plotter.Styles
     metadata: LightcurveMetadataConfig
 
@@ -121,43 +126,38 @@ def main():
         FileReader.table_from_csv(args.candidate_binned_lightcurves)
     )
     df_models = FileReader.table_from_csv(args.candidate_models)
+    n_models = len(cand_lcs.models)
 
     with PdfPages(outpath) as pdf:
-        plotter = plot_utils.Plotter.from_config(conf_plot.layout)
+        plot_layout = plot_utils.PlotLayout.create(
+            layout_config=conf_plot.layout,
+            n_plots=n_models
+        )
+        for i,plotter in enumerate(plot_layout.plotters):
 
-
-        lc = cand_lcs.models[0].lightcurve
-        obslc = obslc_long.select_frequency(
-            nu = lc.nu,
-            unit = lc.nu.unit
-        )
-        model_metadata = CandidateModelMetadata.from_df(
-            df_models=df_models,
-            model_index = lc.model_index
-        )
-        metadata = conf_plot.metadata.build_component(
-            metadata_quantities=model_metadata
-        )
-        lc_plotter = lightcurve_plotter.Lightcurve.from_data(
-            obs_lc=obslc,
-            binned_lc=lc,
-            styles=conf_plot.styles,
-            metadata=metadata,
-            t_unit=t_unit,
-            fnu_unit=fnu_unit
-        )
-        lc_plotter.plot(plotter)
-        # metadata_string = conf_plot.make_metadata_strings(lc.params)
-        # lc.plot_metadata(fig,", ".join(metadata_string))
-        # lc_raw.plot(
-        #     ax,
-        #     style=conf_plot.styles.model,
-        #     fnu_bg=fnu_bg,
-        #     t_unit = t_unit,
-        #     fnu_unit = fnu_unit
-        # )
-        pdf.savefig(plotter.fig)
-        plt.close(plotter.fig)
+            lc = cand_lcs.models[i].lightcurve
+            obslc = obslc_long.select_frequency(
+                nu = lc.nu,
+                unit = lc.nu.unit
+            )
+            model_metadata = CandidateModelMetadata.from_df(
+                df_models=df_models,
+                model_index = lc.model_index
+            )
+            metadata = conf_plot.metadata.build_component(
+                metadata_quantities=model_metadata
+            )
+            lc_plotter = lightcurve_plotter.Lightcurve.from_data(
+                obs_lc=obslc,
+                binned_lc=lc,
+                styles=conf_plot.styles,
+                metadata=metadata,
+                t_unit=t_unit,
+                fnu_unit=fnu_unit
+            )
+            lc_plotter.plot(plotter)
+        pdf.savefig(plot_layout.fig)
+        plt.close(plot_layout.fig)
     return
 
 if __name__ == "__main__":

@@ -1339,6 +1339,7 @@ class CandidateModelFitResults:
 class CandidateModelMetadata(models.ScenarioParameter):
     a_wind: QuantityData
     beta_sh: QuantityData
+    nu: QuantityData
 
     @classmethod
     def from_df(
@@ -1378,7 +1379,12 @@ class CandidateModelMetadata(models.ScenarioParameter):
                 row=row,
                 column=models.ColumnNames.BETA_SH,
                 unit=""
-            )
+            ),
+            nu = QuantityData.from_series(
+                row=row,
+                column=models.ColumnNames.NU,
+                unit=df_models.attrs[models.MetadataNames.NU_UNIT]
+            ),
         )
 
 

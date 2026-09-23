@@ -1,66 +1,3 @@
-# figsize: [16,12]
-# TicksConfigure: &TicksConfigure_tmp
-#   xlim: [-10.0,30.0]
-#   ylim: [0.5,1.8]
-#   xscale: "linear"
-#   yscale: "linear"
-#   fontsize: 24
-# LabelConfigure: &LabelConfigure_tmp
-#   xlabel: 'time since X-ray burst [min]'
-#   ylabel: 'Flux Density [mJy]'
-#   fontsize: 24
-# nu_values:
-#   - 5.5
-#   - 9.0
-# nu_unit: "GHz"
-# t_unit: "min"
-# fnu_unit: "mJy"
-# calculation:
-#   linestyle: "-"
-#   linewidth: 2
-#   color: "#000000"
-#   label: ""
-# observation_scatter:
-#   size: 30
-#   color: "#005AFF"
-#   marker: "o"
-# annotation:
-#   config:
-#     use: True
-#     fontsize: 16
-#     pos: [1.00,1.01]
-#     ha: "right"
-#     va: "bottom"
-#   elements:
-#     eps_b:
-#       prefix: '$\varepsilon_{\mathrm{B}}$'
-#       fmt: '.1e'
-#     eps_th:
-#       prefix: '$\varepsilon_{\mathrm{th}}$'
-#       fmt: '.2f'
-#     mu:
-#       prefix: '$\mu$'
-#       fmt: '.2f'
-#     mu_e:
-#       prefix: '$\mu_e$'
-#       fmt: '.2f'
-#   from_tabledata:
-#     a_wind:
-#       with_unit: True
-#       tendency: "unique"
-#       prefix: '$A_{\mathrm{w}}$'
-#       fmt: '.1e'
-#     beta_sh:
-#       with_unit: False
-#       tendency: "unique"
-#       prefix: '$\beta_{\mathrm{sh}}$'
-#       fmt: '.2f'
-#     reduced_chi2:
-#       with_unit: False
-#       tendency: "unique"
-#       prefix: '$\chi^2_\mathrm{red}$'
-#       fmt: '.1f'
-#
 styles:
   binned: 
     color: "#000000"
@@ -97,6 +34,13 @@ layout:
   figure:
     figsize: [16,9]
     dpi: 100
+    layout_engine: constrained
+  subplots:
+    nrows: 1
+    ncols: 3
+    sharex: true
+    sharey: true
+    hide_shared_labels: true
   axes:
     x:
       scale: "linear"
@@ -120,7 +64,7 @@ layout:
       width: 1.0
       pad: 10.0
 metadata:
-  fontsize: 24
+  fontsize: 18
   eps_b:
     show: true
     unit: ""
@@ -161,5 +105,12 @@ metadata:
     unit: ""
     label_format:
       prefix: '\beta_{\mathrm{sh}}'
-      fmt: '.1f'
+      fmt: '.2f'
       unit: ''
+  nu: 
+    show: true
+    unit: "GHz"
+    label_format:
+      prefix: '\nu'
+      fmt: '.1f'
+      unit: '\mathrm{GHz}'
