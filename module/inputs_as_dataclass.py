@@ -71,14 +71,8 @@ class ModelConfigure:
         return self.nu.quantity
 
 @dataclass(frozen=True)
-class Chi2FittingConfigure:
-    free_parameters: list
-    sampling: SamplingConfigure
-    model: ModelConfigure
-
-    @property
-    def n_model(self):
-        return len(self.free_parameters)
+class Chi2Configure:
+    timewindow: SamplingTimewindow
 
 @dataclass(frozen=True)
 class CandidateModelsSelection:
@@ -238,6 +232,6 @@ class GeneralInputs(YAMLReadable):
     model_parameters: ModelParameters
     candidate_models_selection: CandidateModelsSelection
     model_lightcurves: ModelLightcurveConfig
-    chi2fitting: Chi2FittingConfigure
+    chi2: Chi2Configure
     burster_property: ObservedBursterProperty
 

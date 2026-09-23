@@ -6,15 +6,15 @@ units:
 model_parameters:
   phi_th:
     values:
-      start: 0.0
-      stop: 2.0
-      num: 256
+      start: -1.0
+      stop: 3.0
+      num: 128
       scale: "log"
     unit: *phi_unit
   theta0:
     start: 3.0
-    stop: 8.0
-    num: 256
+    stop: 90.0
+    num: 128
     scale: "linear"
   eps_th: 0.4
   eps_b: 1.0e-02
@@ -41,28 +41,11 @@ model_lightcurves:
     unit: "s"
 
 
-chi2fitting:
-  free_parameters:
-    - a_wind
-    - beta_sh
-  sampling:
-    nu: &nu
-      value: 9.0
-      unit: *nu_unit
-    timewindow:
-      min: 0.0
-      max: 16.0
-      unit: "min"
-  model:
-    time:
-      values:
-        start: 0.0
-        stop: 4.0
-        num: 256
-        scale: "log"
-      unit: "s"
-    fnu_unit: *fnu_unit
-    nu: *nu
+chi2:
+  timewindow:
+    min: 0.0
+    max: 16.0
+    unit: "min"
 
 burster_property:
   burster_name: "4U 1728-34"

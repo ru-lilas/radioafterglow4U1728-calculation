@@ -610,7 +610,7 @@ class CandidateModelLightcurveGrid:
                 candidate_model_index,
                 n_time,
             ),
-            models.ColumnNames.NU: np.tile(
+            models.ColumnNames.NU: np.repeat(
                 nu,
                 n_time,
             ),
@@ -806,6 +806,270 @@ class BinnedBestfitLightcurve:
         a_wind_unit = params.a_wind.unit
         fig.suptitle(
             string
+        )
+
+
+@dataclass(frozen=True,slots=True)
+class CandidateModelLightcurveMetadata(CandidateModelMetadata):
+    t_unit: str
+
+@dataclass(frozen=True,slots=True)
+class CandidateModelBinnedLightcurve:
+    metadata: CandidateModelLightcurveMetadata
+    candidate_model_index: int
+    nu: QuantityData
+    fnu_obs_frame: QuantityArray1D
+    t_center: QuantityArray1D
+    t_left: QuantityArray1D
+    t_right: QuantityArray1D
+
+@dataclass(frozen=True,slots=True)
+class CandidateModelLightcurve:
+    metadata: CandidateModelLightcurveMetadata
+    candidate_model_index: int
+    nu: QuantityData
+    t: QuantityArray1D
+    fnu_obs_frame: QuantityArray1D
+
+    @classmethod
+    def from_df(
+        cls,
+        candidate_model_index: int,
+        df:pd.DataFrame
+    )->Self:
+        metadata = CandidateModelLightcurveMetadata.from_df_attrs(df)
+        nu_unit = metadata.nu_unit
+        nu_array = QuantityArray1D.from_df(
+            df,models.ColumnNames.NU,metadata.nu_unit
+        )
+
+        return cls(
+            metadata = metadata,
+            candidate_model_index=candidate_model_index,
+            t = QuantityArray1D.from_df(
+                df,models.ColumnNames.T,metadata.t_unit
+            ),
+            nu = nu_array.index(0),
+            fnu_obs_frame = QuantityArray1D.from_df(
+                df,models.ColumnNames.FNU_OBS_FRAME,metadata.fnu_unit
+            ),
+        )
+
+    @staticmethod
+    def _make_bin_edges(
+        t_obs_value: FloatArray,
+        width: float,
+        drop_incomplete_bin: bool,
+    )-> FloatArray:
+        start = t_obs_value[0]
+        stop = t_obs_value[-1]
+        duration = t_obs_value[-1] - t_obs_value[0]
+
+        n_bin = int(np.floor(duration/(width)))
+
+        t_edge:FloatArray = (
+            t_obs_value[0]
+            + width * np.arange(n_bin + 1, dtype=np.float64)
+        )
+
+        if (
+                not drop_incomplete_bin
+                and not np.isclose(t_edge[-1],t_obs_value[-1])
+        ):
+            t_edge = np.append(t_edge, t_obs_value[-1])
+        else:
+            pass
+        return t_edge
+
+    @staticmethod
+    def validate_time_coverage(
+        t_model: QuantityArray1D,
+        binning: observation.Binning,
+    ) -> None:
+        t_model_arr = t_model.values
+
+        if t_model_arr.size < 2:
+            raise ValueError(
+                "理論光度曲線には2点以上の時刻が必要です."
+            )
+
+        if (
+            binning.t_left[0] < t_model_arr[0]
+            and not np.isclose(
+                binning.t_left[0],
+                t_model_arr[0],
+            )
+        ):
+            raise ValueError(
+                "理論光度曲線が最初の観測binを覆っていません."
+            )
+
+        if (
+            binning.t_right[-1] > t_model_arr[-1]
+            and not np.isclose(
+                binning.t_right[-1],
+                t_model_arr[-1],
+            )
+        ):
+            raise ValueError(
+                "理論光度曲線が最後の観測binを覆っていません."
+            )
+    def insert_zero_boundary(
+        self
+    )->Self:
+        """
+            配列の左端に時刻ゼロでの境界条件を挿入する
+        """
+        t_values = self.t.values
+        fnu_values = self.fnu_obs_frame.values
+
+        if t_values[0] == 0.0:
+            return self
+
+        if t_values[0] < 0.0:
+            raise ValueError(
+                "計算光度曲線に負の時刻が含まれています."
+                f"t_min={t_values[0]}"
+            )
+
+        return type(self)(
+            metadata=self.metadata,
+            candidate_model_index=self.candidate_model_index,
+            t=QuantityArray1D(
+                values=np.concatenate((
+                    np.array([0.0], dtype=np.float64),
+                    t_values,
+                )),
+                unit=self.t.unit,
+            ),
+            fnu_obs_frame=QuantityArray1D(
+                values=np.concatenate((
+                    np.array([0.0], dtype=np.float64),
+                    fnu_values,
+                )),
+                unit=self.fnu_obs_frame.unit,
+            ),
+            nu=self.nu,
+        )
+
+    def bin_average(
+        self,
+        bin_config: observation.Binning,
+        drop_incomplete_bin: bool = True
+    )->CandidateModelBinnedLightcurve:
+
+        t_unit = bin_config.t_unit
+        fnu_unit = self.fnu_obs_frame.unit
+
+        ## 計算光度曲線が観測の時間範囲を覆っているかcheck
+        t = self.t
+        fnu = self.fnu_obs_frame
+        self.validate_time_coverage(t,bin_config)
+
+        width = bin_config.bin_width
+        t_model = t.to_value_in(t_unit)
+        fnu_model = fnu.to_value_in(fnu_unit)
+
+        if np.any(np.diff(t_model) <= 0.0):
+            raise ValueError(
+                "計算データの時刻配列が単調増加でありません."
+            )
+
+
+        t_center = bin_config.t_center
+        t_left = bin_config.t_left
+        t_right = bin_config.t_right
+        num_bins = t_center.size
+
+        if not (
+            t_left.size
+            == t_right.size
+            == num_bins
+        ):
+            raise ValueError(
+                "観測binの配列長が一致しません."
+            )
+
+         # 計算時間範囲に完全に含まれるbin
+        covered = (
+            (t_left >= t_model[0])
+            & (t_right <= t_model[-1])
+        )
+
+        if drop_incomplete_bin:
+            t_center = t_center[covered]
+            t_left = t_left[covered]
+            t_right = t_right[covered]
+
+            if t_center.size == 0:
+                raise ValueError(
+                    "計算時間範囲に完全に含まれるbinがありません."
+                )
+
+        def interpolate_flux(
+            t_evaluate: FloatArray,
+        ) -> FloatArray:
+            return np.interp(
+                t_evaluate,
+                t_model,
+                fnu_model,
+            )
+
+        # shapeはいずれも(M, B)
+        fnu_left = interpolate_flux(t_left)
+        fnu_right = interpolate_flux(t_right)
+
+        # shapeはいずれも(M, B)
+        fnu_left = interpolate_flux(t_left)
+        fnu_right = interpolate_flux(t_right)
+
+        fnu_average_by_bin: list[float] = []
+
+        for i, (left, right) in enumerate(
+            zip(t_left, t_right, strict=True)
+        ):
+            inside = (
+                (t_model > left)
+                & (t_model < right)
+            )
+
+            t_bin = np.concatenate((
+                np.array([left], dtype=np.float64),
+                t_model[inside],
+                np.array([right], dtype=np.float64),
+            ))
+
+            fnu_bin = np.concatenate((
+                np.array([fnu_left[i]], dtype=np.float64),
+                fnu_model[inside],
+                np.array([fnu_right[i]], dtype=np.float64),
+            ))
+
+            flux_integral = np.trapezoid(
+                fnu_bin,
+                x=t_bin,
+            )
+
+            fnu_average_by_bin.append(
+                float(flux_integral / (right - left))
+            )
+
+        fnu_average = QuantityArray1D(
+            values=np.asarray(
+                fnu_average_by_bin,
+                dtype=np.float64,
+            ),
+            unit=fnu_unit,
+        )
+
+        return CandidateModelBinnedLightcurve(
+            metadata=self.metadata,
+            candidate_model_index=self.candidate_model_index,
+            nu = self.nu,
+            t_center=QuantityArray1D(t_center,t_unit),
+            t_left=QuantityArray1D(t_left,t_unit),
+            t_right=QuantityArray1D(t_right,t_unit),
+            fnu_obs_frame=fnu_average,
         )
 
 # @dataclass(frozen=True,slots=True)

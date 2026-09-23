@@ -144,6 +144,34 @@ class IntVector(VectorBase):
             values = np.asarray(df[index_name],dtype=np.int64)
         )
 
+@dataclass(frozen=True,slots=True)
+class QuantityData:
+    value: float
+    unit: str
+
+    @classmethod
+    def from_Quantity(
+        cls,
+        quantity:u.Quantity
+    )->Self:
+        value = float(quantity.value)
+        unit = quantity.unit
+        if unit is None:
+            raise ValueError("エラー:物理量に単位がありません.")
+        else:
+            return cls(
+                value=value,
+                unit=unit.to_string()
+            )
+
+    @property
+    def quantity(self):
+        return u.Quantity(self.value,self.unit)
+
+    def value_in(self,unit:str)->float:
+        value: float = float(np.asarray(self.quantity.to_value(unit)).item())
+        return value
+
 @dataclass(frozen=True, slots=True)
 class QuantityArray1D(QuantityArray):
     def __post_init__(self) -> None:
@@ -171,6 +199,16 @@ class QuantityArray1D(QuantityArray):
         return FloatArray1D(
             values = self.quantity.decompose()
         )
+
+    def index(
+        self,
+        index:int
+    )->QuantityData:
+        return QuantityData(
+            value=self.values[index],
+            unit=self.unit
+        )
+
 
 
 @dataclass(frozen=True, slots=True)
@@ -576,33 +614,6 @@ class QuantityGrid(QuantityArray):
         )
 
 
-@dataclass(frozen=True,slots=True)
-class QuantityData:
-    value: float
-    unit: str
-
-    @classmethod
-    def from_Quantity(
-        cls,
-        quantity:u.Quantity
-    )->Self:
-        value = float(quantity.value)
-        unit = quantity.unit
-        if unit is None:
-            raise ValueError("エラー:物理量に単位がありません.")
-        else:
-            return cls(
-                value=value,
-                unit=unit.to_string()
-            )
-
-    @property
-    def quantity(self):
-        return u.Quantity(self.value,self.unit)
-
-    def value_in(self,unit:str)->float:
-        value: float = float(np.asarray(self.quantity.to_value(unit)).item())
-        return value
 
 @dataclass(frozen=True, slots=True)
 class MyVector:
