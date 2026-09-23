@@ -371,6 +371,12 @@ class ObservedLightcurve:
             self,
             df=df_selected
         )
+    @property
+    def t(self):
+        return QuantityArray1D(
+            values = self.to_FloatArray(Columns.T),
+            unit = self.metadata.t_unit
+        )
 
     def plot(
         self,
@@ -447,6 +453,42 @@ class ObservedLightcurve:
             fnu_peak_err = QuantityData(fnu_peak_err,fnu_unit),
             nu=nu
         )
+
+@dataclass(frozen=True, slots=True)
+class ObservedLightcurvePlotter:
+    t: NDArray[np.float64]
+    fnu_tot: NDArray[np.float64]
+    fnu_tot_err: NDArray[np.float64]
+    style: plot_utils.ScatterStyle
+
+    @classmethod
+    def from_observed_lightcurve(
+        cls,
+        lightcurve: ObservedLightcurve,
+        style: plot_utils.ScatterStyle,
+        *,
+        t_unit: str,
+        fnu_unit: str
+    )->Self:
+        return cls(
+            t = lightcurve.t.to_value_in(t_unit),
+            fnu_tot = lightcurve.fnu_total.to_value_in(fnu_unit),
+            fnu_tot_err = lightcurve.fnu_total_err.to_value_in(fnu_unit),
+            style=style
+        )
+
+    def plot(
+        self,
+        plotter: plot_utils.Plotter,
+    ):
+        plotter.errorbar(
+            x=self.t,
+            y=self.fnu_tot,
+            yerr=self.fnu_tot_err,
+            style=self.style
+        )
+        return
+
 
 @dataclass(frozen=True, slots=True)
 class LongformatLightcurve:

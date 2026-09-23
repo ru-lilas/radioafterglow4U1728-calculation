@@ -144,6 +144,19 @@ class IntVector(VectorBase):
             values = np.asarray(df[index_name],dtype=np.int64)
         )
 
+    def as_scalar(
+        self
+    )->int:
+        values = self.values
+
+        if values.size == 0:
+            raise ValueError("values is empty.")
+
+        if not np.all(values == values[0]):
+            raise ValueError("All values must be equal.")
+
+        return int(values[0])
+
 @dataclass(frozen=True,slots=True)
 class QuantityData:
     value: float
@@ -163,6 +176,45 @@ class QuantityData:
                 value=value,
                 unit=unit.to_string()
             )
+    @classmethod
+    def from_series(
+        cls,
+        row:pd.Series,
+        *,
+        column:str,
+        unit:str
+    )->Self:
+        value = row[column]
+        if not isinstance(value,float):
+            raise TypeError(f"エラー:無効なvalueです:{value}")
+        else:
+            return cls(
+                value=value,
+                unit=unit
+            )
+    @classmethod
+    def from_attrs(
+        cls,
+        df:pd.DataFrame,
+        *,
+        key:str,
+        unit_key:str|None = None
+    )->Self:
+        value = df.attrs[key]
+        if not isinstance(value,float):
+            raise TypeError("エラー:無効なvalueです.")
+        if not unit_key is None:
+            unit = df.attrs[unit_key]
+            if not isinstance(unit,str):
+                raise TypeError("エラー:無効なunitです.")
+        else:
+            unit = ""
+
+        return cls(
+            value=value,
+            unit=unit
+        )
+
 
     @property
     def quantity(self):

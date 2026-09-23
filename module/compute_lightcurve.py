@@ -8,7 +8,7 @@ from matplotlib.patches import StepPatch
 from module import plot_utils, quantity_converter
 from module import models,dataframe_utils
 from module import mystatistics
-from module.models import PhaseParameter, ThermalSynchrotronUtils, calculate_xm
+from module.models import PhaseParameter, ScenarioParameter, ThermalSynchrotronUtils, calculate_xm
 from module.mydataclasses import IntVector, QuantityArray, QuantityArray1D, QuantityData, QuantityGrid,FloatGrid, YAMLReadable
 from module.mystatistics import CalculateChiSquared, MinimumChiSquared
 from module.plot_utils import LineStyle, MetadataConfig
@@ -172,30 +172,30 @@ class ChevalierParameters:
             ParameterNames.CHI2: self.chi2,
         }
 
-@dataclass(frozen=True,slots=True)
-class LightcurveMetadata:
-    params: ChevalierParameters
-    nu: QuantityData
-
-    @property
-    def as_dict(
-        self,
-    )->dict[str,Any]:
-        params = self.params
-        params_asdict = params.to_dict(
-            a_wind_unit=params.a_wind.unit,
-            phi_unit=params.phi_theta.unit,
-            lnu_unit=params.lnu_theta.unit
-        )
-        nu = self.nu
-        nu_asdict = {
-            LcColumns.NU_VALUE: nu.value,
-            LcColumns.NU_UNIT: nu.unit
-        }
-        return {
-            **params_asdict,
-            **nu_asdict
-        }
+# @dataclass(frozen=True,slots=True)
+# class LightcurveMetadata:
+#     params: ChevalierParameters
+#     nu: QuantityData
+#
+#     @property
+#     def as_dict(
+#         self,
+#     )->dict[str,Any]:
+#         params = self.params
+#         params_asdict = params.to_dict(
+#             a_wind_unit=params.a_wind.unit,
+#             phi_unit=params.phi_theta.unit,
+#             lnu_unit=params.lnu_theta.unit
+#         )
+#         nu = self.nu
+#         nu_asdict = {
+#             LcColumns.NU_VALUE: nu.value,
+#             LcColumns.NU_UNIT: nu.unit
+#         }
+#         return {
+#             **params_asdict,
+#             **nu_asdict
+#         }
 
 @dataclass(frozen=True,slots=True)
 class CandidateModelRows:
@@ -394,7 +394,7 @@ class CandidateModelLightcurveConfig:
     phi: models.PhaseParameter
 
 @dataclass(frozen=True,slots=True)
-class CandidateModelMetadata:
+class CandidateModelInput:
     eps_b: float
     eps_th: float
     mu_e_mu: float
@@ -501,7 +501,7 @@ class SourceframeSpecificFluxGrid(QuantityGrid):
 
 @dataclass(frozen=True,slots=True)
 class CandidateModelParameters:
-    metadata: CandidateModelMetadata
+    metadata: CandidateModelInput
     model_index: IntVector
     nu: QuantityArray1D
     phi_th: QuantityArray1D
@@ -518,7 +518,7 @@ class CandidateModelParameters:
         cls,
         df:pd.DataFrame
     )->Self:
-        metadata = CandidateModelMetadata.from_df_attrs(df)
+        metadata = CandidateModelInput.from_df_attrs(df)
         phi_unit = metadata.phi_unit
         fnu_unit = metadata.fnu_unit
         lnu_unit = metadata.lnu_unit
@@ -577,7 +577,7 @@ class CandidateModelParameters:
 
 @dataclass(frozen=True,slots=True)
 class CandidateModelLightcurveGrid:
-    metadata: CandidateModelMetadata
+    metadata: CandidateModelInput
     model_index: IntVector
     nu: QuantityArray1D
     t: QuantityArray1D
@@ -634,212 +634,190 @@ class CandidateModelLightcurveGrid:
 
         return df
 
-@dataclass(frozen=True, slots=True)
-class BinnedBestfitLightcurve:
-    params: ChevalierParameters
-    nu: QuantityData
-    t_center:   QuantityArray
-    t_left:     QuantityArray
-    t_right:    QuantityArray
-    fnu_net:  QuantityArray
-    fnu_persistent: QuantityArray
-    fnu_persistent_err: QuantityArray
-
-    @classmethod
-    def from_csv(
-        cls,
-        path:Path
-    )->Self:
-        df = FileReader.table_from_csv(
-            path=path,
-        )
-        metadata = ensure_string_keys(df.attrs)
-        params = ChevalierParameters.from_dict(metadata)
-        t_unit = metadata[LcColumns.T_UNIT]
-        fnu_unit = metadata[LcColumns.FNU_UNIT]
-        nu = QuantityData(
-            value = metadata[LcColumns.NU_VALUE],
-            unit = metadata[LcColumns.NU_UNIT]
-        )
-        t_center = QuantityArray(
-                values = dataframe_processors.convert_ndarray(
-                            df,LcColumns.T_CENTER
-                        ),
-                unit = t_unit
-        )
-        t_right = QuantityArray(
-                values = dataframe_processors.convert_ndarray(
-                            df,LcColumns.T_RIGHT
-                        ),
-                unit = t_unit
-        )
-        t_left = QuantityArray(
-                values = dataframe_processors.convert_ndarray(
-                            df,LcColumns.T_LEFT
-                        ),
-                unit = t_unit
-        )
-        fnu_net = QuantityArray(
-                values = dataframe_processors.convert_ndarray(
-                            df,LcColumns.FNU_NET
-                        ),
-                unit = fnu_unit
-        )
-        fnu_persistent = QuantityArray(
-                values = dataframe_processors.convert_ndarray(
-                            df,LcColumns.FNU_PERSISTENT
-                        ),
-                unit = fnu_unit
-        )
-        fnu_persistent_err = QuantityArray(
-                values = dataframe_processors.convert_ndarray(
-                            df,LcColumns.FNU_PERSISTENT_ERR
-                        ),
-                unit = fnu_unit
-        )
-        return cls(
-            params=params,
-            nu=nu,
-            t_center=t_center,
-            t_left = t_left,
-            t_right = t_right,
-            fnu_net = fnu_net,
-            fnu_persistent = fnu_persistent,
-            fnu_persistent_err = fnu_persistent_err
-        )
-
-    @property
-    def bin_edges(self):
-        t_unit = self.t_left.unit
-        t_left = self.t_left.to_value_in(t_unit)
-        t_right = self.t_right.to_value_in(t_unit)
-        bin_edges = np.concatenate(
-            (
-                t_left,
-                np.array([t_right[-1]]),
-            )
-        )
-        return QuantityArray(
-            values=bin_edges,
-            unit=t_unit
-        )
-
-    @property
-    def fnu_total(
-        self,
-    )->QuantityArray:
-        fnu_net = self.fnu_net
-        fnu_unit = fnu_net.unit
-        fnu_net_arr = fnu_net.to_value_in(fnu_unit)
-        fnu_per = self.fnu_persistent.to_value_in(fnu_unit)
-        fnu_per_err = self.fnu_persistent_err.to_value_in(fnu_unit)
-
-        if not (
-            self.t_center.values.size
-            == fnu_per.size
-            == fnu_per_err.size
-        ):
-            raise ValueError(
-                "計算光度曲線と定常放射の配列の長さが一致しません."
-            )
-
-        return QuantityArray(
-            values = fnu_net_arr + fnu_per,
-            unit = fnu_unit
-        )
-
-    def to_df(
-        self,
-        *,
-        t_unit:str,
-        fnu_unit:str,
-        a_wind_unit:str,
-        phi_unit:str,
-        lnu_unit:str,
-    )->pd.DataFrame:
-        metadata = self.params.to_dict(
-            a_wind_unit=a_wind_unit,
-            phi_unit=phi_unit,
-            lnu_unit=lnu_unit,
-        )
-        df = pd.DataFrame({
-            LcColumns.T_LEFT: self.t_left.to_value_in(t_unit),
-            LcColumns.T_CENTER: self.t_center.to_value_in(t_unit),
-            LcColumns.T_RIGHT: self.t_right.to_value_in(t_unit),
-            LcColumns.FNU_NET: self.fnu_net.to_value_in(fnu_unit),
-            LcColumns.FNU_PERSISTENT: self.fnu_persistent.to_value_in(fnu_unit),
-            LcColumns.FNU_PERSISTENT_ERR: self.fnu_persistent_err.to_value_in(fnu_unit),
-        })
-        df.attrs = {**metadata}
-        df.attrs[LcColumns.T_UNIT] = t_unit
-        df.attrs[LcColumns.FNU_UNIT] = fnu_unit
-        df.attrs[LcColumns.NU_VALUE] = self.nu.value
-        df.attrs[LcColumns.NU_UNIT] = self.nu.unit
-
-        return df
-
-    def plot_step(
-        self,
-        ax: Axes,
-        style: LineStyle,
-        *,
-        t_unit: str,
-        fnu_unit: str
-    )->StepPatch:
-        fnu_total = self.fnu_total.to_value_in(fnu_unit)
-        bin_edges = self.bin_edges.to_value_in(t_unit)
-
-        return ax.stairs(
-            fnu_total,
-            bin_edges,
-            baseline=self.fnu_persistent.to_value_in(fnu_unit)[0],
-            **style.to_kwargs(),
-        )
-
-    def plot_metadata(
-        self,
-        fig: Figure,
-        string:str
-    ):
-        nu = self.nu
-        params = self.params
-        a_wind_val = params.a_wind.value
-        a_wind_unit = params.a_wind.unit
-        fig.suptitle(
-            string
-        )
-
-@dataclass(frozen=True,slots=True)
-class LightcurveMetadataConfig:
-    fontsize: float
-    eps_b:  plot_utils.MetadataConfig
-    eps_th: plot_utils.MetadataConfig
-    mue_mu: plot_utils.MetadataConfig
-    distance: plot_utils.MetadataConfig
-    a_wind: plot_utils.MetadataConfig
-    beta_sh: plot_utils.MetadataConfig
+# @dataclass(frozen=True, slots=True)
+# class BinnedBestfitLightcurve:
+#     params: ChevalierParameters
+#     nu: QuantityData
+#     t_center:   QuantityArray
+#     t_left:     QuantityArray
+#     t_right:    QuantityArray
+#     fnu_net:  QuantityArray
+#     fnu_persistent: QuantityArray
+#     fnu_persistent_err: QuantityArray
+#
+#     @classmethod
+#     def from_csv(
+#         cls,
+#         path:Path
+#     )->Self:
+#         df = FileReader.table_from_csv(
+#             path=path,
+#         )
+#         metadata = ensure_string_keys(df.attrs)
+#         params = ChevalierParameters.from_dict(metadata)
+#         t_unit = metadata[LcColumns.T_UNIT]
+#         fnu_unit = metadata[LcColumns.FNU_UNIT]
+#         nu = QuantityData(
+#             value = metadata[LcColumns.NU_VALUE],
+#             unit = metadata[LcColumns.NU_UNIT]
+#         )
+#         t_center = QuantityArray(
+#                 values = dataframe_processors.convert_ndarray(
+#                             df,LcColumns.T_CENTER
+#                         ),
+#                 unit = t_unit
+#         )
+#         t_right = QuantityArray(
+#                 values = dataframe_processors.convert_ndarray(
+#                             df,LcColumns.T_RIGHT
+#                         ),
+#                 unit = t_unit
+#         )
+#         t_left = QuantityArray(
+#                 values = dataframe_processors.convert_ndarray(
+#                             df,LcColumns.T_LEFT
+#                         ),
+#                 unit = t_unit
+#         )
+#         fnu_net = QuantityArray(
+#                 values = dataframe_processors.convert_ndarray(
+#                             df,LcColumns.FNU_NET
+#                         ),
+#                 unit = fnu_unit
+#         )
+#         fnu_persistent = QuantityArray(
+#                 values = dataframe_processors.convert_ndarray(
+#                             df,LcColumns.FNU_PERSISTENT
+#                         ),
+#                 unit = fnu_unit
+#         )
+#         fnu_persistent_err = QuantityArray(
+#                 values = dataframe_processors.convert_ndarray(
+#                             df,LcColumns.FNU_PERSISTENT_ERR
+#                         ),
+#                 unit = fnu_unit
+#         )
+#         return cls(
+#             params=params,
+#             nu=nu,
+#             t_center=t_center,
+#             t_left = t_left,
+#             t_right = t_right,
+#             fnu_net = fnu_net,
+#             fnu_persistent = fnu_persistent,
+#             fnu_persistent_err = fnu_persistent_err
+#         )
+#
+#     @property
+#     def bin_edges(self):
+#         t_unit = self.t_left.unit
+#         t_left = self.t_left.to_value_in(t_unit)
+#         t_right = self.t_right.to_value_in(t_unit)
+#         bin_edges = np.concatenate(
+#             (
+#                 t_left,
+#                 np.array([t_right[-1]]),
+#             )
+#         )
+#         return QuantityArray(
+#             values=bin_edges,
+#             unit=t_unit
+#         )
+#
+#     @property
+#     def fnu_total(
+#         self,
+#     )->QuantityArray:
+#         fnu_net = self.fnu_net
+#         fnu_unit = fnu_net.unit
+#         fnu_net_arr = fnu_net.to_value_in(fnu_unit)
+#         fnu_per = self.fnu_persistent.to_value_in(fnu_unit)
+#         fnu_per_err = self.fnu_persistent_err.to_value_in(fnu_unit)
+#
+#         if not (
+#             self.t_center.values.size
+#             == fnu_per.size
+#             == fnu_per_err.size
+#         ):
+#             raise ValueError(
+#                 "計算光度曲線と定常放射の配列の長さが一致しません."
+#             )
+#
+#         return QuantityArray(
+#             values = fnu_net_arr + fnu_per,
+#             unit = fnu_unit
+#         )
+#
+#     def to_df(
+#         self,
+#         *,
+#         t_unit:str,
+#         fnu_unit:str,
+#         a_wind_unit:str,
+#         phi_unit:str,
+#         lnu_unit:str,
+#     )->pd.DataFrame:
+#         metadata = self.params.to_dict(
+#             a_wind_unit=a_wind_unit,
+#             phi_unit=phi_unit,
+#             lnu_unit=lnu_unit,
+#         )
+#         df = pd.DataFrame({
+#             LcColumns.T_LEFT: self.t_left.to_value_in(t_unit),
+#             LcColumns.T_CENTER: self.t_center.to_value_in(t_unit),
+#             LcColumns.T_RIGHT: self.t_right.to_value_in(t_unit),
+#             LcColumns.FNU_NET: self.fnu_net.to_value_in(fnu_unit),
+#             LcColumns.FNU_PERSISTENT: self.fnu_persistent.to_value_in(fnu_unit),
+#             LcColumns.FNU_PERSISTENT_ERR: self.fnu_persistent_err.to_value_in(fnu_unit),
+#         })
+#         df.attrs = {**metadata}
+#         df.attrs[LcColumns.T_UNIT] = t_unit
+#         df.attrs[LcColumns.FNU_UNIT] = fnu_unit
+#         df.attrs[LcColumns.NU_VALUE] = self.nu.value
+#         df.attrs[LcColumns.NU_UNIT] = self.nu.unit
+#
+#         return df
+#
+#     def plot_step(
+#         self,
+#         ax: Axes,
+#         style: LineStyle,
+#         *,
+#         t_unit: str,
+#         fnu_unit: str
+#     )->StepPatch:
+#         fnu_total = self.fnu_total.to_value_in(fnu_unit)
+#         bin_edges = self.bin_edges.to_value_in(t_unit)
+#
+#         return ax.stairs(
+#             fnu_total,
+#             bin_edges,
+#             baseline=self.fnu_persistent.to_value_in(fnu_unit)[0],
+#             **style.to_kwargs(),
+#         )
+#
+#     def plot_metadata(
+#         self,
+#         fig: Figure,
+#         string:str
+#     ):
+#         nu = self.nu
+#         params = self.params
+#         a_wind_val = params.a_wind.value
+#         a_wind_unit = params.a_wind.unit
+#         fig.suptitle(
+#             string
+#         )
 
 @dataclass(frozen=True,slots=True)
-class CandidateModelLightcurveMetadata(CandidateModelMetadata):
+class CandidateModelLightcurveMetadata(CandidateModelInput):
     t_unit: str
-
-    def plot(
-        self,
-        plotter:plot_utils.Plotter,
-        style: LightcurveMetadataConfig
-    ):
-        strings = [
-            style.eps_b.label_format.to_text(self.eps_b),
-            style.eps_th.label_format.to_text(self.eps_th),
-            style.mue_mu.label_format.to_text(self.mu_e_mu),
-            style.distance.label_format.to_text(self.distance.value_in(self.distance.unit)),
-        ]
-        plotter.title(strings,style.fontsize)
 
 @dataclass(frozen=True,slots=True)
 class CandidateModelBinnedLightcurve:
     metadata: CandidateModelLightcurveMetadata
     candidate_model_index: int
+    model_index: int
     nu: QuantityData
     fnu_flare: QuantityArray1D
     t_center: QuantityArray1D
@@ -850,6 +828,7 @@ class CandidateModelBinnedLightcurve:
 class CandidateModelLightcurve:
     metadata: CandidateModelLightcurveMetadata
     candidate_model_index: int
+    model_index: int
     nu: QuantityData
     t: QuantityArray1D
     fnu_obs_frame: QuantityArray1D
@@ -865,10 +844,14 @@ class CandidateModelLightcurve:
         nu_array = QuantityArray1D.from_df(
             df,models.ColumnNames.NU,metadata.nu_unit
         )
+        model_index = IntVector.from_df(
+            df,models.ColumnNames.MODEL_INDEX
+        ).as_scalar()
 
         return cls(
             metadata = metadata,
             candidate_model_index=candidate_model_index,
+            model_index = model_index,
             t = QuantityArray1D.from_df(
                 df,models.ColumnNames.T,metadata.t_unit
             ),
@@ -958,6 +941,7 @@ class CandidateModelLightcurve:
         return type(self)(
             metadata=self.metadata,
             candidate_model_index=self.candidate_model_index,
+            model_index = self.model_index,
             t=QuantityArray1D(
                 values=np.concatenate((
                     np.array([0.0], dtype=np.float64),
@@ -1088,6 +1072,7 @@ class CandidateModelLightcurve:
         return CandidateModelBinnedLightcurve(
             metadata=self.metadata,
             candidate_model_index=self.candidate_model_index,
+            model_index= self.model_index,
             nu = self.nu,
             t_center=QuantityArray1D(t_center,t_unit),
             t_left=QuantityArray1D(t_left,t_unit),
@@ -1100,6 +1085,7 @@ class CandidateModelLightcurve:
 class CandidateModelTotalLightcurve:
     metadata: CandidateModelLightcurveMetadata
     candidate_model_index: int
+    model_index: int
     nu: QuantityData
     t_center: QuantityArray1D
     t_left: QuantityArray1D
@@ -1118,9 +1104,13 @@ class CandidateModelTotalLightcurve:
         nu_arr = QuantityArray1D.from_df(
             df,models.ColumnNames.NU,metadata.nu_unit
         )
+        model_index = IntVector.from_df(
+            df,models.ColumnNames.MODEL_INDEX
+        ).as_scalar()
         return cls(
             metadata = metadata,
             candidate_model_index=candidate_model_index,
+            model_index = model_index,
             t_center = QuantityArray1D.from_df(
                 df,models.ColumnNames.T_CENTER,metadata.t_unit
             ),
@@ -1164,6 +1154,7 @@ class CandidateModelTotalLightcurve:
             candidate_model_index=(
                 lightcurve.candidate_model_index
             ),
+            model_index = lightcurve.model_index,
             nu=lightcurve.nu,
             t_center=lightcurve.t_center,
             t_left=lightcurve.t_left,
@@ -1270,6 +1261,11 @@ class CandidateModelFitResult:
                 self.lightcurve.candidate_model_index,
                 dtype=np.int64
             ),
+            models.ColumnNames.MODEL_INDEX: np.full(
+                n_bin,
+                self.lightcurve.model_index,
+                dtype=np.int64
+            ),
             models.ColumnNames.NU: np.full(
                 n_bin,
                 self.lightcurve.nu.value_in(nu_unit),
@@ -1286,6 +1282,11 @@ class CandidateModelFitResult:
         })
         df.attrs.update({**asdict(metadata)})
         return df
+
+@dataclass(frozen=True, slots=True)
+class CandidateModelParameter(CandidateModelInput):
+    a_wind_value: float
+    beta_sh: float
 
 @dataclass(frozen=True, slots=True)
 class CandidateModelFitResults:
@@ -1333,6 +1334,54 @@ class CandidateModelFitResults:
     @property
     def n_candidates(self):
         return len(self.models)
+
+@dataclass(frozen=True, slots=True)
+class CandidateModelMetadata(models.ScenarioParameter):
+    a_wind: QuantityData
+    beta_sh: QuantityData
+
+    @classmethod
+    def from_df(
+        cls,
+        df_models:pd.DataFrame,
+        model_index:int
+    ):
+        row:pd.Series = df_models.loc[
+            df_models[
+                models.ColumnNames.MODEL_INDEX
+            ] == model_index
+        ].iloc[0]
+        return cls(
+            eps_b=QuantityData.from_attrs(
+                df_models,
+                key=models.MetadataNames.EPS_B,
+            ),
+            eps_th=QuantityData.from_attrs(
+                df_models,
+                key=models.MetadataNames.EPS_TH,
+            ),
+            mu_e_mu=QuantityData.from_attrs(
+                df_models,
+                key=models.MetadataNames.MU_E_MU,
+            ),
+            distance=QuantityData.from_attrs(
+                df_models,
+                key=models.MetadataNames.DISTANCE_VALUE,
+                unit_key=models.MetadataNames.DISTANCE_UNIT
+            ),
+            a_wind = QuantityData.from_series(
+                row=row,
+                column=models.ColumnNames.A_WIND,
+                unit=df_models.attrs[ParameterNames.A_WIND_UNIT]
+            ),
+            beta_sh = QuantityData.from_series(
+                row=row,
+                column=models.ColumnNames.BETA_SH,
+                unit=""
+            )
+        )
+
+
 
 # @dataclass(frozen=True,slots=True)
 # class BinnedCalculationLightcurve:
@@ -1428,10 +1477,6 @@ class CandidateModelFitResults:
 #             t_left=self.t_left_quantity
 #         )
 #
-@dataclass(frozen=True, slots=True)
-class CalculationLightcurve:
-    t: QuantityArray1D
-    fnu: QuantityArray1D
 #
 #     @classmethod
 #     def from_csv(
@@ -1881,70 +1926,3 @@ class CalculationLightcurve:
 #     )
 #     return lc.with_zero_boundary()
 #
-@dataclass(frozen=True, slots=True)
-class LightcurveStyleConfig:
-    model_binned: plot_utils.LineStyle
-    model: plot_utils.LineStyle
-    observation: plot_utils.ScatterStyle
-    persistent: plot_utils.LineStyle
-#
-@dataclass(frozen=True, slots=True)
-class PlotConfig(YAMLReadable):
-    layout: plot_utils.PlotLayoutConfig
-    styles: LightcurveStyleConfig
-    metadata: LightcurveMetadataConfig
-
-    @property
-    def units(self)->tuple[str,str]:
-        return (
-            self.layout.axes.x.label.unit,
-            self.layout.axes.y.label.unit
-        )
-#
-#     @classmethod
-#     def from_yaml(
-#         cls,
-#         path: Path
-#     )->Self:
-#         dict_data = FileReader.yaml_safe(path)
-#         return DATACLASS_CONVERTER.structure(
-#             dict_data,
-#             cls
-#         )
-#
-#     def make_metadata_strings(
-#         self,
-#         params: ChevalierParameters,
-#     ) -> list[str]:
-#
-#         config = self.metadata
-#         field_names = {field.name for field in fields(params)}
-#
-#         result: list[str] = []
-#
-#         for key, metadata_config in config.items():
-#             if key not in field_names:
-#                 raise KeyError(
-#                     f"{key!r} is not a field of {type(params).__name__}"
-#                 )
-#
-#             if not metadata_config.show:
-#                 continue
-#
-#             value = getattr(params, key)
-#
-#             if isinstance(value,QuantityData):
-#                 if metadata_config.unit is None:
-#                     raise ValueError(
-#                         f"物理量の単位が指定されていません {key!r}"
-#                     )
-#                 else:
-#                     numeric_value = value.value_in(metadata_config.unit)
-#                     str_element = f"{metadata_config.format_value(numeric_value)} {metadata_config.unit}"
-#             else:
-#                 numeric_value = value
-#                 str_element = f"{metadata_config.format_value(numeric_value)}"
-#
-#             result.append(str_element)
-#
-#         return result

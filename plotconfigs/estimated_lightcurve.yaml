@@ -62,19 +62,19 @@
 #       fmt: '.1f'
 #
 styles:
-  model_binned: 
+  binned: 
     color: "#000000"
     linewidth: 2.0
     linestyle: "-"
     alpha: null
     zorder: 1.0
-  model: 
+  continuous: 
     color: "#84919E"
     linewidth: 2.0
     linestyle: "--"
     alpha: null
     zorder: 1.0
-  observation:
+  observed:
     marker: "o"
     markersize: 6.0
     markerfacecolor : "#000000"
@@ -87,7 +87,7 @@ styles:
     linestyle: "none"
     alpha: null
     zorder: 0.0
-  persistent: 
+  background: 
     color: "#000000"
     linewidth: 1.0
     linestyle: "--"
@@ -142,7 +142,7 @@ metadata:
       prefix: 'D'
       fmt: '.1f'
       unit: '\mathrm{kpc}'
-  mue_mu:
+  mu_e_mu:
     show: true
     unit: ""
     label_format:

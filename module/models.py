@@ -94,6 +94,13 @@ class ChiSquaredParameters(StrEnum):
     N_DOF = auto()
 
 @dataclass(frozen=True,slots=True)
+class ScenarioParameter:
+    eps_b: QuantityData
+    eps_th: QuantityData
+    mu_e_mu: QuantityData
+    distance: QuantityData
+
+@dataclass(frozen=True,slots=True)
 class ElectronTemperature:
     values:FloatArray
 

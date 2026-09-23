@@ -1,8 +1,10 @@
 from module import dataframe_processors, dataframe_utils
 from module.inputs_as_dataclass import GeneralInputs
-from module.mydataclasses import QuantityData
+from dataclasses import dataclass
+from module.mydataclasses import QuantityData, YAMLReadable
 from module.utilities import filereaders as fr
 from pathlib import Path
+from module import lightcurve_plotter
 import argparse
 from module.plot import curve
 import matplotlib.pyplot as plt
@@ -10,9 +12,64 @@ from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 import pandas as pd
 from module import plot_utils,observation
-from module.observation import LongformatLightcurve
-from module.compute_lightcurve import BinnedBestfitLightcurve, CalculationLightcurve, CandidateModelFitResults,PlotConfig
+from module.observation import LongformatLightcurve, ObservedLightcurvePlotter
+from module.compute_lightcurve import CandidateModelFitResults, CandidateModelMetadata
 from module.utils import FileReader
+
+@dataclass(frozen=True,slots=True)
+class LightcurveMetadataConfig:
+    fontsize: float
+    eps_b:  plot_utils.MetadataConfig
+    eps_th: plot_utils.MetadataConfig
+    mu_e_mu: plot_utils.MetadataConfig
+    distance: plot_utils.MetadataConfig
+    a_wind: plot_utils.MetadataConfig
+    beta_sh: plot_utils.MetadataConfig
+
+    def build_component(
+        self,
+        metadata_quantities: CandidateModelMetadata
+    )->lightcurve_plotter.LightcurveMetadata:
+        return lightcurve_plotter.LightcurveMetadata(
+            fontsize=self.fontsize,
+            eps_b=plot_utils.MetadataComponent(
+                quantity=metadata_quantities.eps_b,
+                config=self.eps_b
+            ),
+            eps_th=plot_utils.MetadataComponent(
+                quantity=metadata_quantities.eps_th,
+                config=self.eps_th
+            ),
+            mu_e_mu=plot_utils.MetadataComponent(
+                quantity=metadata_quantities.mu_e_mu,
+                config=self.mu_e_mu
+            ),
+            distance=plot_utils.MetadataComponent(
+                quantity=metadata_quantities.distance,
+                config=self.distance
+            ),
+            a_wind=plot_utils.MetadataComponent(
+                quantity=metadata_quantities.a_wind,
+                config=self.a_wind
+            ),
+            beta_sh=plot_utils.MetadataComponent(
+                quantity=metadata_quantities.beta_sh,
+                config=self.beta_sh
+            ),
+        )
+
+@dataclass(frozen=True, slots=True)
+class PlotConfig(YAMLReadable):
+    layout: plot_utils.PlotLayoutConfig
+    styles: lightcurve_plotter.Styles
+    metadata: LightcurveMetadataConfig
+
+    @property
+    def units(self)->tuple[str,str]:
+        return (
+            self.layout.axes.x.label.unit,
+            self.layout.axes.y.label.unit
+        )
 
 def parse_args()->argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -24,6 +81,11 @@ def parse_args()->argparse.Namespace:
     )
     parser.add_argument(
         "--candidate_binned_lightcurves",
+        type=Path,
+        required=True
+    )
+    parser.add_argument(
+        "--candidate_models",
         type=Path,
         required=True
     )
@@ -51,44 +113,40 @@ def main():
 
     conf = GeneralInputs.from_yaml(args.input)
     conf_plot = PlotConfig.from_yaml(args.plotconfig)
+    t_unit,fnu_unit = conf_plot.units
+
     obslc_long = LongformatLightcurve.from_csv(args.obslc)
 
     cand_lcs = CandidateModelFitResults.from_df_long(
         FileReader.table_from_csv(args.candidate_binned_lightcurves)
     )
+    df_models = FileReader.table_from_csv(args.candidate_models)
 
     with PdfPages(outpath) as pdf:
         plotter = plot_utils.Plotter.from_config(conf_plot.layout)
 
-        t_unit,fnu_unit = conf_plot.units
 
         lc = cand_lcs.models[0].lightcurve
-        lc.plot(
-            plotter,
-            style=conf_plot.styles.model_binned,
-            t_unit=t_unit,
-            fnu_unit=fnu_unit
-        )
         obslc = obslc_long.select_frequency(
             nu = lc.nu,
             unit = lc.nu.unit
         )
-        obslc.plot(
-            plotter,
-            style=conf_plot.styles.observation,
-            t_unit = t_unit,
-            fnu_unit = fnu_unit
+        model_metadata = CandidateModelMetadata.from_df(
+            df_models=df_models,
+            model_index = lc.model_index
         )
-        obslc.plot_persistent(
-            plotter,
-            style=conf_plot.styles.persistent,
-            t_unit = t_unit,
-            fnu_unit = fnu_unit
+        metadata = conf_plot.metadata.build_component(
+            metadata_quantities=model_metadata
         )
-        cand_lcs.metadata.plot(
-            plotter,
-            style=conf_plot.metadata
+        lc_plotter = lightcurve_plotter.Lightcurve.from_data(
+            obs_lc=obslc,
+            binned_lc=lc,
+            styles=conf_plot.styles,
+            metadata=metadata,
+            t_unit=t_unit,
+            fnu_unit=fnu_unit
         )
+        lc_plotter.plot(plotter)
         # metadata_string = conf_plot.make_metadata_strings(lc.params)
         # lc.plot_metadata(fig,", ".join(metadata_string))
         # lc_raw.plot(
@@ -100,7 +158,6 @@ def main():
         # )
         pdf.savefig(plotter.fig)
         plt.close(plotter.fig)
-    #
     return
 
 if __name__ == "__main__":

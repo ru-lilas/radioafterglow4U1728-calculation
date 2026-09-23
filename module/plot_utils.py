@@ -599,6 +599,24 @@ class MetadataConfig:
     unit: str
     label_format:QuantityLabel
 
+@dataclass(frozen=True, slots=True)
+class MetadataComponent:
+    quantity: QuantityData
+    config: MetadataConfig
+
+    def add_strings(
+        self,
+        strings:list[str]
+    ):
+        config = self.config
+        if not config.show:
+            return None
+        else:
+            value = self.quantity.value_in(config.unit)
+            text = config.label_format.to_text(value)
+            strings.append(text)
+            return None
+
 class LineLabel:
     @staticmethod
     def log10(

@@ -71,12 +71,14 @@ lcfig: $(FILEPATH_CANDIDATE_LIGHTCURVES_PDF)
 $(FILEPATH_CANDIDATE_LIGHTCURVES_PDF): \
 	$(FILEPATH_INPUT) \
 	$(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES) \
+	$(FILEPATH_CANDIDATE_MODELS) \
 	$(FILEPATH_OBSLC) \
 	plotconfigs/estimated_lightcurve.yaml \
 	scripts/plot_lightcurve.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		--input $< \
 		--$(CANDIDATE_BINNED_LIGHTCURVES) $(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES) \
+		--$(CANDIDATE_MODELS) $(FILEPATH_CANDIDATE_MODELS) \
 		--obslc $(FILEPATH_OBSLC) \
 		--plotconfig plotconfigs/estimated_lightcurve.yaml \
 		--output $@
