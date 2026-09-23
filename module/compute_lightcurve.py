@@ -7,6 +7,7 @@ from matplotlib.figure import Figure
 from matplotlib.patches import StepPatch
 from module import plot_utils, quantity_converter
 from module import models,dataframe_utils
+from module import mystatistics
 from module.models import PhaseParameter, ThermalSynchrotronUtils, calculate_xm
 from module.mydataclasses import IntVector, QuantityArray, QuantityArray1D, QuantityData, QuantityGrid,FloatGrid
 from module.mystatistics import CalculateChiSquared, MinimumChiSquared
@@ -823,74 +824,6 @@ class CandidateModelBinnedLightcurve:
     t_left: QuantityArray1D
     t_right: QuantityArray1D
 
-    def fnu_total(
-        self,
-        fnu_bg: QuantityArray1D,
-    )->QuantityArray1D:
-        fnu_unit = self.metadata.fnu_unit
-
-        if not (
-            self.t_center.length
-            == fnu_bg.length
-        ):
-            raise ValueError(
-                "calculated fnuとbackground fnuの配列長が一致しません."
-            )
-        else:
-            return QuantityArray1D.from_quantity(
-                self.fnu_flare.quantity + fnu_bg.quantity
-            )
-
-    def to_df(
-        self,
-        fnu_bg: QuantityArray1D
-    )->pd.DataFrame:
-        metadata = self.metadata
-        n_bin = self.t_center.length
-
-        t_unit = metadata.t_unit
-        nu_unit = metadata.nu_unit
-        fnu_unit = metadata.fnu_unit
-
-        if not (
-            self.t_left.length
-            == self.t_right.length
-            == self.fnu_flare.length
-            == fnu_bg.length
-            == n_bin
-        ):
-            raise ValueError(
-                "bin平均光度曲線の配列長が一致しません."
-            )
-
-        fnu_total = self.fnu_total(fnu_bg)
-
-        df = pd.DataFrame({
-            models.ColumnNames.CANDIDATE_MODEL_INDEX: np.full(
-                n_bin,
-                self.candidate_model_index,
-                dtype=np.int64
-            ),
-            models.ColumnNames.NU: np.full(
-                n_bin,
-                self.nu.value_in(nu_unit),
-                dtype=np.float64
-            ),
-            models.ColumnNames.T_CENTER: self.t_center.to_value_in(t_unit),
-            models.ColumnNames.T_LEFT: self.t_left.to_value_in(t_unit),
-            models.ColumnNames.T_RIGHT: self.t_right.to_value_in(t_unit),
-            models.ColumnNames.FNU_FLARE: self.fnu_flare.to_value_in(fnu_unit),
-            models.ColumnNames.FNU_BG: fnu_bg.to_value_in(fnu_unit),
-            models.ColumnNames.FNU_TOTAL: fnu_total.to_value_in(fnu_unit),
-        })
-        df.attrs.update({
-            models.MetadataNames.T_UNIT: t_unit,
-            models.MetadataNames.FNU_UNIT: fnu_unit,
-            models.MetadataNames.NU_UNIT: nu_unit
-        })
-        return df
-
-
 @dataclass(frozen=True,slots=True)
 class CandidateModelLightcurve:
     metadata: CandidateModelLightcurveMetadata
@@ -1139,6 +1072,132 @@ class CandidateModelLightcurve:
             t_right=QuantityArray1D(t_right,t_unit),
             fnu_flare=fnu_average,
         )
+
+
+@dataclass(frozen=True, slots=True)
+class CandidateModelTotalLightcurve:
+    metadata: CandidateModelLightcurveMetadata
+    candidate_model_index: int
+    nu: QuantityData
+    t_center: QuantityArray1D
+    t_left: QuantityArray1D
+    t_right: QuantityArray1D
+    fnu_flare: QuantityArray1D
+    fnu_bg: QuantityArray1D
+    fnu_total: QuantityArray1D
+
+    @classmethod
+    def from_binned_lightcurve(
+        cls,
+        lightcurve: CandidateModelBinnedLightcurve,
+        fnu_bg: QuantityArray1D,
+    ) -> Self:
+        if lightcurve.t_center.length != fnu_bg.length:
+            raise ValueError(
+                "光度曲線とbackgroundの配列長が"
+                "一致していません."
+            )
+
+        fnu_total = QuantityArray1D.from_quantity(
+            lightcurve.fnu_flare.quantity
+            + fnu_bg.quantity
+        )
+
+        return cls(
+            metadata=lightcurve.metadata,
+            candidate_model_index=(
+                lightcurve.candidate_model_index
+            ),
+            nu=lightcurve.nu,
+            t_center=lightcurve.t_center,
+            t_left=lightcurve.t_left,
+            t_right=lightcurve.t_right,
+            fnu_flare=lightcurve.fnu_flare,
+            fnu_bg=fnu_bg,
+            fnu_total=fnu_total,
+        )
+
+@dataclass(frozen=True, slots=True)
+class CandidateModelFitResult:
+    lightcurve: CandidateModelTotalLightcurve
+    chi2: float
+    ndof: int
+
+    @classmethod
+    def from_binned_lightcurve(
+        cls,
+        lightcurve: CandidateModelTotalLightcurve,
+        fnu_data: QuantityArray1D,
+        fnu_err: QuantityArray1D,
+        *,
+        n_params: int
+    )->Self:
+        n_data = lightcurve.fnu_total.length
+        fnu_unit = lightcurve.metadata.fnu_unit
+
+        if not (
+            fnu_data.length
+            == fnu_err.length
+            == n_data
+        ):
+            raise ValueError(
+            "モデル, 観測値, 観測誤差の"
+            "配列長が一致していません."
+        )
+        chi2 = CalculateChiSquared.from_vector(
+            model = lightcurve.fnu_total.to_floatarray1d(fnu_unit),
+            observed = fnu_data.to_floatarray1d(fnu_unit),
+            error = fnu_err.to_floatarray1d(fnu_unit)
+        )
+
+        return cls(
+            lightcurve=lightcurve,
+            chi2=chi2,
+            ndof=n_data-n_params
+        )
+
+    def to_df(
+        self,
+    )->pd.DataFrame:
+        metadata = self.lightcurve.metadata
+        n_bin = self.lightcurve.t_center.length
+
+        t_unit = metadata.t_unit
+        nu_unit = metadata.nu_unit
+        fnu_unit = metadata.fnu_unit
+
+        if not (
+            self.lightcurve.t_left.length
+            == self.lightcurve.t_right.length
+            == self.lightcurve.fnu_total.length
+            == n_bin
+        ):
+            raise ValueError(
+                "bin平均光度曲線の配列長が一致しません."
+            )
+
+        df = pd.DataFrame({
+            models.ColumnNames.CANDIDATE_MODEL_INDEX: np.full(
+                n_bin,
+                self.lightcurve.candidate_model_index,
+                dtype=np.int64
+            ),
+            models.ColumnNames.NU: np.full(
+                n_bin,
+                self.lightcurve.nu.value_in(nu_unit),
+                dtype=np.float64
+            ),
+            models.ColumnNames.T_CENTER: self.lightcurve.t_center.to_value_in(t_unit),
+            models.ColumnNames.T_LEFT: self.lightcurve.t_left.to_value_in(t_unit),
+            models.ColumnNames.T_RIGHT: self.lightcurve.t_right.to_value_in(t_unit),
+            models.ColumnNames.FNU_FLARE: self.lightcurve.fnu_flare.to_value_in(fnu_unit),
+            models.ColumnNames.FNU_BG: self.lightcurve.fnu_bg.to_value_in(fnu_unit),
+            models.ColumnNames.FNU_TOTAL: self.lightcurve.fnu_total.to_value_in(fnu_unit),
+            models.ChiSquaredParameters.CHI_SQUARED: self.chi2,
+            models.ChiSquaredParameters.N_DOF: self.ndof,
+        })
+        df.attrs.update({**asdict(metadata)})
+        return df
 
 # @dataclass(frozen=True,slots=True)
 # class BinnedCalculationLightcurve:

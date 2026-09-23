@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from dataclasses import dataclass,asdict
-from module import dataframe_utils
 from module.input_reader import InputReader
 from module.mydataclasses import YAMLReadable
 from module.types import FloatArray, FloatGrid,FloatArray1D
@@ -48,22 +47,6 @@ class MinimumChiSquared(YAMLReadable):
 
 @dataclass(frozen=True,slots=True)
 class ChiSquared(FloatArray1D):
-
-    @classmethod
-    def from_csv(
-        cls,
-        path:Path
-    ):
-        df = FileReader.table_from_csv(path)
-        return cls(
-            values = dataframe_utils.extract_column_as_ndarray(df,"chi2"),
-        )
-
-    def minimum_chi2(
-        self
-    ): 
-        return MinimumChiSquared.from_array(self)
-
     def to_df(
         self
     )->pd.DataFrame:
@@ -88,6 +71,20 @@ class ChiSquared(FloatArray1D):
         )
 
 class CalculateChiSquared:
+    @staticmethod
+    def from_vector(
+        model: FloatArray1D,
+        observed: FloatArray1D,
+        error: FloatArray1D
+    )->float:
+        value = np.sum(
+                np.square(
+                    (model.values - observed.values) / error.values
+                ),
+                dtype=np.float64,
+            )
+        return value
+
     @staticmethod
     def from_grid(
         model: FloatGrid,

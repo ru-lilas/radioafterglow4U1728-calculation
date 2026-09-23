@@ -5,6 +5,7 @@ from dacite import from_dict
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize,ListedColormap
 from matplotlib.lines import Line2D
+from matplotlib.patches import StepPatch
 from matplotlib.ticker import LogLocator
 from matplotlib import colormaps
 from matplotlib.colorbar import Colorbar
@@ -627,4 +628,19 @@ class Plotter:
         return self.ax.plot(
             x,y,
             **style.to_kwargs()
+        )
+
+    def step(
+        self,
+        ax: Axes,
+        style: LineStyle,
+        *,
+        x: ArrayLike,
+        y: ArrayLike,
+        baseline:float = 0.0
+    )->StepPatch:
+        return ax.stairs(
+            x,y,
+            baseline=baseline,
+            **style.to_kwargs(),
         )

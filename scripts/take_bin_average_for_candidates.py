@@ -16,9 +16,11 @@ from module.observation import LongformatLightcurve
 from module.utils import FileReader, FileWriter
 from module.synchrotron_numerical_table import DimensionlessThermalLuminosityGrid, ThermalSynchrotronIntegrals
 from module.compute_lightcurve import (
+    CandidateModelFitResult,
     CandidateModelLightcurve,
     CandidateModelLightcurveGrid,
     CandidateModelParameters,
+    CandidateModelTotalLightcurve,
     ObserverframeSpecificFluxGrid,
     PhaseParameterGrid,
     SpecificLuminosityGrid,
@@ -78,7 +80,17 @@ def main():
             drop_incomplete_bin=True
         )
         fnu_bg  =obs_lc_sampled.fnu_background
-        dfs.append(model_binned_lc.to_df(fnu_bg=fnu_bg))
+        cand_total_lc = CandidateModelTotalLightcurve.from_binned_lightcurve(
+            lightcurve=model_binned_lc,
+            fnu_bg=fnu_bg
+        )
+        cand_chi2_result = CandidateModelFitResult.from_binned_lightcurve(
+            lightcurve=cand_total_lc,
+            fnu_data = obs_lc_sampled.fnu_total,
+            fnu_err = obs_lc_sampled.fnu_total_err,
+            n_params = 2
+        )
+        dfs.append(cand_chi2_result.to_df())
 
     dfs_wide = WideFormatDataFrames(dfs)
     df_long = dfs_wide.to_long_format()

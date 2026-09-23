@@ -213,6 +213,12 @@ class QuantityArray1D(QuantityArray):
     def length(self):
         return self.values.size
 
+    def to_floatarray1d(
+        self,
+        unit: str
+    ):
+        return FloatArray1D(self.to_value_in(unit))
+
 
 
 @dataclass(frozen=True, slots=True)

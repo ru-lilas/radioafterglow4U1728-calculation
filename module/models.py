@@ -89,6 +89,10 @@ class ColumnNames(StrEnum):
     FNU_TOTAL = auto()
     FNU_BG = auto()
 
+class ChiSquaredParameters(StrEnum):
+    CHI_SQUARED = auto()
+    N_DOF = auto()
+
 @dataclass(frozen=True,slots=True)
 class ElectronTemperature:
     values:FloatArray

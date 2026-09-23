@@ -263,7 +263,7 @@ class ObservedLightcurve:
             df = self.df,
             column= Columns.FNU,
         )
-        return QuantityArray(
+        return QuantityArray1D(
             values = values,
             unit = self.metadata.fnu_unit
         )
@@ -274,7 +274,7 @@ class ObservedLightcurve:
             df = self.df,
             column= Columns.FNU_ERR,
         )
-        return QuantityArray(
+        return QuantityArray1D(
             values = values,
             unit = self.metadata.fnu_unit
         )
