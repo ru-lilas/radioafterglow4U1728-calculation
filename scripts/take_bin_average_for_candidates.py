@@ -4,12 +4,13 @@
 """
 
 import argparse
+import pandas as pd
 from pathlib import Path
 
 from module import compute_lightcurve
 from module import mystatistics
 from module.inputs_as_dataclass import GeneralInputs
-from module.mydataclasses import QuantityData
+from module.mydataclasses import QuantityData, WideFormatDataFrames
 from module.mystatistics import CalculateChiSquared
 from module.observation import LongformatLightcurve
 from module.utils import FileReader, FileWriter
@@ -65,16 +66,27 @@ def main():
 
     # observation lightcurve data
     obslc_long = LongformatLightcurve.from_csv(args.obslc)
+    dfs:list[pd.DataFrame] = []
     for cand_lc in model_lcs:
         nu = cand_lc.nu
         obs_lc = obslc_long.select_frequency(nu,unit=nu.unit)
-        binning = obs_lc.time_bin_bounds(conf_chi2.timewindow)
+        obs_lc_sampled = obs_lc.select_timewindow(conf_chi2.timewindow)
+        binning = obs_lc_sampled.time_bin_bounds(conf_chi2.timewindow)
         cand_lc_with_zero_boundary = cand_lc.insert_zero_boundary()
         model_binned_lc = cand_lc_with_zero_boundary.bin_average(
             binning,
             drop_incomplete_bin=True
         )
-        print(model_binned_lc)
+        fnu_bg  =obs_lc_sampled.fnu_background
+        dfs.append(model_binned_lc.to_df(fnu_bg=fnu_bg))
+
+    dfs_wide = WideFormatDataFrames(dfs)
+    df_long = dfs_wide.to_long_format()
+    FileWriter.df_to_csv(
+        path=args.output,
+        df=df_long,
+        save_attrs=True
+    )
     return
 
 if __name__ == "__main__":

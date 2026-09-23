@@ -79,9 +79,15 @@ class ColumnNames(StrEnum):
     LNU_PEAK_THIN = auto()
     NU = auto()
     T = auto()
+    T_CENTER = auto()
+    T_LEFT = auto()
+    T_RIGHT = auto()
     FNU_OBS_FRAME = auto()
     LNU = auto()
     FNU_SRC_FRAME = auto()
+    FNU_FLARE = auto()
+    FNU_TOTAL = auto()
+    FNU_BG = auto()
 
 @dataclass(frozen=True,slots=True)
 class ElectronTemperature:

@@ -209,6 +209,10 @@ class QuantityArray1D(QuantityArray):
             unit=self.unit
         )
 
+    @property
+    def length(self):
+        return self.values.size
+
 
 
 @dataclass(frozen=True, slots=True)
@@ -773,3 +777,21 @@ class QuantityList:
             for value in self.values
         ]
 
+@dataclass(frozen=True,slots=True)
+class WideFormatDataFrames:
+    dfs: list[pd.DataFrame]
+
+    def to_long_format(
+        self
+    )->pd.DataFrame:
+        attrs = self.dfs[0].attrs.copy()
+
+        if any(df.attrs != attrs for df in self.dfs[1:]):
+            raise ValueError(
+                "結合するDataFrameのattrsが一致していません."
+            )
+
+        return pd.concat(
+            self.dfs,
+            ignore_index=True,
+        )

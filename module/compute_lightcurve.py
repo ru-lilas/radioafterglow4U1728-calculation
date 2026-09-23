@@ -818,10 +818,78 @@ class CandidateModelBinnedLightcurve:
     metadata: CandidateModelLightcurveMetadata
     candidate_model_index: int
     nu: QuantityData
-    fnu_obs_frame: QuantityArray1D
+    fnu_flare: QuantityArray1D
     t_center: QuantityArray1D
     t_left: QuantityArray1D
     t_right: QuantityArray1D
+
+    def fnu_total(
+        self,
+        fnu_bg: QuantityArray1D,
+    )->QuantityArray1D:
+        fnu_unit = self.metadata.fnu_unit
+
+        if not (
+            self.t_center.length
+            == fnu_bg.length
+        ):
+            raise ValueError(
+                "calculated fnuとbackground fnuの配列長が一致しません."
+            )
+        else:
+            return QuantityArray1D.from_quantity(
+                self.fnu_flare.quantity + fnu_bg.quantity
+            )
+
+    def to_df(
+        self,
+        fnu_bg: QuantityArray1D
+    )->pd.DataFrame:
+        metadata = self.metadata
+        n_bin = self.t_center.length
+
+        t_unit = metadata.t_unit
+        nu_unit = metadata.nu_unit
+        fnu_unit = metadata.fnu_unit
+
+        if not (
+            self.t_left.length
+            == self.t_right.length
+            == self.fnu_flare.length
+            == fnu_bg.length
+            == n_bin
+        ):
+            raise ValueError(
+                "bin平均光度曲線の配列長が一致しません."
+            )
+
+        fnu_total = self.fnu_total(fnu_bg)
+
+        df = pd.DataFrame({
+            models.ColumnNames.CANDIDATE_MODEL_INDEX: np.full(
+                n_bin,
+                self.candidate_model_index,
+                dtype=np.int64
+            ),
+            models.ColumnNames.NU: np.full(
+                n_bin,
+                self.nu.value_in(nu_unit),
+                dtype=np.float64
+            ),
+            models.ColumnNames.T_CENTER: self.t_center.to_value_in(t_unit),
+            models.ColumnNames.T_LEFT: self.t_left.to_value_in(t_unit),
+            models.ColumnNames.T_RIGHT: self.t_right.to_value_in(t_unit),
+            models.ColumnNames.FNU_FLARE: self.fnu_flare.to_value_in(fnu_unit),
+            models.ColumnNames.FNU_BG: fnu_bg.to_value_in(fnu_unit),
+            models.ColumnNames.FNU_TOTAL: fnu_total.to_value_in(fnu_unit),
+        })
+        df.attrs.update({
+            models.MetadataNames.T_UNIT: t_unit,
+            models.MetadataNames.FNU_UNIT: fnu_unit,
+            models.MetadataNames.NU_UNIT: nu_unit
+        })
+        return df
+
 
 @dataclass(frozen=True,slots=True)
 class CandidateModelLightcurve:
@@ -1069,7 +1137,7 @@ class CandidateModelLightcurve:
             t_center=QuantityArray1D(t_center,t_unit),
             t_left=QuantityArray1D(t_left,t_unit),
             t_right=QuantityArray1D(t_right,t_unit),
-            fnu_obs_frame=fnu_average,
+            fnu_flare=fnu_average,
         )
 
 # @dataclass(frozen=True,slots=True)
