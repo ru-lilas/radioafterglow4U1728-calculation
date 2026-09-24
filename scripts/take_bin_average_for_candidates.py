@@ -16,7 +16,7 @@ from module.utils import FileReader, FileWriter
 from module.synchrotron_numerical_table import DimensionlessThermalLuminosityGrid, ThermalSynchrotronIntegrals
 from module.calculation_lightcurve import (
     CandidateModelFitResult,
-    CandidateModelLightcurve,
+    CandidateModelLightcurveContinuous,
     CandidateModelLightcurveGrid,
     CandidateModelParameters,
     CandidateModelTotalLightcurve,
@@ -56,14 +56,14 @@ def main():
     args = parse_args()
     conf_chi2 = GeneralInputs.from_yaml(args.input).chi2
     df_candidate_lcs = FileReader.table_from_csv(args.candidate_lcs)
-    model_lcs:list[CandidateModelLightcurve] = []
+    model_lcs:list[CandidateModelLightcurveContinuous] = []
     for cand_idx, df in df_candidate_lcs.groupby("candidate_model_index"):
         if not isinstance(cand_idx,int):
             raise TypeError(
                 "indexの型が不正です."
             )
         else:
-            model_lcs.append(CandidateModelLightcurve.from_df(cand_idx,df))
+            model_lcs.append(CandidateModelLightcurveContinuous.from_df(cand_idx,df))
 
     # observation lightcurve data
     obslc_long = LongformatLightcurve.from_csv(args.obslc)

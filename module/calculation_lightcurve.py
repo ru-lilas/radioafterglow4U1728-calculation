@@ -625,7 +625,7 @@ class CandidateModelBinnedLightcurve:
     t_right: QuantityArray1D
 
 @dataclass(frozen=True,slots=True)
-class CandidateModelLightcurve:
+class CandidateModelLightcurveContinuous:
     metadata: CandidateModelLightcurveMetadata
     candidate_model_index: int
     model_index: int
@@ -1104,51 +1104,174 @@ class CandidateModelParameter(CandidateModelInput):
     beta_sh: float
 
 @dataclass(frozen=True, slots=True)
-class CandidateModelFitResults:
+class CandidateModelLightcurve:
+    model_index: int
+    nu: QuantityData
+    fnu_bg: QuantityData
+    chi_squared: float
+    n_dof: int
+    df: pd.DataFrame
+
+    @property
+    def fnu_total(self)->QuantityArray1D:
+        return QuantityArray1D.from_df(
+            self.df,
+            column=models.ColumnNames.FNU_TOTAL,
+            unit=self.df.attrs[models.MetadataNames.FNU_UNIT]
+        )
+
+    @property
+    def t_left(self):
+        return QuantityArray1D.from_df(
+            self.df,
+            column=models.ColumnNames.T_LEFT,
+            unit=self.df.attrs[models.MetadataNames.T_UNIT]
+        )
+
+    @property
+    def t_right(self):
+        return QuantityArray1D.from_df(
+            self.df,
+            column=models.ColumnNames.T_RIGHT,
+            unit=self.df.attrs[models.MetadataNames.T_UNIT]
+        )
+
+    @property
+    def t_center(self):
+        return QuantityArray1D.from_df(
+            self.df,
+            column=models.ColumnNames.T_CENTER,
+            unit=self.df.attrs[models.MetadataNames.T_UNIT]
+        )
+
+    @property
+    def bin_edges(self):
+        t_unit = self.t_center.unit
+        t_left = self.t_left.to_value_in(t_unit)
+        t_right = self.t_right.to_value_in(t_unit)
+        bin_edges = np.concatenate(
+            (
+                t_left,
+                np.array([t_right[-1]]),
+            )
+        )
+        return QuantityArray1D(
+            values=bin_edges,
+            unit=t_unit
+        )
+
+@dataclass(frozen=True, slots=True)
+class CandidateModelLightcurveFrequencyGroup:
+    nu: QuantityData
+    models: dict[Hashable,pd.DataFrame]
+
+    def devide_into_models(
+        self,
+    )->list[CandidateModelLightcurve]:
+        groups:list[CandidateModelLightcurve] = []
+        dfs_model = {}
+        for model_index,df in self.models.items():
+            if not isinstance(model_index,int):
+                raise TypeError(
+                    f"model_indexをint型へ変換できません:{model_index}"
+                )
+            attrs = df.attrs
+            groups.append(
+                CandidateModelLightcurve(
+                    nu=self.nu,
+                    df=df,
+                    fnu_bg=QuantityData.from_attrs(
+                        df,
+                        key=models.ColumnNames.FNU_BG,
+                        unit_key=models.MetadataNames.FNU_UNIT
+                    ),
+                    n_dof=attrs[models.ChiSquaredParameters.N_DOF],
+                    chi_squared=attrs[models.ChiSquaredParameters.CHI_SQUARED],
+                    model_index=model_index
+                )
+            )
+
+        return groups
+
+@dataclass(frozen=True, slots=True)
+class CandidateModelLightcurveTable:
     metadata: CandidateModelLightcurveMetadata
-    models: tuple[CandidateModelFitResult,...]
+    frequency: dict[Hashable,pd.DataFrame]
 
     @classmethod
     def from_df_long(
         cls,
-        df_long:pd.DataFrame
-    )->Self:
+        df_long: pd.DataFrame
+    ) -> Self:
         metadata = CandidateModelLightcurveMetadata.from_df_attrs(df_long)
-        lightcurves = []
-        for cand_idx,df in df_long.groupby(
-                models.ColumnNames.CANDIDATE_MODEL_INDEX
-            ):
-            if not isinstance(cand_idx,int):
-                raise TypeError(
-                    "indexの型が不正です."
-                )
-
-            lc = CandidateModelTotalLightcurve.from_df(
-                candidate_model_index=cand_idx,
-                metadata=metadata,
-                df=df
-            )
-            chi2_arr = QuantityArray1D.from_df(
-                df,models.ChiSquaredParameters.CHI_SQUARED,""
-            )
-            ndof_arr = QuantityArray1D.from_df(
-                df,models.ChiSquaredParameters.N_DOF,""
-            )
-            lightcurves.append(
-                CandidateModelFitResult(
-                    lightcurve = lc,
-                    chi2 = chi2_arr.values[0],
-                    ndof = ndof_arr.values[0]
-                )
-            )
+     
+        nu_key = models.ColumnNames.NU
+        dfs_nu = {
+            nu: df.drop(columns=nu_key)
+            for nu,df in df_long.groupby(nu_key)
+        }
         return cls(
             metadata=metadata,
-            models=tuple(lightcurves)
+            frequency=dfs_nu
         )
 
-    @property
-    def n_candidates(self):
-        return len(self.models)
+    def devide_into_frequency_groups(
+        self,
+    )->list[CandidateModelLightcurveFrequencyGroup]:
+        groups:list[CandidateModelLightcurveFrequencyGroup] = []
+        for nu_value in self.frequency.keys():
+            df_nu = self.frequency[nu_value]
+
+            model_metadata_columns = [
+                models.ColumnNames.CANDIDATE_MODEL_INDEX,
+                models.ColumnNames.FNU_BG,
+                models.ChiSquaredParameters.CHI_SQUARED,
+                models.ChiSquaredParameters.N_DOF,
+            ]
+            dfs_model = {}
+            for idx,df in df_nu.groupby(
+                models.ColumnNames.MODEL_INDEX
+            ):
+                df = df.drop(
+                    columns=models.ColumnNames.MODEL_INDEX
+                )
+
+                attrs = {}
+
+                for column in model_metadata_columns:
+                    values = df[column].unique()
+
+                    if len(values) != 1:
+                        raise ValueError(
+                            f"{column} must have exactly one unique value, "
+                            f"but got {values}"
+                        )
+
+                    attrs[column] = values[0]
+
+                df = df.drop(columns=model_metadata_columns)
+                df.attrs.update(attrs)
+
+                dfs_model[idx] = df
+
+            if not isinstance(nu_value,float):
+                raise TypeError(
+                    f"nuをfloat型へ変換できません:{nu_value}"
+                )
+
+            groups.append(
+                CandidateModelLightcurveFrequencyGroup(
+                    nu=QuantityData(
+                        value=nu_value,
+                        unit=self.metadata.nu_unit
+                    ),
+                    models = dfs_model
+                )
+            )
+
+        return groups
+
+
 
 @dataclass(frozen=True, slots=True)
 class CandidateModelMetadata(models.ScenarioParameter):
