@@ -119,6 +119,16 @@ $(FILEPATH_CHEVALIER_PDF): \
 		--output $@
 
 #=== datafiles ===#
+min_chi2: $(FILEPATH_MINIMUM_CHI2_LC)
+$(FILEPATH_MINIMUM_CHI2_LC): \
+	$(FILEPATH_INPUT) \
+	$(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES) \
+	scripts/find_minimum_chi2_model.$(EXTENTION_PY)
+	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+		--input $< \
+		--$(CANDIDATE_BINNED_LIGHTCURVES) $(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES) \
+		--output $@
+
 lc_bin: $(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES)
 $(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES): \
 	$(FILEPATH_INPUT) \

@@ -118,7 +118,6 @@ def parse_args()->argparse.Namespace:
 
 def main():
     args = parse_args()
-    plot_all:bool = args.plot_all
     outpath:Path = args.output
     outpath.parent.mkdir(parents=True,exist_ok=True)
 

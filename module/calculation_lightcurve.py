@@ -1105,65 +1105,28 @@ class CandidateModelParameter(CandidateModelInput):
 
 @dataclass(frozen=True, slots=True)
 class CandidateModelLightcurve:
-    model_index: int
     nu: QuantityData
-    fnu_bg: QuantityData
-    chi_squared: float
-    n_dof: int
     df: pd.DataFrame
-
-    @property
-    def fnu_total(self)->QuantityArray1D:
-        return QuantityArray1D.from_df(
-            self.df,
-            column=models.ColumnNames.FNU_TOTAL,
-            unit=self.df.attrs[models.MetadataNames.FNU_UNIT]
-        )
-
-    @property
-    def t_left(self):
-        return QuantityArray1D.from_df(
-            self.df,
-            column=models.ColumnNames.T_LEFT,
-            unit=self.df.attrs[models.MetadataNames.T_UNIT]
-        )
-
-    @property
-    def t_right(self):
-        return QuantityArray1D.from_df(
-            self.df,
-            column=models.ColumnNames.T_RIGHT,
-            unit=self.df.attrs[models.MetadataNames.T_UNIT]
-        )
-
-    @property
-    def t_center(self):
-        return QuantityArray1D.from_df(
-            self.df,
-            column=models.ColumnNames.T_CENTER,
-            unit=self.df.attrs[models.MetadataNames.T_UNIT]
-        )
-
-    @property
-    def bin_edges(self):
-        t_unit = self.t_center.unit
-        t_left = self.t_left.to_value_in(t_unit)
-        t_right = self.t_right.to_value_in(t_unit)
-        bin_edges = np.concatenate(
-            (
-                t_left,
-                np.array([t_right[-1]]),
-            )
-        )
-        return QuantityArray1D(
-            values=bin_edges,
-            unit=t_unit
-        )
 
 @dataclass(frozen=True, slots=True)
 class CandidateModelLightcurveFrequencyGroup:
     nu: QuantityData
     models: dict[Hashable,pd.DataFrame]
+
+    def select_model(
+        self,
+        model_index:Hashable
+    )->CandidateModelLightcurve:
+        df=self.models[model_index]
+        attrs = df.attrs
+        if not isinstance(model_index,int):
+            raise TypeError(
+                f"model_indexをint型へ変換できません:{model_index}"
+            )
+        return CandidateModelLightcurve(
+            nu=self.nu,
+            df=df,
+        )
 
     def devide_into_models(
         self,
@@ -1171,27 +1134,43 @@ class CandidateModelLightcurveFrequencyGroup:
         groups:list[CandidateModelLightcurve] = []
         dfs_model = {}
         for model_index,df in self.models.items():
-            if not isinstance(model_index,int):
-                raise TypeError(
-                    f"model_indexをint型へ変換できません:{model_index}"
-                )
-            attrs = df.attrs
-            groups.append(
-                CandidateModelLightcurve(
-                    nu=self.nu,
-                    df=df,
-                    fnu_bg=QuantityData.from_attrs(
-                        df,
-                        key=models.ColumnNames.FNU_BG,
-                        unit_key=models.MetadataNames.FNU_UNIT
-                    ),
-                    n_dof=attrs[models.ChiSquaredParameters.N_DOF],
-                    chi_squared=attrs[models.ChiSquaredParameters.CHI_SQUARED],
-                    model_index=model_index
-                )
-            )
+            model = self.select_model(model_index)
+            groups.append(model)
 
         return groups
+
+    def index_minimum_chi2(self) -> Hashable:
+        chi_squared:dict[Hashable,float] = {
+            key: float(df.attrs[models.ChiSquaredParameters.CHI_SQUARED])
+            for key, df in self.models.items()
+        }
+
+        best_key = min(
+            chi_squared,
+            key=lambda key:chi_squared[key],
+        )
+
+        return best_key
+
+    def to_df_minimum_chi2(self)->pd.DataFrame:
+        index_minimum_chi2 = self.index_minimum_chi2()
+        df = self.models[index_minimum_chi2]
+        metadata_columns = [
+            models.ColumnNames.FNU_BG,
+            models.ChiSquaredParameters.CHI_SQUARED,
+            models.ChiSquaredParameters.N_DOF,
+        ]
+
+        for _, df in self.models.items():
+            df = df.copy()
+
+            for column in metadata_columns:
+                value = df.attrs.pop(column)
+                df[column] = value
+        df[models.ColumnNames.NU] = self.nu.value
+        df[models.ColumnNames.MODEL_INDEX] = index_minimum_chi2
+
+        return df
 
 @dataclass(frozen=True, slots=True)
 class CandidateModelLightcurveTable:
@@ -1223,7 +1202,6 @@ class CandidateModelLightcurveTable:
             df_nu = self.frequency[nu_value]
 
             model_metadata_columns = [
-                models.ColumnNames.CANDIDATE_MODEL_INDEX,
                 models.ColumnNames.FNU_BG,
                 models.ChiSquaredParameters.CHI_SQUARED,
                 models.ChiSquaredParameters.N_DOF,
@@ -1234,6 +1212,9 @@ class CandidateModelLightcurveTable:
             ):
                 df = df.drop(
                     columns=models.ColumnNames.MODEL_INDEX
+                )
+                df = df.drop(
+                    columns=models.ColumnNames.CANDIDATE_MODEL_INDEX
                 )
 
                 attrs = {}
