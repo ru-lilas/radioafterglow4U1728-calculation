@@ -7,7 +7,6 @@ import argparse
 import pandas as pd
 from pathlib import Path
 
-from module import compute_lightcurve
 from module import mystatistics
 from module.inputs_as_dataclass import GeneralInputs
 from module.mydataclasses import QuantityData, WideFormatDataFrames
@@ -15,7 +14,7 @@ from module.mystatistics import CalculateChiSquared
 from module.observation import LongformatLightcurve
 from module.utils import FileReader, FileWriter
 from module.synchrotron_numerical_table import DimensionlessThermalLuminosityGrid, ThermalSynchrotronIntegrals
-from module.compute_lightcurve import (
+from module.calculation_lightcurve import (
     CandidateModelFitResult,
     CandidateModelLightcurve,
     CandidateModelLightcurveGrid,

@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 
 from module import models, observation, plot_utils
-from module.compute_lightcurve import CandidateModelTotalLightcurve
+from module.calculation_lightcurve import CandidateModelTotalLightcurve
 from module.mydataclasses import QuantityData, YAMLReadable
 
 @dataclass(frozen=True,slots=True)

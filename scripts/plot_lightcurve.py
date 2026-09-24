@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from module import plot_utils,observation
 from module.observation import LongformatLightcurve, ObservedLightcurvePlotter
-from module.compute_lightcurve import CandidateModelFitResults, CandidateModelLightcurve, CandidateModelMetadata
+from module.calculation_lightcurve import CandidateModelFitResults, CandidateModelLightcurve, CandidateModelMetadata
 from module.utils import FileReader
 
 @dataclass(frozen=True,slots=True)

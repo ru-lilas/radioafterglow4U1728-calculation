@@ -172,31 +172,6 @@ class ChevalierParameters:
             ParameterNames.CHI2: self.chi2,
         }
 
-# @dataclass(frozen=True,slots=True)
-# class LightcurveMetadata:
-#     params: ChevalierParameters
-#     nu: QuantityData
-#
-#     @property
-#     def as_dict(
-#         self,
-#     )->dict[str,Any]:
-#         params = self.params
-#         params_asdict = params.to_dict(
-#             a_wind_unit=params.a_wind.unit,
-#             phi_unit=params.phi_theta.unit,
-#             lnu_unit=params.lnu_theta.unit
-#         )
-#         nu = self.nu
-#         nu_asdict = {
-#             LcColumns.NU_VALUE: nu.value,
-#             LcColumns.NU_UNIT: nu.unit
-#         }
-#         return {
-#             **params_asdict,
-#             **nu_asdict
-#         }
-
 @dataclass(frozen=True,slots=True)
 class CandidateModelRows:
     model_index: NDArray[np.float64]
