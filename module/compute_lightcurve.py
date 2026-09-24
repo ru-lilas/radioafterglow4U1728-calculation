@@ -634,181 +634,6 @@ class CandidateModelLightcurveGrid:
 
         return df
 
-# @dataclass(frozen=True, slots=True)
-# class BinnedBestfitLightcurve:
-#     params: ChevalierParameters
-#     nu: QuantityData
-#     t_center:   QuantityArray
-#     t_left:     QuantityArray
-#     t_right:    QuantityArray
-#     fnu_net:  QuantityArray
-#     fnu_persistent: QuantityArray
-#     fnu_persistent_err: QuantityArray
-#
-#     @classmethod
-#     def from_csv(
-#         cls,
-#         path:Path
-#     )->Self:
-#         df = FileReader.table_from_csv(
-#             path=path,
-#         )
-#         metadata = ensure_string_keys(df.attrs)
-#         params = ChevalierParameters.from_dict(metadata)
-#         t_unit = metadata[LcColumns.T_UNIT]
-#         fnu_unit = metadata[LcColumns.FNU_UNIT]
-#         nu = QuantityData(
-#             value = metadata[LcColumns.NU_VALUE],
-#             unit = metadata[LcColumns.NU_UNIT]
-#         )
-#         t_center = QuantityArray(
-#                 values = dataframe_processors.convert_ndarray(
-#                             df,LcColumns.T_CENTER
-#                         ),
-#                 unit = t_unit
-#         )
-#         t_right = QuantityArray(
-#                 values = dataframe_processors.convert_ndarray(
-#                             df,LcColumns.T_RIGHT
-#                         ),
-#                 unit = t_unit
-#         )
-#         t_left = QuantityArray(
-#                 values = dataframe_processors.convert_ndarray(
-#                             df,LcColumns.T_LEFT
-#                         ),
-#                 unit = t_unit
-#         )
-#         fnu_net = QuantityArray(
-#                 values = dataframe_processors.convert_ndarray(
-#                             df,LcColumns.FNU_NET
-#                         ),
-#                 unit = fnu_unit
-#         )
-#         fnu_persistent = QuantityArray(
-#                 values = dataframe_processors.convert_ndarray(
-#                             df,LcColumns.FNU_PERSISTENT
-#                         ),
-#                 unit = fnu_unit
-#         )
-#         fnu_persistent_err = QuantityArray(
-#                 values = dataframe_processors.convert_ndarray(
-#                             df,LcColumns.FNU_PERSISTENT_ERR
-#                         ),
-#                 unit = fnu_unit
-#         )
-#         return cls(
-#             params=params,
-#             nu=nu,
-#             t_center=t_center,
-#             t_left = t_left,
-#             t_right = t_right,
-#             fnu_net = fnu_net,
-#             fnu_persistent = fnu_persistent,
-#             fnu_persistent_err = fnu_persistent_err
-#         )
-#
-#     @property
-#     def bin_edges(self):
-#         t_unit = self.t_left.unit
-#         t_left = self.t_left.to_value_in(t_unit)
-#         t_right = self.t_right.to_value_in(t_unit)
-#         bin_edges = np.concatenate(
-#             (
-#                 t_left,
-#                 np.array([t_right[-1]]),
-#             )
-#         )
-#         return QuantityArray(
-#             values=bin_edges,
-#             unit=t_unit
-#         )
-#
-#     @property
-#     def fnu_total(
-#         self,
-#     )->QuantityArray:
-#         fnu_net = self.fnu_net
-#         fnu_unit = fnu_net.unit
-#         fnu_net_arr = fnu_net.to_value_in(fnu_unit)
-#         fnu_per = self.fnu_persistent.to_value_in(fnu_unit)
-#         fnu_per_err = self.fnu_persistent_err.to_value_in(fnu_unit)
-#
-#         if not (
-#             self.t_center.values.size
-#             == fnu_per.size
-#             == fnu_per_err.size
-#         ):
-#             raise ValueError(
-#                 "計算光度曲線と定常放射の配列の長さが一致しません."
-#             )
-#
-#         return QuantityArray(
-#             values = fnu_net_arr + fnu_per,
-#             unit = fnu_unit
-#         )
-#
-#     def to_df(
-#         self,
-#         *,
-#         t_unit:str,
-#         fnu_unit:str,
-#         a_wind_unit:str,
-#         phi_unit:str,
-#         lnu_unit:str,
-#     )->pd.DataFrame:
-#         metadata = self.params.to_dict(
-#             a_wind_unit=a_wind_unit,
-#             phi_unit=phi_unit,
-#             lnu_unit=lnu_unit,
-#         )
-#         df = pd.DataFrame({
-#             LcColumns.T_LEFT: self.t_left.to_value_in(t_unit),
-#             LcColumns.T_CENTER: self.t_center.to_value_in(t_unit),
-#             LcColumns.T_RIGHT: self.t_right.to_value_in(t_unit),
-#             LcColumns.FNU_NET: self.fnu_net.to_value_in(fnu_unit),
-#             LcColumns.FNU_PERSISTENT: self.fnu_persistent.to_value_in(fnu_unit),
-#             LcColumns.FNU_PERSISTENT_ERR: self.fnu_persistent_err.to_value_in(fnu_unit),
-#         })
-#         df.attrs = {**metadata}
-#         df.attrs[LcColumns.T_UNIT] = t_unit
-#         df.attrs[LcColumns.FNU_UNIT] = fnu_unit
-#         df.attrs[LcColumns.NU_VALUE] = self.nu.value
-#         df.attrs[LcColumns.NU_UNIT] = self.nu.unit
-#
-#         return df
-#
-#     def plot_step(
-#         self,
-#         ax: Axes,
-#         style: LineStyle,
-#         *,
-#         t_unit: str,
-#         fnu_unit: str
-#     )->StepPatch:
-#         fnu_total = self.fnu_total.to_value_in(fnu_unit)
-#         bin_edges = self.bin_edges.to_value_in(t_unit)
-#
-#         return ax.stairs(
-#             fnu_total,
-#             bin_edges,
-#             baseline=self.fnu_persistent.to_value_in(fnu_unit)[0],
-#             **style.to_kwargs(),
-#         )
-#
-#     def plot_metadata(
-#         self,
-#         fig: Figure,
-#         string:str
-#     ):
-#         nu = self.nu
-#         params = self.params
-#         a_wind_val = params.a_wind.value
-#         a_wind_unit = params.a_wind.unit
-#         fig.suptitle(
-#             string
-#         )
-
 @dataclass(frozen=True,slots=True)
 class CandidateModelLightcurveMetadata(CandidateModelInput):
     t_unit: str
@@ -1078,6 +903,21 @@ class CandidateModelLightcurve:
             t_left=QuantityArray1D(t_left,t_unit),
             t_right=QuantityArray1D(t_right,t_unit),
             fnu_flare=fnu_average,
+        )
+
+    def plot(
+        self,
+        plotter: plot_utils.Plotter,
+        style: plot_utils.LineStyle,
+        *,
+        t_unit: str,
+        fnu_unit: str,
+        offset: float
+    ):
+        x = self.t.to_value_in(t_unit)
+        y = self.fnu_obs_frame.to_value_in(fnu_unit) + offset
+        return plotter.line(
+            x,y,style
         )
 
 

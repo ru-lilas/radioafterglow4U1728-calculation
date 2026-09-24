@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 from module import plot_utils,observation
 from module.observation import LongformatLightcurve, ObservedLightcurvePlotter
-from module.compute_lightcurve import CandidateModelFitResults, CandidateModelMetadata
+from module.compute_lightcurve import CandidateModelFitResults, CandidateModelLightcurve, CandidateModelMetadata
 from module.utils import FileReader
 
 @dataclass(frozen=True,slots=True)
@@ -90,6 +90,11 @@ def parse_args()->argparse.Namespace:
         required=True
     )
     parser.add_argument(
+        "--candidate_lightcurves",
+        type=Path,
+        required=True
+    )
+    parser.add_argument(
         "--candidate_models",
         type=Path,
         required=True
@@ -125,6 +130,13 @@ def main():
     cand_lcs = CandidateModelFitResults.from_df_long(
         FileReader.table_from_csv(args.candidate_binned_lightcurves)
     )
+    dflong_cont_lcs = FileReader.table_from_csv(args.candidate_lightcurves)
+    dfs_cont_lcs = [
+        df_cont_lcs
+        for _,df_cont_lcs
+        in dflong_cont_lcs.groupby("candidate_model_index")
+    ]
+    print(dfs_cont_lcs)
     df_models = FileReader.table_from_csv(args.candidate_models)
     n_models = len(cand_lcs.models)
 
@@ -135,6 +147,10 @@ def main():
         )
         for i,plotter in enumerate(plot_layout.plotters):
 
+            cand_continuous_lc = CandidateModelLightcurve.from_df(
+                candidate_model_index=i,
+                df=dfs_cont_lcs[i]
+            )
             lc = cand_lcs.models[i].lightcurve
             obslc = obslc_long.select_frequency(
                 nu = lc.nu,
@@ -156,6 +172,13 @@ def main():
                 fnu_unit=fnu_unit
             )
             lc_plotter.plot(plotter)
+            cand_continuous_lc.plot(
+                plotter,
+                style=conf_plot.styles.continuous,
+                t_unit=t_unit,
+                fnu_unit=fnu_unit,
+                offset=obslc.fnu_background.to_value_in(fnu_unit)[0]
+            )
         pdf.savefig(plot_layout.fig)
         plt.close(plot_layout.fig)
     return
