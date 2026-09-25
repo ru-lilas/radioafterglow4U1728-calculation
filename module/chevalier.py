@@ -51,7 +51,7 @@ class Styles:
 
 @dataclass(frozen=True, slots=True)
 class OpticallythinBoundaryPlotConfig(YAMLReadable):
-    layout: plot_utils.PlotLayoutConfig
+    layout: plot_utils.PlotLayout
     thin_boundary: plot_utils.LineStyle
 
 @dataclass(frozen=True,slots=True)
@@ -64,7 +64,7 @@ class ChevalierMetadataConfig:
 
 @dataclass(frozen=True, slots=True)
 class PlotConfig(YAMLReadable):
-    layout: plot_utils.PlotLayoutConfig
+    layout: plot_utils.PlotLayout
     contours: ContourConfigures
     styles: Styles
     metadata: ChevalierMetadataConfig

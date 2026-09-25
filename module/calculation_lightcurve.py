@@ -1108,6 +1108,52 @@ class CandidateModelLightcurve:
     nu: QuantityData
     df: pd.DataFrame
 
+    @property
+    def t_left(self):
+        return QuantityArray1D.from_df(
+            df=self.df,
+            column=models.ColumnNames.T_LEFT,
+            unit_key=models.MetadataNames.T_UNIT
+        )
+    @property
+    def t_right(self):
+        return QuantityArray1D.from_df(
+            df=self.df,
+            column=models.ColumnNames.T_RIGHT,
+            unit_key=models.MetadataNames.T_UNIT
+        )
+
+    @property
+    def bin_edges(
+        self,
+    )->QuantityArray1D:
+        t_unit = self.t_left.unit
+        t_left = self.t_left.to_value_in(t_unit)
+        t_right = self.t_right.to_value_in(t_unit)
+        bin_edges = np.concatenate(
+            (
+                t_left,
+                np.array([t_right[-1]]),
+            )
+        )
+        return QuantityArray1D(bin_edges,unit=t_unit)
+
+    @property
+    def fnu_total(self):
+        return QuantityArray1D.from_df(
+            df=self.df,
+            column=models.ColumnNames.FNU_TOTAL,
+            unit_key=models.MetadataNames.FNU_UNIT
+        )
+
+    @property
+    def fnu_bg(self):
+        return QuantityData.from_attrs(
+            df=self.df,
+            key=models.ColumnNames.FNU_BG,
+            unit_key=models.MetadataNames.FNU_UNIT
+        )
+
 @dataclass(frozen=True, slots=True)
 class CandidateModelLightcurveFrequencyGroup:
     nu: QuantityData
@@ -1127,6 +1173,19 @@ class CandidateModelLightcurveFrequencyGroup:
             nu=self.nu,
             df=df,
         )
+
+    def select_unique(
+        self,
+    ) -> CandidateModelLightcurve:
+        if len(self.models) != 1:
+            raise ValueError(
+                "models must contain exactly one model, "
+                f"but got {len(self.models)}"
+            )
+
+        model_index = next(iter(self.models))
+
+        return self.select_model(model_index)
 
     def devide_into_models(
         self,
@@ -1159,6 +1218,7 @@ class CandidateModelLightcurveFrequencyGroup:
             models.ColumnNames.FNU_BG,
             models.ChiSquaredParameters.CHI_SQUARED,
             models.ChiSquaredParameters.N_DOF,
+            models.ColumnNames.CANDIDATE_MODEL_INDEX,
         ]
 
         for _, df in self.models.items():
@@ -1205,6 +1265,7 @@ class CandidateModelLightcurveTable:
                 models.ColumnNames.FNU_BG,
                 models.ChiSquaredParameters.CHI_SQUARED,
                 models.ChiSquaredParameters.N_DOF,
+                models.ColumnNames.CANDIDATE_MODEL_INDEX,
             ]
             dfs_model = {}
             for idx,df in df_nu.groupby(
@@ -1212,9 +1273,6 @@ class CandidateModelLightcurveTable:
             ):
                 df = df.drop(
                     columns=models.ColumnNames.MODEL_INDEX
-                )
-                df = df.drop(
-                    columns=models.ColumnNames.CANDIDATE_MODEL_INDEX
                 )
 
                 attrs = {}

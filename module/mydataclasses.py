@@ -238,11 +238,11 @@ class QuantityArray1D(QuantityArray):
         cls,
         df:pd.DataFrame,
         column:str,
-        unit:str,
+        unit_key:str,
     )->Self:
         return cls(
             values=df[column].to_numpy(dtype=np.float64),
-            unit=unit
+            unit=df.attrs[unit_key]
         )
 
     def decompose(

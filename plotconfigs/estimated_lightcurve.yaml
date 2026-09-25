@@ -1,43 +1,11 @@
-styles:
-  binned: 
-    color: "#000000"
-    linewidth: 2.0
-    linestyle: "-"
-    alpha: null
-    zorder: 1.0
-  continuous: 
-    color: "#84919E"
-    linewidth: 2.0
-    linestyle: "--"
-    alpha: null
-    zorder: 1.0
-  observed:
-    marker: "o"
-    markersize: 6.0
-    markerfacecolor : "#000000"
-    markeredgecolor : "#000000"
-    markeredgewidth: 1.0
-    ecolor: "#000000"
-    elinewidth: 1.0
-    capsize: 1.0
-    capthick: 1.0
-    linestyle: "none"
-    alpha: null
-    zorder: 0.0
-  background: 
-    color: "#000000"
-    linewidth: 1.0
-    linestyle: "--"
-    alpha: null
-    zorder: 1.0
 layout:
   figure:
-    figsize: [16,9]
+    figsize: [16,18]
     dpi: 100
     layout_engine: constrained
   subplots:
-    nrows: 1
-    ncols: 3
+    nrows: 2
+    ncols: 1
     sharex: true
     sharey: true
     hide_shared_labels: true
@@ -47,14 +15,14 @@ layout:
       limits: [-10.0,34.0]
       label:
         prefix: 'Time Since the X-ray Burst'
-        unit: "min"
+        unit: &x_unit "min"
         fontsize: 32
     y:
       scale: "linear"
       limits: [0.5,1.5]
       label:
         prefix: 'Radio Flux Density'
-        unit: "mJy"
+        unit: &y_unit "mJy"
         fontsize: 32
     ticks:
       labelsize: 32
@@ -65,52 +33,96 @@ layout:
       pad: 10.0
 metadata:
   fontsize: 18
-  eps_b:
-    show: true
-    unit: ""
-    label_format:
-      prefix: '\varepsilon_{\mathrm{B}}'
-      fmt: '.1e'
+  items:
+    eps_b:
+      show: true
       unit: ""
-  eps_th:
-    show: true
-    unit: ""
-    label_format:
-      prefix: '\varepsilon_{\mathrm{th}}'
-      fmt: '.2f'
+      label_format:
+        prefix: '\varepsilon_{\mathrm{B}}'
+        fmt: '.1e'
+        unit: ""
+    eps_th:
+      show: true
       unit: ""
-  distance:
-    show: true
-    unit: "kpc"
-    label_format:
-      prefix: 'D'
-      fmt: '.1f'
-      unit: '\mathrm{kpc}'
-  mu_e_mu:
-    show: true
-    unit: ""
-    label_format:
-      prefix: '\mu_{\mathrm{e}}/\mu'
-      fmt: '.1f'
+      label_format:
+        prefix: '\varepsilon_{\mathrm{th}}'
+        fmt: '.2f'
+        unit: ""
+    distance:
+      show: true
+      unit: "kpc"
+      label_format:
+        prefix: 'D'
+        fmt: '.1f'
+        unit: '\mathrm{kpc}'
+    mu_e_mu:
+      show: true
       unit: ""
-  a_wind:
-    show: true
-    unit: "g cm-1"
-    label_format:
-      prefix: 'A_{\mathrm{w}}'
-      fmt: '.1e'
-      unit: '\mathrm{g/cm}'
-  beta_sh: 
-    show: true
-    unit: ""
-    label_format:
-      prefix: '\beta_{\mathrm{sh}}'
-      fmt: '.2f'
-      unit: ''
-  nu: 
-    show: true
-    unit: "GHz"
-    label_format:
-      prefix: '\nu'
-      fmt: '.1f'
-      unit: '\mathrm{GHz}'
+      label_format:
+        prefix: '\mu_{\mathrm{e}}/\mu'
+        fmt: '.1f'
+        unit: ""
+    a_wind:
+      show: true
+      unit: "g cm-1"
+      label_format:
+        prefix: 'A_{\mathrm{w}}'
+        fmt: '.1e'
+        unit: '\mathrm{g/cm}'
+    beta_sh: 
+      show: true
+      unit: ""
+      label_format:
+        prefix: '\beta_{\mathrm{sh}}'
+        fmt: '.2f'
+        unit: ''
+    nu: 
+      show: true
+      unit: "GHz"
+      label_format:
+        prefix: '\nu'
+        fmt: '.1f'
+        unit: '\mathrm{GHz}'
+components:
+  binned:
+    type: step
+    style:
+      colors: &colors_tmp
+        - "#FF4B00"
+        - "#005AFF"
+      linewidth: 2.0
+      linestyle: "-"
+      alpha: null
+      zorder: 1.0
+  continuous:
+    type: line
+    style:
+      colors: 
+        - "#FFCABF"
+        - "#BFE4FF"
+      linewidth: 2.0
+      linestyle: "--"
+      alpha: null
+      zorder: 1.0
+  observed:
+    type: errorbar
+    style:
+      colors: *colors_tmp
+      marker: "o"
+      markersize: 6.0
+      markeredgewidth: 1.0
+      elinewidth: 1.0
+      capsize: 1.0
+      capthick: 1.0
+      linestyle: "none"
+      alpha: null
+      zorder: 0.0
+  background: 
+    type: line
+    style:
+      colors:
+        - "#000000"
+      linewidth: 2.0
+      linestyle: "--"
+      alpha: null
+      zorder: 1.0

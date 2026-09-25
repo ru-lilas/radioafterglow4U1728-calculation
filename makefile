@@ -21,6 +21,7 @@ CANDIDATE_BINNED_LIGHTCURVES := candidate_binned_lightcurves
 MODEL_PARAMETER_TABLE := model_parameter_table
 SYNCHROTRON_FUNCTION_NUMERICAL_TABLE := synchrotron_function_numerical_table
 THERMAL_PEAK_TABLE := thermal_peak_table
+MINIMUM_CHI2_LIGHTCURVE := minimum_chi2_lightcurve
 
 RUN_ID ?=
 ifndef RUN_ID
@@ -45,7 +46,8 @@ FILEPATH_LC_PDF := $(FIGDIR)/$(RUN_DIR)/lc.$(EXTENTION_PDF)
 FILEPATH_CHEVALIER_PDF := $(FIGDIR)/$(RUN_DIR)/chevalier_diagram.$(EXTENTION_PDF)
 FILEPATH_CHEVALIER_COLORMAP_PDF := $(FIGDIR)/$(RUN_DIR)/chevalier_colormap.$(EXTENTION_PDF)
 FILEPATH_CHI2 := $(DATADIR)/$(RUN_DIR)/chi2.$(EXTENTION_CSV)
-FILEPATH_MINIMUM_CHI2_LC := $(DATADIR)/$(RUN_DIR)/minimum_chi2_lc.$(EXTENTION_CSV)
+FILEPATH_MINIMUM_CHI2_LC := $(DATADIR)/$(RUN_DIR)/$(MINIMUM_CHI2_LIGHTCURVE).$(EXTENTION_CSV)
+FILEPATH_MINIMUM_CHI2_LC_PDF := $(DATADIR)/$(RUN_DIR)/$(MINIMUM_CHI2_LIGHTCURVE).$(EXTENTION_PDF)
 
 FILEPATH_CANDIDATE_MODELS := $(DATADIR)/$(RUN_DIR)/$(CANDIDATE_MODELS).$(EXTENTION_CSV)
 FILEPATH_CANDIDATE_LIGHTCURVES := $(DATADIR)/$(RUN_DIR)/$(CANDIDATE_LIGHTCURVES).$(EXTENTION_CSV)
@@ -64,6 +66,23 @@ param: \
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		--estimated $< \
 		--input $(FILEPATH_INPUT)
+
+minchi2lcfig: $(FILEPATH_MINIMUM_CHI2_LC_PDF)
+	evince $< >/dev/null 2>&1 &
+$(FILEPATH_MINIMUM_CHI2_LC_PDF): \
+	$(FILEPATH_INPUT) \
+	$(FILEPATH_MINIMUM_CHI2_LC) \
+	$(FILEPATH_CANDIDATE_MODELS) \
+	$(FILEPATH_OBSLC) \
+	plotconfigs/estimated_lightcurve.yaml \
+	scripts/plot_$(MINIMUM_CHI2_LIGHTCURVE).py
+	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+		--input $< \
+		--$(MINIMUM_CHI2_LIGHTCURVE) $(FILEPATH_MINIMUM_CHI2_LC) \
+		--$(CANDIDATE_MODELS) $(FILEPATH_CANDIDATE_MODELS) \
+		--obslc $(FILEPATH_OBSLC) \
+		--plotconfig plotconfigs/estimated_lightcurve.yaml \
+		--output $@
 
 lcfig: $(FILEPATH_CANDIDATE_LIGHTCURVES_PDF)
 	evince $< >/dev/null 2>&1 &

@@ -114,28 +114,28 @@ class ChevalierComponent:
         )
         return rectangle.plot(ax)
 
-    def plot_center(
-        self,
-        ax: Axes,
-        style: plot_utils.ScatterStyle,
-        *,
-        phi_unit: str,
-        fnu_unit: str
-    ):
-        phi = self.phi_peak.value_in(phi_unit)
-        phi_err = self.phi_peak_err.value_in(phi_unit)
-        fnu = self.fnu_peak.value_in(fnu_unit)
-        fnu_err = self.fnu_peak_err.value_in(fnu_unit)
-
-        return ax.scatter(
-                phi,fnu,
-                marker=style.marker,
-                s=style.markersize,
-                c=style.markerfacecolor,
-                alpha=style.alpha,
-                edgecolors=style.markeredgecolor,
-                linewidths=style.markeredgewidth
-            )
+    # def plot_center(
+    #     self,
+    #     ax: Axes,
+    #     style: plot_utils.ScatterStyle,
+    #     *,
+    #     phi_unit: str,
+    #     fnu_unit: str
+    # ):
+    #     phi = self.phi_peak.value_in(phi_unit)
+    #     phi_err = self.phi_peak_err.value_in(phi_unit)
+    #     fnu = self.fnu_peak.value_in(fnu_unit)
+    #     fnu_err = self.fnu_peak_err.value_in(fnu_unit)
+    #
+    #     return ax.scatter(
+    #             phi,fnu,
+    #             marker=style.marker,
+    #             s=style.markersize,
+    #             c=style.markerfacecolor,
+    #             alpha=style.alpha,
+    #             edgecolors=style.markeredgecolor,
+    #             linewidths=style.markeredgewidth
+    #         )
 
     def contains(
         self,
@@ -378,56 +378,56 @@ class ObservedLightcurve:
             unit = self.metadata.t_unit
         )
 
-    def plot(
-        self,
-        plotter: plot_utils.Plotter,
-        style: plot_utils.ScatterStyle,
-        *,
-        t_unit: str,
-        fnu_unit: str
-    ):
-        t_quantity = QuantityArray(
-            values = self.to_FloatArray(Columns.T),
-            unit = self.metadata.t_unit
-        )
-        fnu_quantity = QuantityArray(
-            values = self.to_FloatArray(Columns.FNU),
-            unit = self.metadata.fnu_unit
-        )
-        fnu_err_quantity = QuantityArray(
-            values = self.to_FloatArray(Columns.FNU_ERR),
-            unit = self.metadata.fnu_unit
-        )
-        t = t_quantity.to_value_in(t_unit)
-        fnu = fnu_quantity.to_value_in(fnu_unit)
-        fnu_err = fnu_err_quantity.to_value_in(fnu_unit)
-
-        plotter.errorbar(
-            x=t,
-            y=fnu,
-            yerr=fnu_err,
-            style=style
-        )
-        return
-
-    def plot_persistent(
-        self,
-        plotter:plot_utils.Plotter,
-        style: plot_utils.LineStyle,
-        *,
-        t_unit: str,
-        fnu_unit: str
-    )->list[Line2D]:
-        t_quantity = QuantityArray(
-            values = self.to_FloatArray(Columns.T),
-            unit = self.metadata.t_unit
-        )
-        t = t_quantity.to_value_in(t_unit)
-        fnu_per = self.fnu_background.to_value_in(fnu_unit)
-        return plotter.line(
-            t,fnu_per,
-            style=style
-        )
+    # def plot(
+    #     self,
+    #     plotter: plot_utils.Plotter,
+    #     style: plot_utils.ScatterStyle,
+    #     *,
+    #     t_unit: str,
+    #     fnu_unit: str
+    # ):
+    #     t_quantity = QuantityArray(
+    #         values = self.to_FloatArray(Columns.T),
+    #         unit = self.metadata.t_unit
+    #     )
+    #     fnu_quantity = QuantityArray(
+    #         values = self.to_FloatArray(Columns.FNU),
+    #         unit = self.metadata.fnu_unit
+    #     )
+    #     fnu_err_quantity = QuantityArray(
+    #         values = self.to_FloatArray(Columns.FNU_ERR),
+    #         unit = self.metadata.fnu_unit
+    #     )
+    #     t = t_quantity.to_value_in(t_unit)
+    #     fnu = fnu_quantity.to_value_in(fnu_unit)
+    #     fnu_err = fnu_err_quantity.to_value_in(fnu_unit)
+    #
+    #     plotter.errorbar(
+    #         x=t,
+    #         y=fnu,
+    #         yerr=fnu_err,
+    #         style=style
+    #     )
+    #     return
+    #
+    # def plot_persistent(
+    #     self,
+    #     plotter:plot_utils.Plotter,
+    #     style: plot_utils.LineStyle,
+    #     *,
+    #     t_unit: str,
+    #     fnu_unit: str
+    # )->list[Line2D]:
+    #     t_quantity = QuantityArray(
+    #         values = self.to_FloatArray(Columns.T),
+    #         unit = self.metadata.t_unit
+    #     )
+    #     t = t_quantity.to_value_in(t_unit)
+    #     fnu_per = self.fnu_background.to_value_in(fnu_unit)
+    #     return plotter.line(
+    #         t,fnu_per,
+    #         style=style
+    #     )
 
     @property
     def peak(self)->ChevalierComponent:
@@ -454,40 +454,40 @@ class ObservedLightcurve:
             nu=nu
         )
 
-@dataclass(frozen=True, slots=True)
-class ObservedLightcurvePlotter:
-    t: NDArray[np.float64]
-    fnu_tot: NDArray[np.float64]
-    fnu_tot_err: NDArray[np.float64]
-    style: plot_utils.ScatterStyle
-
-    @classmethod
-    def from_observed_lightcurve(
-        cls,
-        lightcurve: ObservedLightcurve,
-        style: plot_utils.ScatterStyle,
-        *,
-        t_unit: str,
-        fnu_unit: str
-    )->Self:
-        return cls(
-            t = lightcurve.t.to_value_in(t_unit),
-            fnu_tot = lightcurve.fnu_total.to_value_in(fnu_unit),
-            fnu_tot_err = lightcurve.fnu_total_err.to_value_in(fnu_unit),
-            style=style
-        )
-
-    def plot(
-        self,
-        plotter: plot_utils.Plotter,
-    ):
-        plotter.errorbar(
-            x=self.t,
-            y=self.fnu_tot,
-            yerr=self.fnu_tot_err,
-            style=self.style
-        )
-        return
+# @dataclass(frozen=True, slots=True)
+# class ObservedLightcurvePlotter:
+#     t: NDArray[np.float64]
+#     fnu_tot: NDArray[np.float64]
+#     fnu_tot_err: NDArray[np.float64]
+#     style: plot_utils.ScatterStyle
+#
+#     @classmethod
+#     def from_observed_lightcurve(
+#         cls,
+#         lightcurve: ObservedLightcurve,
+#         style: plot_utils.ScatterStyle,
+#         *,
+#         t_unit: str,
+#         fnu_unit: str
+#     )->Self:
+#         return cls(
+#             t = lightcurve.t.to_value_in(t_unit),
+#             fnu_tot = lightcurve.fnu_total.to_value_in(fnu_unit),
+#             fnu_tot_err = lightcurve.fnu_total_err.to_value_in(fnu_unit),
+#             style=style
+#         )
+#
+#     def plot(
+#         self,
+#         plotter: plot_utils.Plotter,
+#     ):
+#         plotter.errorbar(
+#             x=self.t,
+#             y=self.fnu_tot,
+#             yerr=self.fnu_tot_err,
+#             style=self.style
+#         )
+#         return
 
 
 @dataclass(frozen=True, slots=True)

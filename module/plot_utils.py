@@ -1,17 +1,16 @@
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from functools import cached_property
-import math
 from typing import Any, Literal, Self
-from dacite import from_dict
+from cattrs import Converter
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize,ListedColormap
+from matplotlib.container import ErrorbarContainer
 from matplotlib.lines import Line2D
 from matplotlib.patches import StepPatch
 from matplotlib.ticker import LogLocator
 from matplotlib import colormaps
 from matplotlib.colorbar import Colorbar
 from numpy.typing import ArrayLike, NDArray
-from module import dataframe_utils
 from module.mydataclasses import FloatGrid, NDArraySpace, QuantityData, QuantityGrid, ValueArray, YAMLReadable
 from module.utilities import build_nparray
 from matplotlib.axes import Axes
@@ -23,8 +22,10 @@ from pathlib import Path
 from module.utils import FileReader
 from module.types import FloatArray, ValueScale,FloatPair
 
-PlotScale = Literal["linear","log"]
 AxisDirection = Literal["x","y"]
+ComponentType = Literal["line","step","errorbar"]
+
+converter = Converter()
 
 bool_cmap = ListedColormap(
     [
@@ -103,18 +104,24 @@ class LabelConfigure:
         else:
             return f"{self.prefix} [{self.unit}]"
 
-@dataclass
-class PlotData:
-    value: str
-    unit: str|None
-
 @dataclass(frozen=True, slots=True)
 class SubplotConfig:
-    nrows: int
-    ncols: int
+    nrows: int = 1
+    ncols: int = 1
     sharex: bool = False
     sharey: bool = False
     hide_shared_labels: bool = True
+
+    def __post_init__(self) -> None:
+        if self.nrows < 1 or self.ncols < 1:
+            raise ValueError(
+                "nrowsとncolsは1以上でなければなりません: "
+                f"nrows={self.nrows}, ncols={self.ncols}"
+            )
+
+    @property
+    def size(self) -> int:
+        return self.nrows * self.ncols
 
 @dataclass(frozen=True,slots=True)
 class AxisRange:
@@ -178,9 +185,12 @@ class FigureConfig:
     layout_engine: str = "constrained"
 
 @dataclass(frozen=True, slots=True)
-class PlotLayoutConfig:
+class PlotLayout:
     figure: FigureConfig
     axes: AxesConfig
+    subplots: SubplotConfig = field(
+        default_factory=SubplotConfig
+    )
 
     @classmethod
     def from_yaml(
@@ -188,16 +198,44 @@ class PlotLayoutConfig:
         path: Path
     )->Self:
         dict_data = FileReader.yaml_safe(path)
-        return from_dict(
-            data_class = cls,
-            data = dict_data
+        return converter.structure(
+            dict_data,
+            cls,
         )
 
-@dataclass(frozen=True, slots=True)
-class MultiPlotLayoutConfig:
-    figure: FigureConfig
-    axes: AxesConfig
-    subplots: SubplotConfig
+    def create(
+        self,
+    ) -> tuple[Figure, NDArray]:
+        figure_config = self.figure
+        subplot_config = self.subplots
+
+        fig, axes = plt.subplots(
+            nrows=subplot_config.nrows,
+            ncols=subplot_config.ncols,
+            figsize=figure_config.figsize,
+            dpi=figure_config.dpi,
+            sharex=subplot_config.sharex,
+            sharey=subplot_config.sharey,
+            layout=figure_config.layout_engine,
+            squeeze=False,
+        )
+
+        for ax in axes.flat:
+            AxesConfigurator.apply(
+                ax,
+                self.axes,
+            )
+
+        if subplot_config.hide_shared_labels:
+            if subplot_config.sharex:
+                for ax in axes[:-1, :].flat:
+                    ax.set_xlabel("")
+
+            if subplot_config.sharey:
+                for ax in axes[:, 1:].flat:
+                    ax.set_ylabel("")
+
+        return fig, axes
 
 class AxesConfigurator:
     @staticmethod
@@ -282,95 +320,9 @@ class AxesConfigurator:
         cls.apply_axis(ax,"y",config.y)
         cls.apply_tick_style(ax,config.ticks)
 
-def create_configured_axes(
-    config: PlotLayoutConfig,
-) -> tuple[Figure, Axes]:
-    fig, ax = plt.subplots(
-        figsize=config.figure.figsize,
-        dpi=config.figure.dpi,
-        layout=config.figure.layout_engine
-    )
-    AxesConfigurator.apply(ax,config.axes)
-
-    return fig, ax
-
-def create_configured_subplots(
-    config: MultiPlotLayoutConfig,
-) -> tuple[Figure, NDArray]:
-    fig, axes = plt.subplots(
-        nrows=config.subplots.nrows,
-        ncols=config.subplots.ncols,
-        figsize=config.figure.figsize,
-        dpi=config.figure.dpi,
-        sharex=config.subplots.sharex,
-        sharey=config.subplots.sharey,
-        layout=config.figure.layout_engine,
-        squeeze=False,
-    )
-
-    for ax in axes.flat:
-        AxesConfigurator.apply(
-            ax,
-            config.axes,
-        )
-
-    if config.subplots.hide_shared_labels:
-        if config.subplots.sharex:
-            for ax in axes[:-1, :].flat:
-                ax.set_xlabel("")
-
-        if config.subplots.sharey:
-            for ax in axes[:, 1:].flat:
-                ax.set_ylabel("")
-
-    return fig, axes
-
-@dataclass
-class AxisConfigure:
-    ax: Axes
-    direction: AxisDirection
-    lim: tuple[float,float]
-    scale: PlotScale
-    ticksize: int
-    data: PlotData
-    label: LabelConfigure
-
-    def __post_init__(self):
-        if self.direction == "x":
-            self.ax.set_xlabel(self.label.text,fontsize=self.label.fontsize)
-            self.ax.set_xscale(self.scale)
-            self.ax.set_xlim(self.lim)
-            self.ax.tick_params(axis=self.direction,which="major", pad=20)
-        else:
-            self.ax.set_ylabel(self.label.text,fontsize=self.label.fontsize)
-            self.ax.set_yscale(self.scale)
-            self.ax.set_ylim(self.lim)
-        self.ax.tick_params(axis=self.direction,labelsize=self.ticksize)
-        self.ax.tick_params(axis="both",which="major", length=10, width=1, direction="in")
-        self.ax.tick_params(axis="both",which="minor", length=8, width=1, direction="in")
-
-    def array(self,df):
-        return dataframe_utils.extract_column_as_ndarray(
-            df,self.data.value
-        )
-
 @dataclass(frozen=True, slots=True)
 class Style:
     def to_kwargs(self)->dict[str,Any]:
-        return {
-            key: value
-            for key, value in asdict(self).items()
-        }
-
-@dataclass(frozen=True, slots=True)
-class LineStyle(YAMLReadable):
-    color: str = "#000000"
-    linewidth: float = 1.0
-    linestyle: str = "-"
-    alpha: float | None = None
-    zorder: float | None = None
-
-    def to_kwargs(self):
         return {
             key: value
             for key, value in asdict(self).items()
@@ -378,7 +330,58 @@ class LineStyle(YAMLReadable):
         }
 
 @dataclass(frozen=True, slots=True)
-class ScatterStyle:
+class LineStyle(Style):
+    color: str
+    linewidth: float = 1.0
+    linestyle: str = "-"
+    alpha: float | None = None
+    zorder: float | None = None
+
+def select_style_value(
+    values: list[str],
+    index: int,
+)->str:
+    if len(values) == 0:
+        raise ValueError(
+            "styleの候補が設定されていません."
+        )
+
+    if len(values) == 1:
+        return values[0]
+
+    try:
+        return values[index]
+    except IndexError as error:
+        raise IndexError(
+            f"style index={index}に対応する値がありません: "
+            f"len={len(values)}"
+        ) from error
+
+@dataclass(frozen=True, slots=True)
+class LineStyleConfig(YAMLReadable):
+    colors: list[str]
+    linewidth: float = 1.0
+    linestyle: str = "-"
+    alpha: float | None = None
+    zorder: float | None = None
+
+    def resolve(
+        self,
+        index: int,
+    )->LineStyle:
+        return LineStyle(
+            color=select_style_value(
+                self.colors,
+                index,
+            ),
+            linewidth=self.linewidth,
+            linestyle=self.linestyle,
+            alpha=self.alpha,
+            zorder=self.zorder,
+        )
+
+@dataclass(frozen=True, slots=True)
+class ErrorbarStyle(Style):
     marker: str = "o"
     markersize: float = 6.0
     markerfacecolor: str = "#000000"
@@ -392,12 +395,41 @@ class ScatterStyle:
     alpha: float | None = None
     zorder: float | None = None
 
-    def to_kwargs(self)->dict[str,Any]:
-        return {
-            key: value
-            for key, value in asdict(self).items()
-            if value is not None
-        }
+@dataclass(frozen=True, slots=True)
+class ErrorbarStyleConfig(YAMLReadable):
+    colors: list[str]
+    marker: str = "o"
+    markersize: float = 6.0
+    markeredgewidth: float = 1.0
+    elinewidth: float = 1.0
+    capsize: float = 0.0
+    capthick: float = 1.0
+    linestyle: str = "none"
+    alpha: float | None = None
+    zorder: float | None = None
+
+    def resolve(
+        self,
+        index: int,
+    )->ErrorbarStyle:
+        color = select_style_value(
+            self.colors,
+            index,
+        )
+        return ErrorbarStyle(
+            marker=self.marker,
+            markersize=self.markersize,
+            markerfacecolor=color,
+            markeredgecolor=color,
+            markeredgewidth=self.markeredgewidth,
+            ecolor=color,
+            elinewidth=self.elinewidth,
+            capsize=self.capsize,
+            capthick=self.capthick,
+            linestyle=self.linestyle,
+            alpha=self.alpha,
+            zorder=self.zorder,
+        )
 
 @dataclass(frozen=True, slots=True)
 class RectangleStyle(Style):
@@ -601,6 +633,64 @@ class MetadataConfig:
     label_format:QuantityLabel
 
 @dataclass(frozen=True, slots=True)
+class MetadataGroupConfig:
+    fontsize: float
+    items: dict[str,MetadataConfig]
+
+ComponentStyleConfig = LineStyleConfig | ErrorbarStyleConfig
+
+@dataclass(frozen=True, slots=True)
+class ComponentConfig:
+    type: ComponentType
+    style: ComponentStyleConfig
+
+def structure_component_config(
+    data: dict[str, Any],
+    _: Any,
+)->ComponentConfig:
+    component_type = data["type"]
+
+    if component_type in ("line", "step"):
+        style_type = LineStyleConfig
+    elif component_type == "errorbar":
+        style_type = ErrorbarStyleConfig
+    else:
+        raise ValueError(
+            "未対応のcomponent typeです: "
+            f"{component_type}"
+        )
+
+    return ComponentConfig(
+        type=component_type,
+        style=converter.structure(
+            data["style"],
+            style_type,
+        ),
+    )
+
+converter.register_structure_hook(
+    ComponentConfig,
+    structure_component_config,
+)
+
+@dataclass(frozen=True, slots=True)
+class PlotConfig:
+    layout: PlotLayout
+    metadata: MetadataGroupConfig
+    components: dict[str, ComponentConfig]
+
+    @classmethod
+    def from_yaml(
+        cls,
+        path: Path,
+    )->Self:
+        data = FileReader.yaml_safe(path)
+        return converter.structure(
+            data,
+            cls,
+        )
+
+@dataclass(frozen=True, slots=True)
 class MetadataComponent:
     quantity: QuantityData
     config: MetadataConfig
@@ -669,26 +759,13 @@ class Plotter:
         x: ArrayLike,
         y: ArrayLike,
         yerr: ArrayLike,
-        style: ScatterStyle
-    ):
-        self.ax.errorbar(
+        style: ErrorbarStyle
+    )->ErrorbarContainer:
+        return self.ax.errorbar(
             x,y,
             yerr=yerr,
-            ls=style.linestyle,
-            color=style.markeredgecolor,
-            capsize=style.capsize,
-            capthick=style.capthick
+            **style.to_kwargs(),
         )
-        self.ax.scatter(
-            x,y,
-            marker=style.marker,
-            s=style.markersize,
-            c=style.markerfacecolor,
-            alpha=style.alpha,
-            edgecolors=style.markeredgecolor,
-            linewidths=style.markeredgewidth
-        )
-        return
 
     def title(
         self,
@@ -698,61 +775,4 @@ class Plotter:
         self.ax.set_title(
             ", ".join(strings),
             fontsize=fontsize
-        )
-
-@dataclass(frozen=True, slots=True)
-class PlotLayout:
-    fig: Figure
-    plotters: tuple[Plotter, ...]
-
-    @classmethod
-    def create(
-        cls,
-        layout_config: MultiPlotLayoutConfig,
-        n_plots: int,
-        max_ncols: int = 3,
-    ) -> Self:
-        ncols = min(n_plots, max_ncols)
-        nrows = math.ceil(n_plots / ncols)
-        figsize_base=layout_config.figure.figsize
-
-        fig, axes = plt.subplots(
-            nrows=nrows,
-            ncols=ncols,
-            figsize=(figsize_base[0]*ncols,figsize_base[1]*nrows),
-            dpi=layout_config.figure.dpi,
-            sharex=layout_config.subplots.sharex,
-            sharey=layout_config.subplots.sharey,
-            layout=layout_config.figure.layout_engine,
-            squeeze=False,
-        )
-
-        for ax in axes.flat:
-            AxesConfigurator.apply(
-                ax,
-                layout_config.axes,
-            )
-
-        if layout_config.subplots.hide_shared_labels:
-            if layout_config.subplots.sharex:
-                for ax in axes[:-1, :].flat:
-                    ax.set_xlabel("")
-
-            if layout_config.subplots.sharey:
-                for ax in axes[:, 1:].flat:
-                    ax.set_ylabel("")
-
-        axes_flat = axes.ravel()
-
-        for ax in axes_flat[n_plots:]:
-            ax.set_visible(False)
-
-        plotters = tuple(
-            Plotter(ax=ax)
-            for ax in axes_flat[:n_plots]
-        )
-
-        return cls(
-            fig=fig,
-            plotters=plotters,
         )
