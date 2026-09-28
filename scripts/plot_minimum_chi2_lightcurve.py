@@ -1,6 +1,7 @@
 from module import dataframe_processors, dataframe_utils
 from module.inputs_as_dataclass import GeneralInputs
 from dataclasses import dataclass
+from module.models import ColumnNames
 from module.mydataclasses import QuantityData, YAMLReadable
 from module.utilities import filereaders as fr
 from pathlib import Path
@@ -12,7 +13,7 @@ import numpy as np
 import pandas as pd
 from module import plot_utils,observation
 from module.observation import LongformatLightcurve
-from module.calculation_lightcurve import CandidateModelLightcurveContinuous, CandidateModelLightcurveTable, CandidateModelMetadata
+from module.calculation_lightcurve import CandidateModelLightcurveContinuous, CandidateModelLightcurveContinuousPlot, CandidateModelLightcurveTable, CandidateModelMetadata
 from module import calculation_lightcurve as clc
 from module.utils import FileReader
 
@@ -26,6 +27,11 @@ def parse_args()->argparse.Namespace:
     )
     parser.add_argument(
         "--minimum_chi2_lightcurve",
+        type=Path,
+        required=True
+    )
+    parser.add_argument(
+        "--candidate_lightcurves",
         type=Path,
         required=True
     )
@@ -69,10 +75,10 @@ def main():
         args.minimum_chi2_lightcurve
     )
 
-
     lc_table_minchi2 = clc.CandidateModelLightcurveTable.from_df_long(
         df_long_minchi2
     )
+    df_cont = FileReader.table_from_csv(args.candidate_lightcurves)
     lcs = [
         lc.select_unique()
         for lc in lc_table_minchi2.devide_into_frequency_groups()
@@ -87,8 +93,15 @@ def main():
         for i,lc in enumerate(lcs):
             plotter = plot_utils.Plotter(axes.flat[i])
             nu = lc.nu
+
+            print(lc.df.attrs)
             
             lc_obs = lcs_obs.select_frequency(nu,unit=nu.unit)
+            model_idx = lc.candidate_model_index
+            lc_cont = CandidateModelLightcurveContinuousPlot.from_df(
+                df=df_cont,
+                candidate_model_index=model_idx
+            )
 
             binned = components["binned"]
             binned_style = binned.style.resolve(i)
@@ -108,6 +121,11 @@ def main():
                 x=lc_obs.t.to_value_in(x_unit),
                 y=lc_obs.fnu_background.to_value_in(y_unit),
                 style=components["background"].resolve_line_style(i)
+            )
+            plotter.line(
+                x=lc_cont.t.to_value_in(x_unit),
+                y=lc_cont.fnu_with_bg(lc_obs.fnu_background.index(0)).to_value_in(y_unit),
+                style=components["continuous"].resolve_line_style(i)
             )
 
         pdf.savefig(fig)

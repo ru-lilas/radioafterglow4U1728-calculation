@@ -1,11 +1,11 @@
 layout:
   figure:
-    figsize: [16,18]
+    figsize: [32,9]
     dpi: 100
     layout_engine: constrained
   subplots:
-    nrows: 2
-    ncols: 1
+    nrows: 1
+    ncols: 2
     sharex: true
     sharey: true
     hide_shared_labels: true
@@ -97,9 +97,7 @@ components:
   continuous:
     type: line
     style:
-      colors: 
-        - "#FFCABF"
-        - "#BFE4FF"
+      colors: *colors_tmp
       linewidth: 2.0
       linestyle: "--"
       alpha: null
