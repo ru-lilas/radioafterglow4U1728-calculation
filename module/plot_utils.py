@@ -637,12 +637,89 @@ class MetadataGroupConfig:
     fontsize: float
     items: dict[str,MetadataConfig]
 
-ComponentStyleConfig = LineStyleConfig | ErrorbarStyleConfig
-
 @dataclass(frozen=True, slots=True)
 class ComponentConfig:
     type: ComponentType
-    style: ComponentStyleConfig
+    style: LineStyleConfig | ErrorbarStyleConfig
+
+    def __post_init__(self) -> None:
+        if self.type in ("line", "step"):
+            if not isinstance(
+                self.style,
+                LineStyleConfig,
+            ):
+                raise TypeError(
+                    f"type={self.type!r}には"
+                    "LineStyleConfigが必要です: "
+                    f"{type(self.style).__name__}"
+                )
+
+        elif self.type == "errorbar":
+            if not isinstance(
+                self.style,
+                ErrorbarStyleConfig,
+            ):
+                raise TypeError(
+                    "type='errorbar'には"
+                    "ErrorbarStyleConfigが必要です: "
+                    f"{type(self.style).__name__}"
+                )
+
+    @property
+    def line_style_config(
+        self,
+    ) -> LineStyleConfig:
+        if self.type not in ("line", "step"):
+            raise TypeError(
+                "line_style_configへアクセスできるのは"
+                "type='line'または'step'の場合だけです: "
+                f"type={self.type!r}"
+            )
+
+        if not isinstance(
+            self.style,
+            LineStyleConfig,
+        ):
+            raise TypeError(
+                "styleがLineStyleConfigではありません: "
+                f"{type(self.style).__name__}"
+            )
+
+        return self.style
+
+    @property
+    def errorbar_style_config(
+        self,
+    ) -> ErrorbarStyleConfig:
+        if self.type != "errorbar":
+            raise TypeError(
+                "errorbar_style_configへアクセスできるのは"
+                "type='errorbar'の場合だけです: "
+                f"type={self.type!r}"
+            )
+
+        if not isinstance(
+            self.style,
+            ErrorbarStyleConfig,
+        ):
+            raise TypeError(
+                "styleがErrorbarStyleConfigではありません: "
+                f"{type(self.style).__name__}"
+            )
+
+        return self.style
+
+    def resolve_line_style(
+        self,
+        index: int,
+    ) -> LineStyle:
+        return self.line_style_config.resolve(index)
+
+    def resolve_errorbar_style(
+        self,
+        index: int,
+    ) -> ErrorbarStyle:
+        return self.errorbar_style_config.resolve(index)
 
 def structure_component_config(
     data: dict[str, Any],

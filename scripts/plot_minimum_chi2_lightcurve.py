@@ -95,19 +95,19 @@ def main():
             plotter.step(
                 edges=lc.bin_edges.to_value_in(x_unit),
                 values=lc.fnu_total.to_value_in(y_unit),
-                style=binned_style,
+                style=binned.resolve_line_style(i),
                 baseline=lc.fnu_bg.value_in(y_unit)
             )
             plotter.errorbar(
                 x=lc_obs.t.to_value_in(x_unit),
                 y=lc_obs.fnu_total.to_value_in(y_unit),
                 yerr=lc_obs.fnu_total_err.to_value_in(y_unit),
-                style=components["observed"].style.resolve(i)
+                style=components["observed"].resolve_errorbar_style(i)
             )
             plotter.line(
                 x=lc_obs.t.to_value_in(x_unit),
                 y=lc_obs.fnu_background.to_value_in(y_unit),
-                style=components["background"].style.resolve(i)
+                style=components["background"].resolve_line_style(i)
             )
 
         pdf.savefig(fig)
