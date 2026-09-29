@@ -679,7 +679,18 @@ class ThermalComponentParameters:
 @dataclass(frozen=True,slots=True)
 class Emissivity:
     j0: NDArray[np.float64]
-    j_scr: NDArray[np.float64]
+    norm: NDArray[np.float64]
+
+    @staticmethod
+    def norm_th(
+        x: NDArray,
+        params: CalculationParameters
+    )->NDArray[np.float64]:
+        return EmissivityFequencyDependence.thermal_factor(
+            x=x,
+            f_factor=params.f_factor,
+            ip=params.ip
+        )
 
     @classmethod
     def only_thermal(
@@ -690,11 +701,7 @@ class Emissivity:
     )->Self:
         return cls(
             j0 = j0,
-            j_scr = EmissivityFequencyDependence.thermal_factor(
-                x=x,
-                f_factor=params.f_factor,
-                ip=params.ip
-            )
+            norm=cls.norm_th(x,params)
         )
 
     @classmethod
@@ -706,7 +713,7 @@ class Emissivity:
     )->Self:
         return cls(
             j0 = j0,
-            j_scr = EmissivityFequencyDependence.powerlaw_factor(
+            norm = EmissivityFequencyDependence.powerlaw_factor(
                 x=x,
                 cj=params.cj,
                 p=params.p,
@@ -722,12 +729,8 @@ class Emissivity:
         x: NDArray,
         params: CalculationParameters
     )->Self:
-        j_scr_th = EmissivityFequencyDependence.thermal_factor(
-            x=x,
-            f_factor=params.f_factor,
-            ip=params.ip
-        )
-        j_scr_pl = EmissivityFequencyDependence.powerlaw_factor(
+        norm_th = cls.norm_th(x,params)
+        norm_pl = EmissivityFequencyDependence.powerlaw_factor(
             x=x,
             cj=params.index.cj,
             p=params.index.p,
@@ -736,13 +739,13 @@ class Emissivity:
         )
         return cls(
             j0 = j0,
-            j_scr = j_scr_th+j_scr_pl
+            norm = norm_th+norm_pl
         )
 
 @dataclass(frozen=True,slots=True)
 class AbsorptionCoefficient:
     alpha0: NDArray[np.float64]
-    alpha_scr: NDArray[np.float64]
+    norm: NDArray[np.float64]
 
     @classmethod
     def only_thermal(
@@ -753,7 +756,7 @@ class AbsorptionCoefficient:
     )->Self:
         return cls(
             alpha0 = alpha0,
-            alpha_scr = AbsorptionCoefficientFrequencyDependence.thermal_factor(
+            norm = AbsorptionCoefficientFrequencyDependence.thermal_factor(
                 x=x,
                 f_factor=params.f_factor,
                 ip=params.ip
@@ -769,7 +772,7 @@ class AbsorptionCoefficient:
     )->Self:
         return cls(
             alpha0 = alpha0,
-            alpha_scr = AbsorptionCoefficientFrequencyDependence.powerlaw_factor(
+            norm = AbsorptionCoefficientFrequencyDependence.powerlaw_factor(
                 x=x,
                 ca=params.ca,
                 p=params.p,
@@ -785,12 +788,12 @@ class AbsorptionCoefficient:
         x: NDArray,
         params: CalculationParameters
     )->Self:
-        alpha_scr_th = AbsorptionCoefficientFrequencyDependence.thermal_factor(
+        norm_pl = AbsorptionCoefficientFrequencyDependence.thermal_factor(
             x=x,
             f_factor=params.f_factor,
             ip=params.ip
         )
-        alpha_scr_pl = AbsorptionCoefficientFrequencyDependence.powerlaw_factor(
+        norm_pl = AbsorptionCoefficientFrequencyDependence.powerlaw_factor(
             x=x,
             ca=params.ca,
             p=params.p,
@@ -799,12 +802,12 @@ class AbsorptionCoefficient:
         )
         return cls(
             alpha0 = alpha0,
-            alpha_scr = alpha_scr_th+alpha_scr_pl
+            norm = norm_pl+norm_pl
         )
 
     @property
     def value(self):
-        return self.alpha0*self.alpha_scr
+        return self.alpha0*self.norm
 
 @dataclass(frozen=True,slots=True)
 class OpticalDepth:
