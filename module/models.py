@@ -985,6 +985,7 @@ class SynchrotronPeak:
     xm: NDArray64
     phi: u.Quantity
     fnu_total: u.Quantity
+    lnu: u.Quantity
 
     @classmethod
     def from_df(cls, df: pd.DataFrame) -> Self:
@@ -997,6 +998,7 @@ class SynchrotronPeak:
 
         fnu_unit = df.attrs[MetadataNames.FNU_UNIT]
         phi_unit = df.attrs[MetadataNames.PHI_UNIT]
+        lnu_unit = df.attrs[MetadataNames.LNU_UNIT]
         return cls(
             column_index=ordered[ColumnNames.PEAK_COLUMN_INDEX]
                 .to_numpy(dtype=np.intp).reshape(-1, 1),
@@ -1011,6 +1013,11 @@ class SynchrotronPeak:
                     .to_numpy(dtype=np.float64).reshape(-1, 1),
                 unit=fnu_unit,
             ),
+            lnu=u.Quantity(
+                ordered[ColumnNames.LNU]
+                    .to_numpy(dtype=np.float64).reshape(-1, 1),
+                unit=lnu_unit,
+            ),
         )
 
     def to_df(
@@ -1018,6 +1025,7 @@ class SynchrotronPeak:
         *,
         fnu_unit: str = DefaultUnits.fnu,
         phi_unit: str = DefaultUnits.phi,
+        lnu_unit: str = DefaultUnits.lnu,
     ) -> pd.DataFrame:
         n_models = self.xm.shape[0]
         df = pd.DataFrame({
@@ -1026,9 +1034,11 @@ class SynchrotronPeak:
             ColumnNames.XM: self.xm.ravel(),
             PhiName.PHI: self.phi.to_value(phi_unit).ravel(),
             FluxName.FNU_TOTAL: self.fnu_total.to_value(fnu_unit).ravel(),
+            ColumnNames.LNU: self.lnu.to_value(lnu_unit).ravel(),
         })
         df.attrs[MetadataNames.FNU_UNIT] = str(fnu_unit)
         df.attrs[MetadataNames.PHI_UNIT] = str(phi_unit)
+        df.attrs[MetadataNames.LNU_UNIT] = str(lnu_unit)
         return df
 
 @dataclass(frozen=True,slots=True)
@@ -1063,12 +1073,18 @@ class SynchrotronResults:
             raise TypeError(
                 "phi_peak をQuantityとして返せません."
             )
+        lnu_peak = self.lnu.total_quantity[row_index, column_index]
+        if not isinstance(lnu_peak, u.Quantity):
+            raise TypeError(
+                "lnu_peak をQuantityとして返せません."
+            )
 
         return SynchrotronPeak(
             column_index=column_index,
             xm=self.xm[row_index, column_index],
             phi=phi_peak,
             fnu_total=fnu_total_peak,
+            lnu=lnu_peak,
         )
 
     def to_df(
