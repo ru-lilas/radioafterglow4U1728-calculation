@@ -874,7 +874,7 @@ class SourceFunction(SynchrotronComponents):
         jnu: Emissivity,
         anu: AbsorptionCoefficient
     )->Self:
-        norm_s = jnu.norm*anu.norm
+        norm_s = jnu.norm/anu.norm
         zeta = jnu.zeta
         eta = anu.eta
         return cls(
@@ -915,7 +915,7 @@ class SpecificLuminosity(SynchrotronComponents):
         return cls(
             thermal_only = norm_l*snu.thermal_only*(-np.expm1(-tau.thermal_only)),
             powerlaw_only = norm_l*snu.powerlaw_only*(-np.expm1(-tau.powerlaw_only)),
-            total = norm_l*snu.powerlaw_only*(-np.expm1(-tau.total)),
+            total = norm_l*snu.total*(-np.expm1(-tau.total)),
         )
 
     @staticmethod
