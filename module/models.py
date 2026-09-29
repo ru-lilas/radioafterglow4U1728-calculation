@@ -28,6 +28,8 @@ m_e = u.Quantity(m_e)
 m_p = u.Quantity(m_p)
 mec2 = (m_e*c**2).to("erg")
 
+type NDArray64 = NDArray[np.float64]
+
 A_CYC = (((4.0*np.pi*mec2)/(3.0*e*c))**2).to("g cm-1")
 PHI = (1*u.Unit("GHz")*1*u.Unit("min")).decompose()
 
@@ -619,9 +621,44 @@ def calculate_alpha0(
         *eps_th/(8.0*np.pi*eps_b*theta0*theta**5)
     )
 
-class EmissivityFequencyDependence:
+@dataclass(frozen=True,slots=True)
+class SynchrotronNormalizationFactor:
+    norm_j: NDArray64
+    norm_alpha: NDArray64
+
+    @classmethod
+    def from_grid(
+        cls,
+        eps_th: float,
+        eps_b: float,
+        theta0: NDArray64,
+        theta : NDArray64,
+        phi_th: NDArray64,
+    )->Self:
+        return cls(
+            norm_j = calculate_j0(
+                eps_th= eps_th,
+                eps_b = eps_b,
+                theta0 = theta0,
+                theta = theta,
+                phi_th = phi_th
+            ),
+            norm_alpha = calculate_alpha0(
+                eps_th= eps_th,
+                eps_b = eps_b,
+                theta0 = theta0,
+                theta = theta,
+                phi_th = phi_th
+            )
+        )
+
+@dataclass(frozen=True,slots=True)
+class EmissivityFequencyDependenceTerm:
+    thermal: NDArray64
+    powerlaw: NDArray64
+
     @staticmethod
-    def thermal_factor(
+    def compute_thermal(
         x: NDArray,
         f_factor: NDArray,
         ip: NDArray
@@ -631,26 +668,44 @@ class EmissivityFequencyDependence:
         )
 
     @staticmethod
-    def powerlaw_factor(
+    def compute_powerlaw(
         cj: float,
-        delta_pl: float,
+        eps_e: float,
         g_factor: NDArray,
         x: NDArray,
         p:float
     )->NDArray:
         return (
-            cj*delta_pl*g_factor*x**(-0.5*(p-1.0))
+            cj*eps_e*g_factor*x**(-0.5*(p-1.0))
         )
 
+    @classmethod
+    def from_grid(
+        cls,
+        cj: float,
+        p:float,
+        eps_e: float,
+        x: NDArray64,
+        ip: NDArray64,
+        f_factor: NDArray64,
+        g_factor: NDArray,
+    )->Self:
+        return cls(
+            thermal = cls.compute_thermal(x,f_factor,ip),
+            powerlaw = cls.compute_powerlaw(cj,eps_e,g_factor,x,p)
+        )
+
+    @property
+    def total(self)->NDArray64:
+        return self.thermal+self.powerlaw
+
+@dataclass(frozen=True,slots=True)
 class AbsorptionCoefficientFrequencyDependence:
-    eps_th: float
-    eps_b: float
-    theta0: NDArray
-    theta : NDArray
-    phi_th: NDArray
+    thermal: NDArray64
+    powerlaw: NDArray64
 
     @staticmethod
-    def thermal_factor(
+    def compute_thermal(
         x: NDArray,
         f_factor: NDArray,
         ip: NDArray
@@ -660,234 +715,178 @@ class AbsorptionCoefficientFrequencyDependence:
         )
 
     @staticmethod
-    def powerlaw_factor(
+    def compute_powerlaw(
         ca: float,
-        delta_pl: float,
+        eps_e: float,
         g_factor: NDArray,
         x: NDArray,
         p: float
     )->NDArray:
         return (
-            ca*delta_pl*g_factor*x**(-0.5*(p+4.0))
-        )
-
-@dataclass(frozen=True,slots=True)
-class ThermalComponentParameters:
-    ip: NDArray[np.float64]
-    f_factor: NDArray[np.float64]
-
-@dataclass(frozen=True,slots=True)
-class Emissivity:
-    j0: NDArray[np.float64]
-    norm: NDArray[np.float64]
-
-    @staticmethod
-    def norm_th(
-        x: NDArray,
-        params: CalculationParameters
-    )->NDArray[np.float64]:
-        return EmissivityFequencyDependence.thermal_factor(
-            x=x,
-            f_factor=params.f_factor,
-            ip=params.ip
+            ca*eps_e*g_factor*x**(-0.5*(p+4.0))
         )
 
     @classmethod
-    def only_thermal(
+    def from_grid(
         cls,
-        j0: NDArray,
-        x: NDArray,
-        params: CalculationParameters
+        ca: float,
+        p:float,
+        eps_e: float,
+        x: NDArray64,
+        ip: NDArray64,
+        f_factor: NDArray64,
+        g_factor: NDArray,
     )->Self:
         return cls(
-            j0 = j0,
-            norm=cls.norm_th(x,params)
-        )
-
-    @classmethod
-    def only_powerlaw(
-        cls,
-        j0: NDArray,
-        x: NDArray,
-        params: CalculationParameters
-    )->Self:
-        return cls(
-            j0 = j0,
-            norm = EmissivityFequencyDependence.powerlaw_factor(
-                x=x,
-                cj=params.cj,
-                p=params.p,
-                delta_pl=params.delta_pl,
-                g_factor=params.g_factor,
-            )
-        )
-
-    @classmethod
-    def total(
-        cls,
-        j0: NDArray,
-        x: NDArray,
-        params: CalculationParameters
-    )->Self:
-        norm_th = cls.norm_th(x,params)
-        norm_pl = EmissivityFequencyDependence.powerlaw_factor(
-            x=x,
-            cj=params.index.cj,
-            p=params.index.p,
-            delta_pl=params.delta_pl,
-            g_factor=params.g_factor,
-        )
-        return cls(
-            j0 = j0,
-            norm = norm_th+norm_pl
-        )
-
-@dataclass(frozen=True,slots=True)
-class AbsorptionCoefficient:
-    alpha0: NDArray[np.float64]
-    norm: NDArray[np.float64]
-
-    @classmethod
-    def only_thermal(
-        cls,
-        alpha0: NDArray,
-        x: NDArray,
-        params: CalculationParameters
-    )->Self:
-        return cls(
-            alpha0 = alpha0,
-            norm = AbsorptionCoefficientFrequencyDependence.thermal_factor(
-                x=x,
-                f_factor=params.f_factor,
-                ip=params.ip
-            )
-        )
-
-    @classmethod
-    def only_powerlaw(
-        cls,
-        alpha0: NDArray,
-        x: NDArray,
-        params: CalculationParameters
-    )->Self:
-        return cls(
-            alpha0 = alpha0,
-            norm = AbsorptionCoefficientFrequencyDependence.powerlaw_factor(
-                x=x,
-                ca=params.ca,
-                p=params.p,
-                delta_pl=params.delta_pl,
-                g_factor=params.g_factor,
-            )
-        )
-
-    @classmethod
-    def total(
-        cls,
-        alpha0: NDArray,
-        x: NDArray,
-        params: CalculationParameters
-    )->Self:
-        norm_pl = AbsorptionCoefficientFrequencyDependence.thermal_factor(
-            x=x,
-            f_factor=params.f_factor,
-            ip=params.ip
-        )
-        norm_pl = AbsorptionCoefficientFrequencyDependence.powerlaw_factor(
-            x=x,
-            ca=params.ca,
-            p=params.p,
-            delta_pl=params.delta_pl,
-            g_factor=params.g_factor,
-        )
-        return cls(
-            alpha0 = alpha0,
-            norm = norm_pl+norm_pl
+            thermal = cls.compute_thermal(x,f_factor,ip),
+            powerlaw = cls.compute_powerlaw(ca,eps_e,g_factor,x,p)
         )
 
     @property
-    def value(self):
-        return self.alpha0*self.norm
+    def total(self)->NDArray64:
+        return self.thermal+self.powerlaw
 
 @dataclass(frozen=True,slots=True)
-class OpticalDepth:
-    value: NDArray[np.float64]
-
-    @classmethod
-    def build(
-        cls,
-        alpha_nu: NDArray,
-        r0: NDArray
-    )->Self:
-        return cls(alpha_nu*r0)
+class Emissivity:
+    norm: NDArray[np.float64]
+    zeta: EmissivityFequencyDependenceTerm
 
 @dataclass(frozen=True,slots=True)
-class SpecificLuminosity:
-    value: u.Quantity
+class AbsorptionCoefficient:
+    norm: NDArray[np.float64]
+    eta: AbsorptionCoefficientFrequencyDependence
+
+@dataclass(frozen=True,slots=True)
+class SynchrotronComponents:
+    thermal_only: NDArray64
+    powerlaw_only: NDArray64
+    total: NDArray64
+
+@dataclass(frozen=True,slots=True)
+class SynchrotronQuantities:
+    thermal_only: u.Quantity
+    powerlaw_only: u.Quantity
+    total: u.Quantity
+
+@dataclass(frozen=True,slots=True)
+class SourceFunction(SynchrotronComponents):
 
     @classmethod
-    def compute(
+    def compute_from(
         cls,
-        l0: u.Quantity,
-        tau:NDArray[np.float64],
-        j_scr:NDArray[np.float64],
-        alpha_scr:NDArray[np.float64]
+        jnu: Emissivity,
+        anu: AbsorptionCoefficient
     )->Self:
-        f_esc = -np.expm1(-tau)
+        norm_s = jnu.norm*anu.norm
+        zeta = jnu.zeta
+        eta = anu.eta
         return cls(
-            l0*f_esc*j_scr/alpha_scr
+            thermal_only = norm_s*zeta.thermal/eta.thermal,
+            powerlaw_only = norm_s*zeta.powerlaw/eta.powerlaw,
+            total = norm_s*(zeta.total)/(eta.total)
         )
 
 @dataclass(frozen=True,slots=True)
-class Lightcurve:
-    nu: QuantityData
-    t: QuantityArray1D
-    fnu_flare: QuantityArray
+class OpticalDepth(SynchrotronComponents):
 
     @classmethod
-    def only_thermal(
+    def compute_from(
         cls,
-        params:CalculationParameters,
-        x: NDArray[np.float64]
-    ):
-        j0 = params.j0
-        jnu = Emissivity.only_thermal(
-            j0=j0,
-            x=x,
-            params=params
+        anu: AbsorptionCoefficient,
+        norm_r: NDArray64
+    )->Self:
+        norm_a = anu.norm
+        eta = anu.eta
+        norm_tau = norm_a*norm_r
+        return cls(
+            thermal_only = norm_tau*eta.thermal,
+            powerlaw_only = norm_tau*eta.powerlaw,
+            total = norm_tau*eta.total,
         )
-        a0 = params.alpha0
-        anu = AbsorptionCoefficient.only_thermal(
-            alpha0=a0,
-            x=x,
-            params=params
-        )
-        tau = OpticalDepth.build(
-            alpha_nu=anu.value,
-            r0 = params.r0
-        )
-        # lambda_syn = SpecificLuminosity.compute(
-        #     tau=tau.value,
-        #     j_scr=jnu.j_scr,
-        #     alpha_scr=anu.alpha_scr
-        # )
 
+@dataclass(frozen=True,slots=True)
+class SpecificLuminosity(SynchrotronComponents):
+
+    @classmethod
+    def compute_from(
+        cls,
+        norm_r: NDArray64,
+        snu: SourceFunction,
+        tau: OpticalDepth
+    )->Self:
+        norm_l = (2.0*np.pi*norm_r)**2
+        return cls(
+            thermal_only = norm_l*snu.thermal_only*(-np.expm1(-tau.thermal_only)),
+            powerlaw_only = norm_l*snu.powerlaw_only*(-np.expm1(-tau.powerlaw_only)),
+            total = norm_l*snu.powerlaw_only*(-np.expm1(-tau.total)),
+        )
+
+    @staticmethod
+    def as_quantity(lambda_syn:NDArray64)->u.Quantity:
+        return u.Quantity(lambda_syn*mec2)
+
+    @property
+    def thermal_quantity(self):
+        return self.as_quantity(self.thermal_only)
+
+    @property
+    def powerlaw_quantity(self):
+        return self.as_quantity(self.powerlaw_only)
+
+    @property
+    def total_quantity(self):
+        return self.as_quantity(self.total)
+
+@dataclass(frozen=True,slots=True)
+class ObserverframeSpecificFlux(SynchrotronQuantities):
+    pass
+
+@dataclass(frozen=True,slots=True)
+class SourceframeSpecificFlux(SynchrotronQuantities):
+
+    @staticmethod
+    def convert(
+        lnu: u.Quantity,
+        distance: u.Quantity
+    )->u.Quantity:
+        return quantity_converter.lnu_into_fnu(lnu,distance)
+
+    @classmethod
+    def from_luminosity(
+        cls,
+        lnu: SpecificLuminosity,
+        distance: QuantityData
+    )->Self:
+        d_quantity = distance.quantity
+        return cls(
+            thermal_only = cls.convert(lnu.thermal_quantity,d_quantity),
+            powerlaw_only = cls.convert(lnu.powerlaw_quantity,d_quantity),
+            total = cls.convert(lnu.total_quantity,d_quantity)
+        )
+
+    @staticmethod
+    def convert_into_obsframe(
+        fnu_srcframe:u.Quantity,
+        doppler_factor:NDArray64
+    )->u.Quantity:
+        doppler_factor_column = u.Quantity(doppler_factor[:,np.newaxis])
+        return doppler_factor_column**3 * fnu_srcframe
+
+    def to_observer_frame(
+        self,
+        doppler_factor:NDArray64
+    )->ObserverframeSpecificFlux:
+        return ObserverframeSpecificFlux(
+            thermal_only=self.convert_into_obsframe(self.thermal_only,doppler_factor),
+            powerlaw_only=self.convert_into_obsframe(self.powerlaw_only,doppler_factor),
+            total=self.convert_into_obsframe(self.total,doppler_factor),
+        )
 
 def calculate_effective_mass_ratio(
     mu:float,
     mu_e:float
 )->float:
     return float((mu_e*MASS_RATIO_ELE_PRO/mu).decompose())
-
-def calculate_lnu_theta(
-    eps_th:float,
-    eps_b:float,
-    mep:float,
-    a:FloatArray
-)->QuantityArray:
-    return QuantityArray.from_quantity(
-        192*np.pi**3*eps_b*mep*a**2*mec2/eps_th
-    )
 
 @dataclass(frozen=True,slots=True)
 class ShockRadius(QuantityArray):
@@ -1032,33 +1031,7 @@ class DimensionlessLuminosity:
             unit=lnu_theta.unit,
         )
 
-@dataclass(frozen=True,slots=True)
-class ObserverframeSpecificFlux(QuantityArray):
-    pass
 
-@dataclass(frozen=True,slots=True)
-class SourceframeSpecificFlux(QuantityArray):
-    @classmethod
-    def from_lnu(
-        cls,
-        lnu: QuantityArray,
-        distance: QuantityData
-    )->Self:
-        fnu = quantity_converter.lnu_into_fnu(
-            lnu = lnu.quantity,
-            distance = distance.quantity
-        )
-        return cls.from_quantity(fnu)
-
-    def to_observerframe(
-        self,
-        doppler_factor:FloatArray
-    )->ObserverframeSpecificFlux:
-        doppler_factor_column = doppler_factor[:,np.newaxis]
-        return ObserverframeSpecificFlux(
-            values = doppler_factor_column**3 * self.values,
-            unit = self.unit
-        )
 
 @dataclass(slots=True)
 class ThermalSynchrotron:
