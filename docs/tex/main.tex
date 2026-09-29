@@ -430,6 +430,24 @@ exact one is smaller than \qty{0.5}{\percent}.
   \melecc
 \end{empheq}
 \section{Power-law component}
+\subsection{Emissivity}
+\begin{equation}
+  \mathscr{J}_{\powerlaw}
+  \coloneq
+  \jnupl\ab(\frac{\melecc}{(ct)^3})^{-1}
+  =
+  N_{j}
+  \zeta_{\powerlaw}(\xm)
+\end{equation}
+\begin{equation}
+  \mathscr{A}_{\powerlaw}
+  \coloneq
+  \anupl(ct)
+  =
+  N_{\alpha}
+  \eta_{\powerlaw}(\xm)
+\end{equation}
+
 \begin{equation}
   \label{eq:definition_of_N_j}
   N_{j}
@@ -448,26 +466,18 @@ exact one is smaller than \qty{0.5}{\percent}.
   \Theta^{-5}
 \end{equation}
 \begin{equation}
-  \label{eq:definition_of_Pi_j}
-  \Pi_{j}
-  =
+  \label{eq:definition_of_zeta_pl}
+  \zeta_{\powerlaw}(\xm)
+  \coloneq 
   C_{j}\varepsilon_{\ele}
   g(\Theta)\xm^{-(p-1)/2}
 \end{equation}
 \begin{equation}
-  \label{eq:definition_of_Pi_alpha}
-  \Pi_{\alpha}
-  =
+  \label{eq:definition_of_eta_pl}
+  \eta_{\powerlaw}(\xm)
+  \coloneq
   C_{\alpha}\varepsilon_{\ele}
   g(\Theta)\xm^{-(p+4)/2}
-\end{equation}
-\begin{equation}
-  \label{eq:definition_of_j_nu_pl}
-  \jnupl = N_j\Pi_{j}(\xm)\frac{\melecc}{(ct)^3}
-\end{equation}
-\begin{equation}
-  \label{eq:definition_of_alpha_nu_pl}
-  \anupl = N_{\alpha}\Pi_{\alpha}(\xm)\frac{1}{ct}
 \end{equation}
 
 \section{Results}

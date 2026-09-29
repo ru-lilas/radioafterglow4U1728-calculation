@@ -26,7 +26,7 @@ model_parameters:
     unit: "kpc"
   powerlaw:
     p_index: 3.0
-    delta_pl: 1.0e-02
+    eps_e: 1.0e-02
 
 candidate_models_selection:
   observation_frequencies:

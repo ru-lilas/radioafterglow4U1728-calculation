@@ -462,7 +462,7 @@ class MolecularWeight:
 @dataclass(frozen=True,slots=True)
 class PowerlawParameters:
     p_index:float
-    delta_pl: float
+    eps_e: float
 
     @property
     def cj(
