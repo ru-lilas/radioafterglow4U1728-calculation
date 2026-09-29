@@ -67,6 +67,9 @@ class FluxName(StrEnum):
     FNU_POWERLAW = auto()
     FNU_TOTAL = auto()
 
+class PhiName(StrEnum):
+    PHI = auto()
+
 class ColumnNames(StrEnum):
     CANDIDATE_MODEL_INDEX = auto()
     MODEL_INDEX = auto()
@@ -984,6 +987,27 @@ class SynchrotronResults:
     lnu: SpecificLuminosity
     fnu_obsframe: ObserverframeSpecificFlux
 
+    @property
+    def phi(self):
+        return self.xm*self.model_params.phi_th.reshape(-1,1)
+
+    def to_df(
+        self,
+        *,
+        fnu_unit: str = DefaultUnits.fnu,
+    ) -> pd.DataFrame:
+        n_models, n_xm = self.xm.shape
+        fnu = self.fnu_obsframe
+
+        return pd.DataFrame({
+            ColumnNames.MODEL_INDEX: np.repeat(np.arange(n_models), n_xm),
+            ColumnNames.XM: self.xm.ravel(),
+            PhiName.PHI: self.phi.ravel(),
+            FluxName.FNU_THERMAL: fnu.thermal_only.to_value(fnu_unit).ravel(),
+            FluxName.FNU_POWERLAW: fnu.powerlaw_only.to_value(fnu_unit).ravel(),
+            FluxName.FNU_TOTAL: fnu.total.to_value(fnu_unit).ravel(),
+        })
+
     @classmethod
     def compute_from(
         cls,
@@ -1043,21 +1067,6 @@ class SynchrotronResults:
             lnu=lnu,
             fnu_obsframe=fnu_obsframe
         )
-
-    def to_df(
-        self,
-        *,
-        fnu_unit:str = DefaultUnits.fnu
-    )->pd.DataFrame:
-        fnu = self.fnu_obsframe
-
-        df = pd.DataFrame({
-            ColumnNames.XM: self.xm.ravel(),
-            FluxName.FNU_THERMAL: fnu.thermal_only.to(fnu_unit).ravel(),
-            FluxName.FNU_POWERLAW: self.fnu_obsframe.powerlaw_only.to(fnu_unit).ravel(),
-            FluxName.FNU_TOTAL: self.fnu_obsframe.total.to(fnu_unit).ravel(),
-        })
-        return df
 
 
 @dataclass(frozen=True,slots=True)

@@ -5,25 +5,12 @@
 
 import argparse
 from pathlib import Path
-import numpy as np
 
-from module import mystatistics
 from module.inputs_as_dataclass import GeneralInputs
 from module.models import ModelParameters, SynchrotronResults
 from module.mydataclasses import QuantityData
-from module.mystatistics import CalculateChiSquared
-from module.observation import LongformatLightcurve
 from module.utils import FileReader, FileWriter
-from module.synchrotron_numerical_table import DimensionlessThermalLuminosityGrid, ThermalSynchrotronIntegrals
-from module.calculation_lightcurve import (
-    CandidateModelLightcurveGrid,
-    CandidateModelParameters,
-    ObserverframeSpecificFluxGrid,
-    PhaseParameterGrid,
-    SpecificLuminosityGrid,
-    SourceframeSpecificFluxGrid,
-    ObserverframeSpecificFluxGrid
-    )
+from module.synchrotron_numerical_table import ThermalSynchrotronIntegrals
 
 def parse_args()->argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -58,12 +45,11 @@ def main():
         xm=conf_lc.xm.to_floatvector().values[None,:],
         table=table
     )
-    print(results.to_df())
-
-    # FileWriter.df_to_csv(
-    #     path=args.output,
-    #     df=lc.to_df(),
-    # )
+    print("dumping now...")
+    FileWriter.df_to_csv(
+        path=args.output,
+        df=results.to_df(),
+    )
     return
 
 if __name__ == "__main__":
