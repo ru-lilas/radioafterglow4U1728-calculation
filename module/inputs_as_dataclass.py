@@ -11,6 +11,7 @@ from module.parameter_table import ModelParameterTable, ParameterGrid
 from module.types import FloatArray
 from module import electron_temperature, models,synchrotron_scaling_values,quantity_converter
 from module.mydataclasses import (
+    FloatVectorSpace,
     QuantityArray,
     QuantityArray1D,
     QuantityArray1DSpace,
@@ -100,55 +101,19 @@ class ObservedBursterProperty:
         return QuantityData.from_Quantity(e_nuc_max)
 
 @dataclass(frozen=True,slots=True)
-class ModelParameters:
-    phi_th: QuantityArrayBase
-    theta0: ValueArray
-    eps_b: float
-    eps_th: float
-    molecular_weight: models.MolecularWeight
-    distance: QuantityData
-    powerlaw: models.PowerlawParameters
-
-    @property
-    def phi_th_array(self):
-        return self.phi_th.to_QuantityArray1D()
-
-    @property
-    def theta0_array(self):
-        return self.theta0.to_floatarray()
-
-    def build_grid(self):
-        return ParameterGrid.from_arrays(
-            self.phi_th_array,
-            self.theta0_array
-        )
-
-    def to_df(
-        self
-    )->ModelParameterTable:
-        return ModelParameterTable(
-            grid = ParameterGrid.from_arrays(
-                phi_th=self.phi_th_array,
-                theta0=self.theta0.to_floatarray()
-            ),
-            eps_b = self.eps_b,
-            eps_th = self.eps_th,
-            mep = self.molecular_weight.to_effective_mass_ratio(),
-            distance= self.distance
-        )
-@dataclass(frozen=True,slots=True)
 class Units:
     phi_unit: str
     fnu_unit: str
 
 @dataclass(frozen=True,slots=True)
 class ModelLightcurveConfig:
+    xm: FloatVectorSpace
     time: QuantityArray1DSpace
 
 @dataclass(frozen=True)
 class GeneralInputs(YAMLReadable):
     units: Units
-    model_parameters: ModelParameters
+    model_parameters: models.InputParametersRaw
     candidate_models_selection: CandidateModelsSelection
     model_lightcurves: ModelLightcurveConfig
     chi2: Chi2Configure

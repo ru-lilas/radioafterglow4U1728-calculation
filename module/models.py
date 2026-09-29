@@ -12,6 +12,7 @@ import pandas as pd
 from enum import StrEnum, auto
 from dataclasses import dataclass
 from module.mydataclasses import FloatVector, FloatVectorSpace, NDArraySpace, QuantityArray, QuantityArrayBase, QuantityData, QuantityArray1D, ValueArray
+from module.synchrotron_numerical_table import ThermalSynchrotronIntegrals
 from module.types import FloatArray, FloatArray1D, FloatArrayLike, FloatGrid
 from scipy import special
 from numpy.typing import NDArray
@@ -40,6 +41,12 @@ log10_3 = np.log10(3.0)
 TWO_TO_FIVE:float = 2**5
 THREE_TO_SEVEN = 3**7
 
+class DefaultUnits(StrEnum):
+    fnu = "mJy"
+    lnu = "erg s-1 Hz-1"
+    t   = "min"
+    nu  = "GHz"
+
 class MetadataNames(StrEnum):
     PHI_TH = auto()
     THETA0 = auto()
@@ -55,9 +62,15 @@ class MetadataNames(StrEnum):
     NU_UNIT = auto()
     T_UNIT = auto()
 
+class FluxName(StrEnum):
+    FNU_THERMAL = auto()
+    FNU_POWERLAW = auto()
+    FNU_TOTAL = auto()
+
 class ColumnNames(StrEnum):
     CANDIDATE_MODEL_INDEX = auto()
     MODEL_INDEX = auto()
+    XM = auto()
     PHI_TH = auto()
     THETA0 = auto()
     PHI_TH_THIN = auto()
@@ -473,7 +486,7 @@ class PowerlawParameters:
         p=self.p_index
         return (
             3.0**(0.5*(2.0*p-1.0)) \
-            *(p-2) \
+            *(p-2.0) \
             *special.gamma( 0.25*(p+5.0)) \
             *special.gamma( (3.0*p +  19.0)  / 12.0) \
             *special.gamma( (3.0*p -  1.0)   / 12.0) \
@@ -492,6 +505,7 @@ class PowerlawParameters:
         p=self.p_index
         return (
             2.0**(0.5*p) \
+            *np.pi**1.5 \
             *(p-2) \
             *special.gamma( 0.25*(p+6.0)) \
             *special.gamma( (3.0*p +  2.0)  / 12.0) \
@@ -503,12 +517,18 @@ class PowerlawParameters:
         )
 
 @dataclass(frozen=True,slots=True)
-class InputParameters:
+class ParameterGrid:
+    phi_th: NDArray64
+    theta0: NDArray64
+
+@dataclass(frozen=True,slots=True)
+class InputParametersRaw:
     phi_th: QuantityArrayBase
     theta0: FloatVectorSpace
     eps_th: float
     eps_b: float
     molecular_weight: MolecularWeight
+    distance: QuantityData
     powerlaw:PowerlawParameters
 
     @property
@@ -519,23 +539,77 @@ class InputParameters:
     def theta0_arr(self)->FloatVector:
         return self.theta0.to_floatvector()
 
+    def grid(self)->ParameterGrid:
+        phi_axis = np.unique(self.phi_arr.values)
+        theta0_axis = np.unique(self.theta0_arr.values)
+
+        phi_grid,theta0_grid = np.meshgrid(
+            phi_axis,
+            theta0_axis,
+            indexing="xy",
+            sparse=False
+        )
+
+        return ParameterGrid(
+            phi_th=phi_grid,
+            theta0=theta0_grid
+        )
+
+@dataclass(frozen=True,slots=True)
+class ModelParameters:
+    phi_th: NDArray64
+    theta0: NDArray64
+    eps_th: float
+    eps_b: float
+    molecular_weight: MolecularWeight
+    powerlaw:PowerlawParameters
+    distance:QuantityData
+
+    @classmethod
+    def build_from_input(
+        cls,
+        input:InputParametersRaw
+    )->Self:
+        grid=input.grid()
+        return cls(
+            phi_th=grid.phi_th,
+            theta0=grid.theta0,
+            eps_th=input.eps_th,
+            eps_b =input.eps_b,
+            molecular_weight=input.molecular_weight,
+            distance=input.distance,
+            powerlaw=input.powerlaw,
+
+        )
+
     @property
     def theta(self):
-        return DimensionlessElectronTemperature.hot(self.theta0_arr.values)
+        return DimensionlessElectronTemperature.hot(self.theta0)
 
     @property
     def effmass_ep(self):
-        return float((self.mu_e_mu*MASS_RATIO_ELE_PRO).decompose())
+        return self.molecular_weight.to_effective_mass_ratio()
+
+    @property
+    def beta_sh(
+        self,
+    )->NDArray64:
+        beta2 = (32.0*self.effmass_ep*self.theta0/(9.0*self.eps_th))
+        return np.sqrt(beta2)
 
     @property
     def r_norm(self):
         return np.sqrt(
-            32.0*self.effmass_ep*self.theta0_arr.values/(9.0*self.eps_th)
+            32.0*self.effmass_ep*self.theta0/(9.0*self.eps_th)
         )
 
     @property
     def gamma_min(self):
         return np.ones_like(self.theta0)
+
+    @property
+    def doppler_delta(self):
+        return quantity_converter.beta_into_doppler_delta(self.beta_sh)
 
     @property
     def f_factor(self):
@@ -549,51 +623,31 @@ class InputParameters:
             gamma_min=self.gamma_min,
         )
 
+    @staticmethod
+    def phi(
+        t:u.Quantity,
+        nu:u.Quantity
+    )->NDArray64:
+        return np.asarray((t*nu).decompose(),dtype=np.float64)
+
+    def xm(
+        self,
+        t:u.Quantity,
+        nu:u.Quantity
+    )->NDArray64:
+        phi = np.atleast_1d(self.phi(t, nu))
+        phi_th = self.phi_th.reshape(-1)
+
+        return phi[None, :] / phi_th[:, None]
+
+    @staticmethod
+    def ip(
+        xm:NDArray64,
+        table: ThermalSynchrotronIntegrals
+    )->NDArray64:
+        return table.ip(xm)
+
 FOUR_PI_OVER_THREE = 4.0*np.pi/3.0
-
-@dataclass(frozen=True,slots=True)
-class CalculationParameters:
-    j0: NDArray[np.float64]
-    alpha0: NDArray[np.float64]
-    theta: NDArray[np.float64]
-    r0: NDArray[np.float64]
-    f_factor: NDArray[np.float64]
-    g_factor: NDArray[np.float64]
-    delta_pl: float
-    p: float
-    cj: float
-    ca: float
-
-    @classmethod
-    def build(
-        cls,
-        inputs:InputParameters
-    )->Self:
-        phi_th = inputs.phi_th_arr.values
-        theta = inputs.theta
-        theta0 = inputs.theta0_arr.values
-        eps_th = inputs.eps_th
-        eps_b   = inputs.eps_b
-        return cls(
-            j0 = (
-                FOUR_PI_OVER_THREE**3
-                *(phi_th/theta**2)**3
-                *eps_th/(8.0*np.pi*eps_b*theta0)
-            ),
-            alpha0 = (
-                FOUR_PI_OVER_THREE
-                *(phi_th/theta**2)
-                *eps_th/(8.0*np.pi*eps_b*theta0*theta**5)
-            ),
-            theta = theta,
-            r0 = inputs.r_norm,
-            f_factor = inputs.f_factor,
-            g_factor = inputs.g_factor,
-            p = inputs.powerlaw.p_index,
-            cj = inputs.powerlaw.cj,
-            ca = inputs.powerlaw.ca,
-            delta_pl = inputs.delta_pl
-        )
 
 def calculate_j0(
     eps_th: float,
@@ -664,7 +718,7 @@ class EmissivityFequencyDependenceTerm:
         ip: NDArray
     )->NDArray:
         return (
-            0.125*np.sqrt(3.0)*f_factor*x*ip
+            np.sqrt(3.0)*f_factor*x*ip/(8.0*np.pi)
         )
 
     @staticmethod
@@ -745,6 +799,44 @@ class AbsorptionCoefficientFrequencyDependence:
     @property
     def total(self)->NDArray64:
         return self.thermal+self.powerlaw
+
+@dataclass(frozen=True,slots=True)
+class FrequencyDependence:
+    j:EmissivityFequencyDependenceTerm
+    alpha:AbsorptionCoefficientFrequencyDependence
+
+    @classmethod
+    def compute_from(
+        cls,
+        ca: float,
+        cj:float,
+        p:float,
+        eps_e: float,
+        x: NDArray64,
+        ip: NDArray64,
+        f_factor: NDArray64,
+        g_factor: NDArray,
+    )->Self:
+        return cls(
+            j=EmissivityFequencyDependenceTerm.from_grid(
+                cj=cj,
+                p=p,
+                eps_e=eps_e,
+                x=x,
+                ip=ip,
+                f_factor=f_factor,
+                g_factor=g_factor
+            ),
+            alpha=AbsorptionCoefficientFrequencyDependence.from_grid(
+                ca=ca,
+                p=p,
+                eps_e=eps_e,
+                x=x,
+                ip=ip,
+                f_factor=f_factor,
+                g_factor=g_factor
+            )
+        )
 
 @dataclass(frozen=True,slots=True)
 class Emissivity:
@@ -882,29 +974,91 @@ class SourceframeSpecificFlux(SynchrotronQuantities):
             total=self.convert_into_obsframe(self.total,doppler_factor),
         )
 
-def calculate_effective_mass_ratio(
-    mu:float,
-    mu_e:float
-)->float:
-    return float((mu_e*MASS_RATIO_ELE_PRO/mu).decompose())
-
 @dataclass(frozen=True,slots=True)
-class ShockRadius(QuantityArray):
+class SynchrotronResults:
+    model_params:ModelParameters
+    xm: NDArray64
+    j_nu: Emissivity
+    alpha_nu: AbsorptionCoefficient
+    tau: OpticalDepth
+    lnu: SpecificLuminosity
+    fnu_obsframe: ObserverframeSpecificFlux
 
     @classmethod
-    def beta_sh(
+    def compute_from(
         cls,
-        beta_sh:FloatArray,
-        t:QuantityArray,
-    ):
-        return
+        model_params:ModelParameters,
+        xm:NDArray64,
+        table: ThermalSynchrotronIntegrals,
+    )->Self:
+        n_models = model_params.phi_th.size
+        if model_params.theta0.shape != model_params.phi_th.shape:
+            raise ValueError("phi_thとtheta0の格子形状が一致しません")
+        if xm.ndim != 2 or xm.shape[0] != 1:
+            raise ValueError(
+                f"xmは(1, M)の配列が必要です: shape={xm.shape}"
+            )
 
+        xm_grid = np.broadcast_to(xm, (n_models, xm.shape[1]))
+        r = model_params.r_norm.reshape(-1, 1)
+        norms = SynchrotronNormalizationFactor.from_grid(
+            eps_th=model_params.eps_th,
+            eps_b=model_params.eps_b,
+            theta0=model_params.theta0,
+            theta=model_params.theta,
+            phi_th=model_params.phi_th,
+        )
+        x_dependent_terms = FrequencyDependence.compute_from(
+            ca=model_params.powerlaw.ca,
+            cj=model_params.powerlaw.cj,
+            p=model_params.powerlaw.p_index,
+            eps_e=model_params.powerlaw.eps_e,
+            x=xm_grid,
+            ip=model_params.ip(xm,table),
+            f_factor=model_params.f_factor.reshape(-1,1),
+            g_factor=model_params.g_factor.reshape(-1,1),
+        )
+        jnu = Emissivity(
+            norm=norms.norm_j.reshape(-1, 1),
+            zeta=x_dependent_terms.j
+        )
+        alpha_nu = AbsorptionCoefficient(
+            norm=norms.norm_alpha.reshape(-1, 1),
+            eta=x_dependent_terms.alpha
+        )
+        snu = SourceFunction.compute_from(jnu,alpha_nu)
+        tau = OpticalDepth.compute_from(alpha_nu,r)
+        lnu = SpecificLuminosity.compute_from(r,snu,tau)
+        fnu_srcframe = SourceframeSpecificFlux.from_luminosity(lnu,model_params.distance)
+        fnu_obsframe = fnu_srcframe.to_observer_frame(
+            np.asarray(model_params.doppler_delta).reshape(-1)
+        )
 
-@dataclass(frozen=True,slots=True)
-class TransRelativisticLimit:
-    mep:float
-    eps_th: float
-    eps_b: float
+        return cls(
+            model_params=model_params,
+            xm=xm_grid,
+            j_nu=jnu,
+            alpha_nu=alpha_nu,
+            tau=tau,
+            lnu=lnu,
+            fnu_obsframe=fnu_obsframe
+        )
+
+    def to_df(
+        self,
+        *,
+        fnu_unit:str = DefaultUnits.fnu
+    )->pd.DataFrame:
+        fnu = self.fnu_obsframe
+
+        df = pd.DataFrame({
+            ColumnNames.XM: self.xm.ravel(),
+            FluxName.FNU_THERMAL: fnu.thermal_only.to(fnu_unit).ravel(),
+            FluxName.FNU_POWERLAW: self.fnu_obsframe.powerlaw_only.to(fnu_unit).ravel(),
+            FluxName.FNU_TOTAL: self.fnu_obsframe.total.to(fnu_unit).ravel(),
+        })
+        return df
+
 
 @dataclass(frozen=True,slots=True)
 class ThermalSynchrotronTable:
@@ -1030,8 +1184,6 @@ class DimensionlessLuminosity:
             values=self.values * lnu_theta_column,
             unit=lnu_theta.unit,
         )
-
-
 
 @dataclass(slots=True)
 class ThermalSynchrotron:

@@ -36,6 +36,12 @@ candidate_models_selection:
     unit: *nu_unit
 
 model_lightcurves:
+  xm:
+    values:
+      start: 1.0e-02
+      stop: 1.0e+04
+      num: 256
+      scale: log
   time:
     values:
       start:  1.0e-02
