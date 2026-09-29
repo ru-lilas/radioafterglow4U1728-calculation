@@ -44,7 +44,7 @@ class ColormapConfigures:
 
 @dataclass(frozen=True,slots=True)
 class Styles:
-    obs_center: plot_utils.ScatterStyle
+    obs_center: plot_utils.ErrorbarStyle
     obs_ranges: plot_utils.RectangleStyles
     thin_boundary: plot_utils.LineStyle
     relativistic_boundary: plot_utils.LineStyle
@@ -72,7 +72,7 @@ class PlotConfig(YAMLReadable):
 
 @dataclass(frozen=True, slots=True)
 class ColormapPlotConfig(YAMLReadable):
-    layout: plot_utils.MultiPlotLayoutConfig
+    layout: plot_utils.PlotLayout
     colormaps: ColormapConfigures
     metadata: ChevalierMetadataConfig
     styles: Styles

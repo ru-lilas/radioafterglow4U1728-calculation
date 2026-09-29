@@ -78,98 +78,6 @@ class Chi2Configure:
 class CandidateModelsSelection:
     observation_frequencies: QuantityList
 
-# @dataclass(frozen=True,slots=True)
-# class ModelParameterGrid:
-#     a_wind: QuantityArray
-#     beta_sh: FloatArray
-#     eps_b: float
-#     eps_th: float
-#     mu: float
-#     mu_e: float
-#     distance: QuantityData
-#
-#     @classmethod
-#     def from_yaml(
-#         cls,
-#         path:Path
-#     )->Self:
-#         generalinput = GeneralInputs.from_yaml(path)
-#         indata = generalinput.model_parameters
-#         return cls(
-#             a_wind = indata.a_wind.quantity_array,
-#             beta_sh = indata.beta_sh.arr,
-#             eps_b = indata.eps_b,
-#             eps_th = indata.eps_th,
-#             mu = indata.mu,
-#             mu_e = indata.mu_e,
-#             distance = indata.distance
-#         )
-#
-#     @property
-#     def a_wind_axis(self)->FloatArray:
-#         return np.unique(self.a_wind.values)
-#
-#     @property
-#     def beta_sh_axis(self)->FloatArray:
-#         return np.unique(self.beta_sh)
-#
-#     def build_meshgrid(self):
-#         a_wind_unit = self.a_wind.unit
-#
-#         a_wind_value_grid,beta_sh_grid = np.meshgrid(
-#             self.a_wind_axis,
-#             self.beta_sh_axis,
-#             indexing="xy",
-#             sparse=True
-#         )
-#         a_wind_grid = QuantityArray(
-#             values = a_wind_value_grid,
-#             unit = a_wind_unit
-#         )
-#         return (a_wind_grid,beta_sh_grid)
-#
-#     @property
-#     def theta(self)->FloatArray:
-#         return electron_temperature.calculate_theta_e(
-#             eps_th=self.eps_th,
-#             mu=self.mu,
-#             mu_e=self.mu_e,
-#             beta_sh=self.beta_sh
-#         )
-#
-#     @property
-#     def phi_theta(self):
-#         return synchrotron_scaling_values.calculate_phi_theta(
-#             theta = self.theta,
-#             eps_b = self.eps_b,
-#             a_wind = self.a_wind.quantity
-#         )
-#
-#     @property
-#     def tau_theta(self)->FloatArray:
-#         return synchrotron_scaling_values.calculate_tau_theta(
-#             theta = self.theta,
-#             eps_b = self.eps_b,
-#             a_wind = self.a_wind.quantity,
-#             beta_sh=self.beta_sh,
-#             mu=self.mu,
-#             mu_e=self.mu_e,
-#         )
-#
-#     @property
-#     def lnu_theta(self):
-#         return synchrotron_scaling_values.calculate_l_theta(
-#             theta = self.theta,
-#             eps_b = self.eps_b,
-#             a_wind = self.a_wind.quantity,
-#             beta_sh=self.beta_sh,
-#         )
-#
-#     @property
-#     def doppler_delta(self):
-#         return quantity_converter.beta_into_doppler_delta(self.beta_sh)
-
-
 @dataclass(frozen=True,slots=True)
 class ObservedBursterProperty:
     burster_name: str
@@ -197,24 +105,35 @@ class ModelParameters:
     theta0: ValueArray
     eps_b: float
     eps_th: float
-    mu: float
-    mu_e: float
+    molecular_weight: models.MolecularWeight
     distance: QuantityData
+    powerlaw: models.PowerlawParameters
 
-    def build(
+    @property
+    def phi_th_array(self):
+        return self.phi_th.to_QuantityArray1D()
+
+    @property
+    def theta0_array(self):
+        return self.theta0.to_floatarray()
+
+    def build_grid(self):
+        return ParameterGrid.from_arrays(
+            self.phi_th_array,
+            self.theta0_array
+        )
+
+    def to_df(
         self
     )->ModelParameterTable:
         return ModelParameterTable(
             grid = ParameterGrid.from_arrays(
-                phi_th=self.phi_th.to_QuantityArray1D(),
+                phi_th=self.phi_th_array,
                 theta0=self.theta0.to_floatarray()
             ),
             eps_b = self.eps_b,
             eps_th = self.eps_th,
-            mep = models.MolecularWeightRatio.from_params(
-                mu=self.mu,
-                mu_e=self.mu_e
-            ).to_mep(),
+            mep = self.molecular_weight.to_mass_ratio(),
             distance= self.distance
         )
 @dataclass(frozen=True,slots=True)

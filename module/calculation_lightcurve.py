@@ -317,7 +317,7 @@ class CandidateModelParameters:
             column: str,
             unit: str
         )->QuantityArray1D:
-            return QuantityArray1D.from_df(df,column,unit)
+            return QuantityArray1D.from_df_unit(df,column,unit=unit)
 
         return cls(
             metadata = metadata,
@@ -466,11 +466,11 @@ class CandidateModelLightcurveContinuous:
             metadata = metadata,
             candidate_model_index=candidate_model_index,
             model_index = model_index,
-            t = QuantityArray1D.from_df(
+            t = QuantityArray1D.from_df_unit(
                 df,models.ColumnNames.T,metadata.t_unit
             ),
             nu = nu_array.index(0),
-            fnu_obs_frame = QuantityArray1D.from_df(
+            fnu_obs_frame = QuantityArray1D.from_df_unit(
                 df,models.ColumnNames.FNU_OBS_FRAME,metadata.fnu_unit
             ),
         )

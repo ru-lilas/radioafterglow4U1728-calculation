@@ -31,7 +31,7 @@ def main():
     general_inputs = GeneralInputs.from_yaml(args.input)
     peak_table =DimensionlessThermalPeak.from_csv(args.peak_table)
     model_params = general_inputs.model_parameters
-    model_table = model_params.build()
+    model_table = model_params.to_df()
 
     df = model_table.to_df(peak_table)
 

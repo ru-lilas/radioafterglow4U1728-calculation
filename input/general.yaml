@@ -18,11 +18,15 @@ model_parameters:
     scale: "linear"
   eps_th: 0.4
   eps_b: 1.0e-02
-  mu: 0.5
-  mu_e: 1.00
+  molecular_weight:
+    mu: 0.5
+    mu_e: 1.00
   distance:
     value: 5.0
     unit: "kpc"
+  powerlaw:
+    p_index: 3.0
+    delta_pl: 1.0e-02
 
 candidate_models_selection:
   observation_frequencies:
@@ -39,7 +43,6 @@ model_lightcurves:
       num: 256
       scale: "log"
     unit: "s"
-
 
 chi2:
   timewindow:

@@ -245,6 +245,18 @@ class QuantityArray1D(QuantityArray):
             unit=df.attrs[unit_key]
         )
 
+    @classmethod
+    def from_df_unit(
+        cls,
+        df:pd.DataFrame,
+        column:str,
+        unit:str,
+    )->Self:
+        return cls(
+            values=df[column].to_numpy(dtype=np.float64),
+            unit=unit
+        )
+
     def decompose(
         self,
     )->FloatArray1D:

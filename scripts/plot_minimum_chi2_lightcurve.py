@@ -1,7 +1,7 @@
 from module import dataframe_processors, dataframe_utils
 from module.inputs_as_dataclass import GeneralInputs
 from dataclasses import dataclass
-from module.models import ColumnNames
+from module.models import ColumnNames, MetadataNames
 from module.mydataclasses import QuantityData, YAMLReadable
 from module.utilities import filereaders as fr
 from pathlib import Path
@@ -70,6 +70,7 @@ def main():
 
     # model table
     df_models = FileReader.table_from_csv(args.candidate_models)
+    print(df_models)
 
     df_long_minchi2 = FileReader.table_from_csv(
         args.minimum_chi2_lightcurve
@@ -94,14 +95,18 @@ def main():
             plotter = plot_utils.Plotter(axes.flat[i])
             nu = lc.nu
 
-            print(lc.df.attrs)
-            
             lc_obs = lcs_obs.select_frequency(nu,unit=nu.unit)
-            model_idx = lc.candidate_model_index
+            model_index = lc.candidate_model_index
             lc_cont = CandidateModelLightcurveContinuousPlot.from_df(
                 df=df_cont,
-                candidate_model_index=model_idx
+                candidate_model_index=model_index
             )
+            row = df_models.loc[
+                df_models["model_index"] == lc.model_index
+            ].iloc[0]
+            print(row)
+            
+            eps_b = lc.df.attrs[MetadataNames.EPS_B]
 
             binned = components["binned"]
             binned_style = binned.style.resolve(i)

@@ -435,38 +435,40 @@ class ThermalSynchrotronLuminosity(QuantityArray):
         return cls.from_quantity(quantities)
 
 @dataclass(frozen=True,slots=True)
-class MolecularWeightRatio:
-    value: float
+class MolecularWeight:
+    mu_e: float
+    mu: float
 
-    @classmethod
-    def from_params(
-        cls,
-        mu:float,
-        mu_e:float
-    )->Self:
-        return cls(mu_e/mu)
-
-    @classmethod
-    def from_mep(
-        cls,
-        mep:float
-    )->float:
-        return float((mep/MASS_RATIO_ELE_PRO).decompose())
-
-    def to_mep(
+    def to_ratio(
         self
     )->float:
-        return float((self.value*MASS_RATIO_ELE_PRO).decompose())
+        return float(
+            (self.mu_e/self.mu).decompose()
+        )
+
+    def to_mass_ratio(
+        self
+    )->float:
+        return float(
+            (self.mu_e*MASS_RATIO_ELE_PRO/self.mu).decompose()
+        )
+
+    @staticmethod
+    def convert_mass_ratio_into_ratio(
+        mass_ratio:float
+    )->float:
+        return float(mass_ratio/MASS_RATIO_ELE_PRO)
 
 @dataclass(frozen=True,slots=True)
-class PowerlawIndex:
-    p:float
+class PowerlawParameters:
+    p_index:float
+    delta_pl: float
 
     @property
     def cj(
         self
     )->float:
-        p=self.p
+        p=self.p_index
         return (
             3.0**(0.5*(2.0*p-1.0)) \
             *(p-2) \
@@ -485,7 +487,7 @@ class PowerlawIndex:
     def ca(
         self
     )->float:
-        p=self.p
+        p=self.p_index
         return (
             2.0**(0.5*p) \
             *(p-2) \
@@ -505,7 +507,7 @@ class InputParameters:
     mu_e_mu: float
     theta0: NDArray
     phi_th: NDArray
-    p_index:PowerlawIndex
+    p_index:PowerlawParameters
     delta_pl: float
 
     @property
@@ -533,7 +535,7 @@ class InputParameters:
     @property
     def g_factor(self):
         return PowerlawDistributionFactor.exact(
-            p=self.p_index.p,
+            p=self.p_index.p_index,
             theta=self.theta,
             gamma_min=self.gamma_min,
         )
@@ -578,7 +580,7 @@ class CalculationParameters:
             r0 = inputs.r0,
             f_factor = inputs.f_factor,
             g_factor = inputs.g_factor,
-            p = inputs.p_index.p,
+            p = inputs.p_index.p_index,
             cj = inputs.p_index.cj,
             ca = inputs.p_index.ca,
             delta_pl = inputs.delta_pl

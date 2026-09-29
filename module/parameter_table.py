@@ -344,7 +344,7 @@ class ModelParameterTable:
         })
         df.attrs[models.MetadataNames.EPS_B] = self.eps_b
         df.attrs[models.MetadataNames.EPS_TH] = self.eps_th
-        df.attrs[models.MetadataNames.MU_E_MU] = models.MolecularWeightRatio.from_mep(self.mep)
+        df.attrs[models.MetadataNames.MU_E_MU] = models.MolecularWeight.convert_mass_ratio_into_ratio(self.mep)
         df.attrs[models.MetadataNames.DISTANCE_VALUE] = self.distance.value
         df.attrs[models.MetadataNames.DISTANCE_UNIT] = self.distance.unit
         df.attrs[models.MetadataNames.A_WIND_UNIT] = a_wind_unit
