@@ -108,11 +108,10 @@ class MaxwellJuttnerFactor:
 
     @staticmethod
     def exact(
-        theta:ElectronTemperature
-    )->FloatArray:
-        theta_val = theta.values
+        theta:NDArray[np.float64]
+    )->NDArray[np.float64]:
         return (
-            2.0*theta_val**2 / special.kv(2,1.0/theta_val)
+            2.0*theta**2 / special.kv(2,1.0/theta)
         )
 
     @staticmethod
@@ -128,11 +127,29 @@ class MaxwellJuttnerFactor:
         ax:Axes,
         style:plot_utils.LineStyle,
     ):
-        f_exact = self.exact(theta)
+        f_exact = self.exact(theta.values)
         return ax.plot(
             theta.values,f_exact,
             **style.to_kwargs()
         )
+
+class PowerlawDistributionFactor:
+    @staticmethod
+    def exact(
+        p: float,
+        theta:NDArray[np.float64],
+        gamma_min: NDArray[np.float64]
+    )->NDArray[np.float64]:
+        pm1 = p-1.0
+        return (
+            pm1*gamma_min/(pm1*gamma_min-pm1+1.0)
+        )*(gamma_min/(3.0*theta))**pm1
+
+    @staticmethod
+    def hot(
+        theta:NDArray[np.float64]
+    )->FloatArray:
+        return np.ones_like(theta)
 
 @dataclass(frozen=True,slots=True)
 class PhaseParameter(QuantityArray):
@@ -200,7 +217,6 @@ class EffectiveElectronProtonMassRatio:
         return cls(
             value=float((muep*MASS_RATIO_ELE_PRO).decompose())
         )
-
 
 @dataclass(frozen=True,slots=True)
 class ElectronTemperatureScaling:
@@ -293,7 +309,7 @@ class ThermalSynchrotronPhase(PhaseParameter):
     )->Self:
         theta_val = theta.values
         theta0_val = theta0.values
-        f_factor = MaxwellJuttnerFactor.exact(theta)
+        f_factor = MaxwellJuttnerFactor.exact(theta.values)
         phi_th_thin_inv = u.Quantity(
                 (np.pi*f_factor)/(eps_b*theta_val**7)
             *np.sqrt(TWO_TO_FIVE*eps_th*mep/(THREE_TO_SEVEN*theta0_val)),
@@ -384,7 +400,8 @@ class OpticalDepthParameter:
         hot:bool=False
     )->Self:
         phi = phi_th.decompose()
-        f_factor = MaxwellJuttnerFactor.exact(theta) if not hot else MaxwellJuttnerFactor.hot(theta)
+        f_factor = MaxwellJuttnerFactor.exact(theta.values) \
+        if not hot else MaxwellJuttnerFactor.hot(theta)
         return cls(
             values = (
                 (np.pi*phi/(eps_b*theta.values**7))
@@ -440,6 +457,409 @@ class MolecularWeightRatio:
         self
     )->float:
         return float((self.value*MASS_RATIO_ELE_PRO).decompose())
+
+@dataclass(frozen=True,slots=True)
+class PowerlawIndex:
+    p:float
+
+    @property
+    def cj(
+        self
+    )->float:
+        p=self.p
+        return (
+            3.0**(0.5*(2.0*p-1.0)) \
+            *(p-2) \
+            *special.gamma( 0.25*(p+5.0)) \
+            *special.gamma( (3.0*p +  19.0)  / 12.0) \
+            *special.gamma( (3.0*p -  1.0)   / 12.0) \
+            / (
+                2.0**(0.5*(7.0-p)) \
+                *np.sqrt(np.pi) \
+                *(p + 1.0) \
+                *special.gamma(0.25*(p+7.0))
+            )
+        )
+
+    @property
+    def ca(
+        self
+    )->float:
+        p=self.p
+        return (
+            2.0**(0.5*p) \
+            *(p-2) \
+            *special.gamma( 0.25*(p+6.0)) \
+            *special.gamma( (3.0*p +  2.0)  / 12.0) \
+            *special.gamma( (3.0*p + 22.0)  / 12.0) \
+            / (
+                3.0**(0.5*(5.0-2.0*p)) \
+                *special.gamma(0.25*(p+8.0))
+            )
+        )
+
+@dataclass(frozen=True,slots=True)
+class InputParameters:
+    eps_th: float
+    eps_b: float
+    mu_e_mu: float
+    theta0: NDArray
+    phi_th: NDArray
+    p_index:PowerlawIndex
+    delta_pl: float
+
+    @property
+    def theta(self):
+        return DimensionlessElectronTemperature.hot(self.theta0)
+
+    @property
+    def effmass_ep(self):
+        return float((self.mu_e_mu*MASS_RATIO_ELE_PRO).decompose())
+
+    @property
+    def r0(self):
+        return np.sqrt(
+            32.0*self.effmass_ep*self.theta0/(9.0*self.eps_th)
+        )
+
+    @property
+    def gamma_min(self):
+        return np.ones_like(self.theta0)
+
+    @property
+    def f_factor(self):
+        return MaxwellJuttnerFactor.exact(self.theta)
+
+    @property
+    def g_factor(self):
+        return PowerlawDistributionFactor.exact(
+            p=self.p_index.p,
+            theta=self.theta,
+            gamma_min=self.gamma_min,
+        )
+
+FOUR_PI_OVER_THREE = 4.0*np.pi/3.0
+
+@dataclass(frozen=True,slots=True)
+class CalculationParameters:
+    j0: NDArray[np.float64]
+    alpha0: NDArray[np.float64]
+    theta: NDArray[np.float64]
+    r0: NDArray[np.float64]
+    f_factor: NDArray[np.float64]
+    g_factor: NDArray[np.float64]
+    delta_pl: float
+    p: float
+    cj: float
+    ca: float
+
+    @classmethod
+    def build(
+        cls,
+        inputs:InputParameters
+    )->Self:
+        phi_th = inputs.phi_th
+        theta = inputs.theta
+        theta0 = inputs.theta0
+        eps_th = inputs.eps_th
+        eps_b   = inputs.eps_b
+        return cls(
+            j0 = (
+                FOUR_PI_OVER_THREE**3
+                *(phi_th/theta**2)**3
+                *eps_th/(8.0*np.pi*eps_b*theta0)
+            ),
+            alpha0 = (
+                FOUR_PI_OVER_THREE
+                *(phi_th/theta**2)
+                *eps_th/(8.0*np.pi*eps_b*theta0*theta**5)
+            ),
+            theta = theta,
+            r0 = inputs.r0,
+            f_factor = inputs.f_factor,
+            g_factor = inputs.g_factor,
+            p = inputs.p_index.p,
+            cj = inputs.p_index.cj,
+            ca = inputs.p_index.ca,
+            delta_pl = inputs.delta_pl
+        )
+
+def calculate_j0(
+    eps_th: float,
+    eps_b: float,
+    theta0: NDArray,
+    theta : NDArray,
+    phi_th: NDArray,
+)->NDArray[np.float64]:
+    return (
+        FOUR_PI_OVER_THREE**3
+        *(phi_th/theta**2)**3
+        *eps_th/(8.0*np.pi*eps_b*theta0)
+    )
+
+def calculate_alpha0(
+    eps_th: float,
+    eps_b: float,
+    theta0: NDArray,
+    theta : NDArray,
+    phi_th: NDArray,
+)->NDArray:
+    return (
+        FOUR_PI_OVER_THREE
+        *(phi_th/theta**2)
+        *eps_th/(8.0*np.pi*eps_b*theta0*theta**5)
+    )
+
+class EmissivityFequencyDependence:
+    @staticmethod
+    def thermal_factor(
+        x: NDArray,
+        f_factor: NDArray,
+        ip: NDArray
+    )->NDArray:
+        return (
+            0.125*np.sqrt(3.0)*f_factor*x*ip
+        )
+
+    @staticmethod
+    def powerlaw_factor(
+        cj: float,
+        delta_pl: float,
+        g_factor: NDArray,
+        x: NDArray,
+        p:float
+    )->NDArray:
+        return (
+            cj*delta_pl*g_factor*x**(-0.5*(p-1.0))
+        )
+
+class AbsorptionCoefficientFrequencyDependence:
+    eps_th: float
+    eps_b: float
+    theta0: NDArray
+    theta : NDArray
+    phi_th: NDArray
+
+    @staticmethod
+    def thermal_factor(
+        x: NDArray,
+        f_factor: NDArray,
+        ip: NDArray
+    )->NDArray[np.float64]:
+        return (
+            np.pi*f_factor*ip/(3.0**1.5*x)
+        )
+
+    @staticmethod
+    def powerlaw_factor(
+        ca: float,
+        delta_pl: float,
+        g_factor: NDArray,
+        x: NDArray,
+        p: float
+    )->NDArray:
+        return (
+            ca*delta_pl*g_factor*x**(-0.5*(p+4.0))
+        )
+
+@dataclass(frozen=True,slots=True)
+class ThermalComponentParameters:
+    ip: NDArray[np.float64]
+    f_factor: NDArray[np.float64]
+
+@dataclass(frozen=True,slots=True)
+class Emissivity:
+    j0: NDArray[np.float64]
+    j_scr: NDArray[np.float64]
+
+    @classmethod
+    def only_thermal(
+        cls,
+        j0: NDArray,
+        x: NDArray,
+        params: CalculationParameters
+    )->Self:
+        return cls(
+            j0 = j0,
+            j_scr = EmissivityFequencyDependence.thermal_factor(
+                x=x,
+                f_factor=params.f_factor,
+                ip=params.ip
+            )
+        )
+
+    @classmethod
+    def only_powerlaw(
+        cls,
+        j0: NDArray,
+        x: NDArray,
+        params: CalculationParameters
+    )->Self:
+        return cls(
+            j0 = j0,
+            j_scr = EmissivityFequencyDependence.powerlaw_factor(
+                x=x,
+                cj=params.cj,
+                p=params.p,
+                delta_pl=params.delta_pl,
+                g_factor=params.g_factor,
+            )
+        )
+
+    @classmethod
+    def total(
+        cls,
+        j0: NDArray,
+        x: NDArray,
+        params: CalculationParameters
+    )->Self:
+        j_scr_th = EmissivityFequencyDependence.thermal_factor(
+            x=x,
+            f_factor=params.f_factor,
+            ip=params.ip
+        )
+        j_scr_pl = EmissivityFequencyDependence.powerlaw_factor(
+            x=x,
+            cj=params.index.cj,
+            p=params.index.p,
+            delta_pl=params.delta_pl,
+            g_factor=params.g_factor,
+        )
+        return cls(
+            j0 = j0,
+            j_scr = j_scr_th+j_scr_pl
+        )
+
+@dataclass(frozen=True,slots=True)
+class AbsorptionCoefficient:
+    alpha0: NDArray[np.float64]
+    alpha_scr: NDArray[np.float64]
+
+    @classmethod
+    def only_thermal(
+        cls,
+        alpha0: NDArray,
+        x: NDArray,
+        params: CalculationParameters
+    )->Self:
+        return cls(
+            alpha0 = alpha0,
+            alpha_scr = AbsorptionCoefficientFrequencyDependence.thermal_factor(
+                x=x,
+                f_factor=params.f_factor,
+                ip=params.ip
+            )
+        )
+
+    @classmethod
+    def only_powerlaw(
+        cls,
+        alpha0: NDArray,
+        x: NDArray,
+        params: CalculationParameters
+    )->Self:
+        return cls(
+            alpha0 = alpha0,
+            alpha_scr = AbsorptionCoefficientFrequencyDependence.powerlaw_factor(
+                x=x,
+                ca=params.ca,
+                p=params.p,
+                delta_pl=params.delta_pl,
+                g_factor=params.g_factor,
+            )
+        )
+
+    @classmethod
+    def total(
+        cls,
+        alpha0: NDArray,
+        x: NDArray,
+        params: CalculationParameters
+    )->Self:
+        alpha_scr_th = AbsorptionCoefficientFrequencyDependence.thermal_factor(
+            x=x,
+            f_factor=params.f_factor,
+            ip=params.ip
+        )
+        alpha_scr_pl = AbsorptionCoefficientFrequencyDependence.powerlaw_factor(
+            x=x,
+            ca=params.ca,
+            p=params.p,
+            delta_pl=params.delta_pl,
+            g_factor=params.g_factor,
+        )
+        return cls(
+            alpha0 = alpha0,
+            alpha_scr = alpha_scr_th+alpha_scr_pl
+        )
+
+    @property
+    def value(self):
+        return self.alpha0*self.alpha_scr
+
+@dataclass(frozen=True,slots=True)
+class OpticalDepth:
+    value: NDArray[np.float64]
+
+    @classmethod
+    def build(
+        cls,
+        alpha_nu: NDArray,
+        r0: NDArray
+    )->Self:
+        return cls(alpha_nu*r0)
+
+@dataclass(frozen=True,slots=True)
+class SpecificLuminosity:
+    value: u.Quantity
+
+    @classmethod
+    def compute(
+        cls,
+        l0: u.Quantity,
+        tau:NDArray[np.float64],
+        j_scr:NDArray[np.float64],
+        alpha_scr:NDArray[np.float64]
+    )->Self:
+        f_esc = -np.expm1(-tau)
+        return cls(
+            l0*f_esc*j_scr/alpha_scr
+        )
+
+@dataclass(frozen=True,slots=True)
+class Lightcurve:
+    nu: QuantityData
+    t: QuantityArray1D
+    fnu_flare: QuantityArray
+
+    @classmethod
+    def only_thermal(
+        cls,
+        params:CalculationParameters,
+        x: NDArray[np.float64]
+    ):
+        j0 = params.j0
+        jnu = Emissivity.only_thermal(
+            j0=j0,
+            x=x,
+            params=params
+        )
+        a0 = params.alpha0
+        anu = AbsorptionCoefficient.only_thermal(
+            alpha0=a0,
+            x=x,
+            params=params
+        )
+        tau = OpticalDepth.build(
+            alpha_nu=anu.value,
+            r0 = params.r0
+        )
+        # lambda_syn = SpecificLuminosity.compute(
+        #     tau=tau.value,
+        #     j_scr=jnu.j_scr,
+        #     alpha_scr=anu.alpha_scr
+        # )
+
 
 def calculate_effective_mass_ratio(
     mu:float,
