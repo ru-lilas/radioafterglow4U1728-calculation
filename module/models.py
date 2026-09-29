@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from enum import StrEnum, auto
 from dataclasses import dataclass
-from module.mydataclasses import QuantityArray, QuantityData, QuantityArray1D
+from module.mydataclasses import FloatVector, FloatVectorSpace, NDArraySpace, QuantityArray, QuantityArrayBase, QuantityData, QuantityArray1D, ValueArray
 from module.types import FloatArray, FloatArray1D, FloatArrayLike, FloatGrid
 from scipy import special
 from numpy.typing import NDArray
@@ -446,7 +446,7 @@ class MolecularWeight:
             (self.mu_e/self.mu).decompose()
         )
 
-    def to_mass_ratio(
+    def to_effective_mass_ratio(
         self
     )->float:
         return float(
@@ -502,26 +502,33 @@ class PowerlawParameters:
 
 @dataclass(frozen=True,slots=True)
 class InputParameters:
+    phi_th: QuantityArrayBase
+    theta0: FloatVectorSpace
     eps_th: float
     eps_b: float
-    mu_e_mu: float
-    theta0: NDArray
-    phi_th: NDArray
-    p_index:PowerlawParameters
-    delta_pl: float
+    molecular_weight: MolecularWeight
+    powerlaw:PowerlawParameters
+
+    @property
+    def phi_arr(self)->FloatVector:
+        return self.phi_th.to_floatvector()
+
+    @property
+    def theta0_arr(self)->FloatVector:
+        return self.theta0.to_floatvector()
 
     @property
     def theta(self):
-        return DimensionlessElectronTemperature.hot(self.theta0)
+        return DimensionlessElectronTemperature.hot(self.theta0_arr.values)
 
     @property
     def effmass_ep(self):
         return float((self.mu_e_mu*MASS_RATIO_ELE_PRO).decompose())
 
     @property
-    def r0(self):
+    def r_norm(self):
         return np.sqrt(
-            32.0*self.effmass_ep*self.theta0/(9.0*self.eps_th)
+            32.0*self.effmass_ep*self.theta0_arr.values/(9.0*self.eps_th)
         )
 
     @property
@@ -535,7 +542,7 @@ class InputParameters:
     @property
     def g_factor(self):
         return PowerlawDistributionFactor.exact(
-            p=self.p_index.p_index,
+            p=self.powerlaw.p_index,
             theta=self.theta,
             gamma_min=self.gamma_min,
         )
@@ -560,9 +567,9 @@ class CalculationParameters:
         cls,
         inputs:InputParameters
     )->Self:
-        phi_th = inputs.phi_th
+        phi_th = inputs.phi_th_arr.values
         theta = inputs.theta
-        theta0 = inputs.theta0
+        theta0 = inputs.theta0_arr.values
         eps_th = inputs.eps_th
         eps_b   = inputs.eps_b
         return cls(
@@ -577,12 +584,12 @@ class CalculationParameters:
                 *eps_th/(8.0*np.pi*eps_b*theta0*theta**5)
             ),
             theta = theta,
-            r0 = inputs.r0,
+            r0 = inputs.r_norm,
             f_factor = inputs.f_factor,
             g_factor = inputs.g_factor,
-            p = inputs.p_index.p_index,
-            cj = inputs.p_index.cj,
-            ca = inputs.p_index.ca,
+            p = inputs.powerlaw.p_index,
+            cj = inputs.powerlaw.cj,
+            ca = inputs.powerlaw.ca,
             delta_pl = inputs.delta_pl
         )
 

@@ -133,7 +133,7 @@ class ModelParameters:
             ),
             eps_b = self.eps_b,
             eps_th = self.eps_th,
-            mep = self.molecular_weight.to_mass_ratio(),
+            mep = self.molecular_weight.to_effective_mass_ratio(),
             distance= self.distance
         )
 @dataclass(frozen=True,slots=True)

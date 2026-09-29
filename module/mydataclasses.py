@@ -75,6 +75,12 @@ class QuantityArrayBase:
             unit = self.unit
         )
 
+    def to_floatvector(self):
+        qarr = self.to_QuantityArray1D()
+        return FloatVector(
+            values = qarr.quantity.decompose()
+        )
+
     def FloatArray_in(self,unit:str|u.UnitBase)->FloatArray:
         value:FloatArray = np.asarray(self.quantity.to_value(unit),dtype=np.float64)
         return value
@@ -764,6 +770,20 @@ class FloatArray1DSpace(NDArraySpace):
             return FloatArray1D(self.linspace())
         elif self.scale=="log":
             return FloatArray1D(self.geomspace())
+        else:
+            raise ValueError(
+                f"未対応のscaleです:{self.scale}"
+            )
+
+@dataclass(frozen=True, slots=True)
+class FloatVectorSpace(NDArraySpace):
+    scale: ValueScale
+
+    def to_floatvector(self):
+        if self.scale=="linear":
+            return FloatVector(self.linspace())
+        elif self.scale=="log":
+            return FloatVector(self.geomspace())
         else:
             raise ValueError(
                 f"未対応のscaleです:{self.scale}"
