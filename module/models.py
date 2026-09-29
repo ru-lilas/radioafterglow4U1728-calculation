@@ -73,6 +73,7 @@ class PhiName(StrEnum):
 class ColumnNames(StrEnum):
     CANDIDATE_MODEL_INDEX = auto()
     MODEL_INDEX = auto()
+    PEAK_COLUMN_INDEX = auto()
     XM = auto()
     PHI_TH = auto()
     THETA0 = auto()
@@ -984,6 +985,20 @@ class SynchrotronPeak:
     phi: NDArray64
     fnu_total: u.Quantity
 
+    def to_df(
+        self,
+        *,
+        fnu_unit: str = DefaultUnits.fnu,
+    ) -> pd.DataFrame:
+        n_models = self.xm.shape[0]
+        return pd.DataFrame({
+            ColumnNames.MODEL_INDEX: np.arange(n_models),
+            ColumnNames.PEAK_COLUMN_INDEX: self.column_index.ravel(),
+            ColumnNames.XM: self.xm.ravel(),
+            PhiName.PHI: self.phi.ravel(),
+            FluxName.FNU_TOTAL: self.fnu_total.to_value(fnu_unit).ravel(),
+        })
+
 @dataclass(frozen=True,slots=True)
 class SynchrotronResults:
     model_params:ModelParameters
@@ -1003,8 +1018,8 @@ class SynchrotronResults:
         fnu_total = self.fnu_obsframe.total
         column_index = np.argmax(fnu_total.value, axis=1)[:, np.newaxis]
         row_index = np.arange(self.xm.shape[0])[:, np.newaxis]
-        fnu_total_peak = fnu_total[row_index, column_index] 
-        if not isinstance(fnu_total_peak,u.Quantity):
+        fnu_total_peak = fnu_total[row_index, column_index]
+        if not isinstance(fnu_total_peak, u.Quantity):
             raise TypeError(
                 "fnu_total_peak をQuantityとして返せません."
             )
