@@ -16,6 +16,22 @@
 \NewDocumentCommand\melecc{}{\ensuremath{\mele c^2}}
 \NewDocumentCommand\muep{}{\ensuremath{\mu_{\mathrm{ep}}}}
 \NewDocumentCommand\Mep{}{\ensuremath{\mathcal{M}_{\mathrm{ep}}}}
+\NewDocumentCommand\jnu{o}{%
+  \ensuremath{
+    j_{
+      \nu
+      \IfValueT{#1}{,#1}
+    }
+  }
+}
+\NewDocumentCommand\anu{o}{%
+  \ensuremath{
+    \alpha_{
+      \nu
+      \IfValueT{#1}{,#1}
+    }
+  }
+}
 \NewDocumentCommand\betash{o}{
   \ensuremath{
     \beta_{
@@ -132,4 +148,25 @@
 }
 \NewDocumentCommand\ThetaTrFiducial{}{
   \num{3.0}
+}
+\NewDocumentCommand\jnuth{}{
+  \jnu[\thermal]
+}
+\NewDocumentCommand\anuth{}{
+  \anu[\thermal]
+}
+\NewDocumentCommand\jnupl{}{
+  \jnu[\powerlaw]
+}
+\NewDocumentCommand\anupl{}{
+  \anu[\powerlaw]
+}
+\NewDocumentCommand\Galpha{}{
+  G_{\alpha}
+}
+\NewDocumentCommand\Nalpha{}{
+  N_{\alpha}
+}
+\NewDocumentCommand\Nj{}{
+  N_{j}
 }
