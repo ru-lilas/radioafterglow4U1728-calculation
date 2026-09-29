@@ -20,7 +20,7 @@ from module import synchrotron_scaling_values
 from module import electron_temperature
 from module.utilities import bisection, unit_aliases as unit
 from module.utils import FileReader
-from astropy.constants import e,c,m_e,m_p,hbar
+from astropy.constants import e,c,m_e,m_p
 from module import f_factor
 import astropy.units as u
 e = u.Quantity(e.esu)
@@ -44,8 +44,8 @@ THREE_TO_SEVEN = 3**7
 class DefaultUnits(StrEnum):
     fnu = "mJy"
     lnu = "erg s-1 Hz-1"
-    t   = "min"
-    nu  = "GHz"
+    t = "min"
+    nu = "GHz"
 
 class MetadataNames(StrEnum):
     PHI_TH = auto()
@@ -978,6 +978,13 @@ class SourceframeSpecificFlux(SynchrotronQuantities):
         )
 
 @dataclass(frozen=True,slots=True)
+class SynchrotronPeak:
+    column_index: NDArray[np.intp]
+    xm: NDArray64
+    phi: NDArray64
+    fnu_total: u.Quantity
+
+@dataclass(frozen=True,slots=True)
 class SynchrotronResults:
     model_params:ModelParameters
     xm: NDArray64
@@ -990,6 +997,24 @@ class SynchrotronResults:
     @property
     def phi(self):
         return self.xm*self.model_params.phi_th.reshape(-1,1)
+
+    @property
+    def peak(self) -> SynchrotronPeak:
+        fnu_total = self.fnu_obsframe.total
+        column_index = np.argmax(fnu_total.value, axis=1)[:, np.newaxis]
+        row_index = np.arange(self.xm.shape[0])[:, np.newaxis]
+        fnu_total_peak = fnu_total[row_index, column_index] 
+        if not isinstance(fnu_total_peak,u.Quantity):
+            raise TypeError(
+                "fnu_total_peak をQuantityとして返せません."
+            )
+
+        return SynchrotronPeak(
+            column_index=column_index,
+            xm=self.xm[row_index, column_index],
+            phi=self.phi[row_index, column_index],
+            fnu_total=fnu_total_peak,
+        )
 
     def to_df(
         self,
@@ -1015,6 +1040,7 @@ class SynchrotronResults:
         xm:NDArray64,
         table: ThermalSynchrotronIntegrals,
     )->Self:
+        # 格子の各セルを一つのモデルとして扱う。
         n_models = model_params.phi_th.size
         if model_params.theta0.shape != model_params.phi_th.shape:
             raise ValueError("phi_thとtheta0の格子形状が一致しません")
@@ -1023,6 +1049,7 @@ class SynchrotronResults:
                 f"xmは(1, M)の配列が必要です: shape={xm.shape}"
             )
 
+        # xmを全モデルへ広げ、モデル格子を(n_models, 1)にする。
         xm_grid = np.broadcast_to(xm, (n_models, xm.shape[1]))
         r = model_params.r_norm.reshape(-1, 1)
         norms = SynchrotronNormalizationFactor.from_grid(
@@ -1067,7 +1094,6 @@ class SynchrotronResults:
             lnu=lnu,
             fnu_obsframe=fnu_obsframe
         )
-
 
 @dataclass(frozen=True,slots=True)
 class ThermalSynchrotronTable:
