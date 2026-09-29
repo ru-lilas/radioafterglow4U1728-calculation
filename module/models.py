@@ -46,6 +46,7 @@ class DefaultUnits(StrEnum):
     lnu = "erg s-1 Hz-1"
     t = "min"
     nu = "GHz"
+    phi = "GHz min"
 
 class MetadataNames(StrEnum):
     PHI_TH = auto()
@@ -982,22 +983,53 @@ class SourceframeSpecificFlux(SynchrotronQuantities):
 class SynchrotronPeak:
     column_index: NDArray[np.intp]
     xm: NDArray64
-    phi: NDArray64
+    phi: u.Quantity
     fnu_total: u.Quantity
+
+    @classmethod
+    def from_df(cls, df: pd.DataFrame) -> Self:
+        ordered = df.sort_values(ColumnNames.MODEL_INDEX)
+        model_index = ordered[ColumnNames.MODEL_INDEX].to_numpy()
+        if not np.array_equal(model_index, np.arange(len(ordered))):
+            raise ValueError(
+                "model_indexは0から始まる重複のない連番でなければなりません."
+            )
+
+        fnu_unit = df.attrs[MetadataNames.FNU_UNIT]
+        phi_unit = df.attrs[MetadataNames.PHI_UNIT]
+        return cls(
+            column_index=ordered[ColumnNames.PEAK_COLUMN_INDEX]
+                .to_numpy(dtype=np.intp).reshape(-1, 1),
+            xm=ordered[ColumnNames.XM]
+                .to_numpy(dtype=np.float64).reshape(-1, 1),
+            phi=u.Quantity(
+                ordered[PhiName.PHI].to_numpy(dtype=np.float64).reshape(-1, 1),
+                unit=phi_unit,
+            ).to(u.dimensionless_unscaled),
+            fnu_total=u.Quantity(
+                ordered[FluxName.FNU_TOTAL]
+                    .to_numpy(dtype=np.float64).reshape(-1, 1),
+                unit=fnu_unit,
+            ),
+        )
 
     def to_df(
         self,
         *,
         fnu_unit: str = DefaultUnits.fnu,
+        phi_unit: str = DefaultUnits.phi,
     ) -> pd.DataFrame:
         n_models = self.xm.shape[0]
-        return pd.DataFrame({
+        df = pd.DataFrame({
             ColumnNames.MODEL_INDEX: np.arange(n_models),
             ColumnNames.PEAK_COLUMN_INDEX: self.column_index.ravel(),
             ColumnNames.XM: self.xm.ravel(),
-            PhiName.PHI: self.phi.ravel(),
+            PhiName.PHI: self.phi.to_value(phi_unit).ravel(),
             FluxName.FNU_TOTAL: self.fnu_total.to_value(fnu_unit).ravel(),
         })
+        df.attrs[MetadataNames.FNU_UNIT] = str(fnu_unit)
+        df.attrs[MetadataNames.PHI_UNIT] = str(phi_unit)
+        return df
 
 @dataclass(frozen=True,slots=True)
 class SynchrotronResults:
@@ -1010,8 +1042,11 @@ class SynchrotronResults:
     fnu_obsframe: ObserverframeSpecificFlux
 
     @property
-    def phi(self):
-        return self.xm*self.model_params.phi_th.reshape(-1,1)
+    def phi(self) -> u.Quantity:
+        return u.Quantity(
+            self.xm*self.model_params.phi_th.reshape(-1,1),
+            u.dimensionless_unscaled,
+        )
 
     @property
     def peak(self) -> SynchrotronPeak:
@@ -1023,11 +1058,16 @@ class SynchrotronResults:
             raise TypeError(
                 "fnu_total_peak をQuantityとして返せません."
             )
+        phi_peak = self.phi[row_index, column_index]
+        if not isinstance(phi_peak, u.Quantity):
+            raise TypeError(
+                "phi_peak をQuantityとして返せません."
+            )
 
         return SynchrotronPeak(
             column_index=column_index,
             xm=self.xm[row_index, column_index],
-            phi=self.phi[row_index, column_index],
+            phi=phi_peak,
             fnu_total=fnu_total_peak,
         )
 
@@ -1035,18 +1075,22 @@ class SynchrotronResults:
         self,
         *,
         fnu_unit: str = DefaultUnits.fnu,
+        phi_unit: str = DefaultUnits.phi,
     ) -> pd.DataFrame:
         n_models, n_xm = self.xm.shape
         fnu = self.fnu_obsframe
 
-        return pd.DataFrame({
+        df = pd.DataFrame({
             ColumnNames.MODEL_INDEX: np.repeat(np.arange(n_models), n_xm),
             ColumnNames.XM: self.xm.ravel(),
-            PhiName.PHI: self.phi.ravel(),
+            PhiName.PHI: self.phi.to_value(phi_unit).ravel(),
             FluxName.FNU_THERMAL: fnu.thermal_only.to_value(fnu_unit).ravel(),
             FluxName.FNU_POWERLAW: fnu.powerlaw_only.to_value(fnu_unit).ravel(),
             FluxName.FNU_TOTAL: fnu.total.to_value(fnu_unit).ravel(),
         })
+        df.attrs[MetadataNames.FNU_UNIT] = str(fnu_unit)
+        df.attrs[MetadataNames.PHI_UNIT] = str(phi_unit)
+        return df
 
     @classmethod
     def compute_from(
