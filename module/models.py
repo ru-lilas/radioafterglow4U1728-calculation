@@ -77,9 +77,6 @@ class FluxName(StrEnum):
     FNU_THERMAL = auto()
     FNU_POWERLAW = auto()
     FNU_TOTAL = auto()
-    FNU_WITH_BG= auto()
-    FNU_NET = auto()
-    FNU_BG = auto()
 
 class PhiName(StrEnum):
     PHI = auto()
@@ -115,14 +112,12 @@ class ColumnNames(StrEnum):
     T_CENTER = auto()
     T_LEFT = auto()
     T_RIGHT = auto()
-    T_EDGE = auto()
     FNU_OBS_FRAME = auto()
     LNU = auto()
     FNU_SRC_FRAME = auto()
     FNU_FLARE = auto()
     FNU_TOTAL = auto()
     FNU_BG = auto()
-    FNU= auto()
 
 class ChiSquaredParameters(StrEnum):
     CHI_SQUARED = auto()
@@ -477,7 +472,9 @@ class MolecularWeight:
     def to_ratio(
         self
     )->float:
-        return (self.mu_e/self.mu)
+        return float(
+            (self.mu_e/self.mu).decompose()
+        )
 
     def to_effective_mass_ratio(
         self
@@ -706,6 +703,13 @@ class ModelParameters:
         return DimensionlessElectronTemperature.hot(self.theta0)
 
     @property
+    def a_wind(self)->u.Quantity:
+        return (
+            4.0*A_CYC/(9.0*self.eps_b)
+            *(self.phi_th/self.theta**2)**2
+        )
+
+    @property
     def effmass_ep(self):
         return self.molecular_weight.to_effective_mass_ratio()
 
@@ -715,13 +719,6 @@ class ModelParameters:
     )->NDArray64:
         beta2 = (32.0*self.effmass_ep*self.theta0/(9.0*self.eps_th))
         return np.sqrt(beta2)
-
-    @property
-    def a_wind(self)->u.Quantity:
-        return (
-            4.0*A_CYC/(9.0*self.eps_b)
-            *(self.phi_th/self.theta**2)**2
-        )
 
     @property
     def r_norm(self):
@@ -1151,6 +1148,31 @@ class SynchrotronPeak:
         df = self.to_df()
         ordered = df.sort_values(ColumnNames.MODEL_INDEX)
         return IndexGrid.from_df(ordered.set_index(ColumnNames.MODEL_INDEX))
+
+    def _parameter_grid(
+        self,
+        model_params: ModelParameters,
+        values: u.Quantity,
+    ) -> QuantityGrid:
+        index_grid = self.index
+        indices = index_grid.values.ravel()
+        positions = pd.Index(model_params.model_indices.ravel()).get_indexer(indices)
+        if np.any(positions < 0):
+            raise KeyError(f"対応するmodel_indexがありません: {indices[positions < 0].tolist()}")
+        quantity = values.reshape(-1)[positions].reshape(index_grid.shape)
+        return QuantityGrid(
+            values=np.asarray(quantity.value, dtype=np.float64),
+            unit=quantity.unit.to_string(),
+        )
+
+    def a_wind_grid(self, model_params: ModelParameters) -> QuantityGrid:
+        return self._parameter_grid(model_params, model_params.a_wind)
+
+    def beta_sh_grid(self, model_params: ModelParameters) -> QuantityGrid:
+        return self._parameter_grid(model_params, u.Quantity(model_params.beta_sh))
+
+    def theta_grid(self, model_params: ModelParameters) -> QuantityGrid:
+        return self._parameter_grid(model_params, u.Quantity(model_params.theta))
 
     @classmethod
     def from_df(cls, df: pd.DataFrame) -> Self:
@@ -1612,93 +1634,4 @@ def calculate_xm(
         (phi/phi_theta).to(u.dimensionless_unscaled),
         dtype=np.float64
     )
-#
-#
-# def theta(
-#     eps_th:FloatArrayLike,
-#     mu: FloatArrayLike,
-#     mu_e: FloatArrayLike,
-#     beta_sh: FloatArrayLike,
-# )->FloatArray:
-#     return electron_temperature.calculate_theta_e(
-#         eps_th=eps_th,
-#         mu=mu,
-#         mu_e=mu_e,
-#         beta_sh=beta_sh
-#     )
-#
-# def phi_theta(
-#     theta:FloatArrayLike,
-#     eps_b:FloatArrayLike,
-#     a_wind: QuantityArray
-# ):
-#     return synchrotron_scaling_values.calculate_phi_theta(
-#         theta = theta,
-#         eps_b = eps_b,
-#         a_wind = a_wind.quantity
-#     )
-#
-# def tau_theta(
-#     theta:FloatArrayLike,
-#     eps_b:FloatArrayLike,
-#     a_wind: QuantityArray,
-#     beta_sh:FloatArrayLike,
-#     mu:FloatArrayLike,
-#     mu_e:FloatArrayLike
-# ):
-#     return synchrotron_scaling_values.calculate_tau_theta(
-#         theta = theta,
-#         eps_b = eps_b,
-#         a_wind = a_wind.quantity,
-#         beta_sh=beta_sh,
-#         mu=mu,
-#         mu_e=mu_e,
-#     )
-#
-# def lnu_theta(
-#     theta:FloatArrayLike,
-#     eps_b:FloatArrayLike,
-#     a_wind: QuantityArray,
-#     beta_sh:FloatArrayLike,
-# ):
-#     return synchrotron_scaling_values.calculate_l_theta(
-#         theta = theta,
-#         eps_b = eps_b,
-#         a_wind =a_wind.quantity,
-#         beta_sh=beta_sh,
-#     )
-#
-# def doppler_delta(
-#     beta_sh:FloatArrayLike
-# ):
-#     return quantity_converter.beta_into_doppler_delta(beta_sh)
-#
-# @dataclass(frozen=True,slots=True)
-# class ModelMetadata:
-#     eps_b: float
-#     eps_th: float
-#     mue_mu: float
-#     distance: QuantityData
-#     phi_unit: str
-#     lnu_unit: str
-#     fnu_unit: str
-#     a_wind_unit: str
-#
-#     @classmethod
-#     def from_attrs(
-#         cls,
-#         attrs:dict[Hashable,Any]
-#     )->Self:
-#         return cls(
-#             eps_b = attrs[MetadataNames.EPS_B],
-#             eps_th = attrs[MetadataNames.EPS_TH],
-#             mue_mu = attrs[MetadataNames.MU_E_MU],
-#             distance = QuantityData(
-#                 value=attrs[MetadataNames.DISTANCE_VALUE],
-#                 unit =attrs[MetadataNames.DISTANCE_UNIT]
-#             ),
-#             a_wind_unit = attrs[MetadataNames.A_WIND_UNIT],
-#             phi_unit = attrs[MetadataNames.PHI_UNIT],
-#             lnu_unit = attrs[MetadataNames.LNU_UNIT],
-#             fnu_unit = attrs[MetadataNames.FNU_UNIT],
-#         )
+

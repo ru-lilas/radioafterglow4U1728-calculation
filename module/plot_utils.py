@@ -5,8 +5,10 @@ from cattrs import Converter
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize,ListedColormap
 from matplotlib.container import ErrorbarContainer
+from matplotlib.contour import QuadContourSet
 from matplotlib.lines import Line2D
 from matplotlib.patches import StepPatch
+from matplotlib.text import Text
 from matplotlib.ticker import LogLocator
 from matplotlib import colormaps
 from matplotlib.colorbar import Colorbar
@@ -23,7 +25,7 @@ from module.utils import FileReader
 from module.types import FloatArray, ValueScale,FloatPair
 
 AxisDirection = Literal["x","y"]
-ComponentType = Literal["line","step","errorbar"]
+ComponentType = Literal["line","step","errorbar","contour"]
 
 converter = Converter()
 
@@ -177,6 +179,14 @@ class AxesConfig:
             x=self.x.range(),
             y=self.y.range()
         )
+
+    @property
+    def x_unit(self):
+        return self.x.label.unit
+
+    @property
+    def y_unit(self):
+        return self.y.label.unit
 
 @dataclass(frozen=True, slots=True)
 class FigureConfig:
@@ -465,7 +475,7 @@ class RectangleStyles:
         ]
 
 @dataclass(frozen=True, slots=True)
-class ContourLevelConfigure:
+class ContourLevelConfig:
     start: float|None = None
     stop: float|None = None
     num: int|None = None
@@ -569,7 +579,7 @@ class ContourLevelConfigure:
         return levels
 
 @dataclass(frozen=True,slots=True)
-class ContourStyle(Style):
+class ContourLineStyle(Style):
     colors: str = "#000000"
     linestyles: str = "-"
 
@@ -580,25 +590,12 @@ class ContourLabelStyle(Style):
     fontsize: int
 
 @dataclass(frozen=True,slots=True)
-class ContourLabelFormat(QuantityLabel):
-    pass
-
-@dataclass(frozen=True,slots=True)
-class ContourConfigure:
-    style: ContourStyle
-    levels: ContourLevelConfigure
-    label: ContourLabelStyle
-    label_format: ContourLabelFormat
+class ContourStyleConfig(YAMLReadable):
     unit: str
-
-    def build_quantity_label(
-        self
-    )->QuantityLabel:
-        return QuantityLabel(
-            prefix=self.label_format.prefix,
-            fmt=self.label_format.fmt,
-            unit=self.label_format.unit
-        )
+    lines: ContourLineStyle
+    levels: ContourLevelConfig
+    label: ContourLabelStyle
+    label_format: QuantityLabel
 
 @dataclass(frozen=True, slots=True)
 class ColorbarConfigure:
@@ -640,7 +637,11 @@ class MetadataGroupConfig:
 @dataclass(frozen=True, slots=True)
 class ComponentConfig:
     type: ComponentType
-    style: LineStyleConfig | ErrorbarStyleConfig
+    style: (
+        LineStyleConfig
+        | ErrorbarStyleConfig
+        | ContourStyleConfig
+    )
 
     def __post_init__(self) -> None:
         if self.type in ("line", "step"):
@@ -662,6 +663,17 @@ class ComponentConfig:
                 raise TypeError(
                     "type='errorbar'には"
                     "ErrorbarStyleConfigが必要です: "
+                    f"{type(self.style).__name__}"
+                )
+
+        elif self.type == "contour":
+            if not isinstance(
+                self.style,
+                ContourStyleConfig,
+            ):
+                raise TypeError(
+                    "type='contour'には"
+                    "ContourStyleConfigが必要です: "
                     f"{type(self.style).__name__}"
                 )
 
@@ -709,6 +721,28 @@ class ComponentConfig:
 
         return self.style
 
+    @property
+    def contour_style_config(
+        self,
+    ) -> ContourStyleConfig:
+        if self.type != "contour":
+            raise TypeError(
+                "contour_style_configへアクセスできるのは"
+                "type='contour'の場合だけです: "
+                f"type={self.type!r}"
+            )
+
+        if not isinstance(
+            self.style,
+            ContourStyleConfig,
+        ):
+            raise TypeError(
+                "styleがContourStyleConfigではありません: "
+                f"{type(self.style).__name__}"
+            )
+
+        return self.style
+
     def resolve_line_style(
         self,
         index: int,
@@ -731,6 +765,8 @@ def structure_component_config(
         style_type = LineStyleConfig
     elif component_type == "errorbar":
         style_type = ErrorbarStyleConfig
+    elif component_type == "contour":
+        style_type = ContourStyleConfig
     else:
         raise ValueError(
             "未対応のcomponent typeです: "
@@ -842,6 +878,32 @@ class Plotter:
             x,y,
             yerr=yerr,
             **style.to_kwargs(),
+        )
+
+    def contour(
+        self,
+        x: ArrayLike,
+        y: ArrayLike,
+        z: FloatArray,
+        style: ContourStyleConfig,
+    )->QuadContourSet:
+        return self.ax.contour(
+            x,
+            y,
+            z,
+            levels=style.levels.levels(z),
+            **style.lines.to_kwargs(),
+        )
+
+    def contour_labels(
+        self,
+        contour_set: QuadContourSet,
+        style: ContourStyleConfig,
+    )->list[Text]:
+        return self.ax.clabel(
+            contour_set,
+            fmt=style.label_format.to_text,
+            **style.label.to_kwargs(),
         )
 
     def title(

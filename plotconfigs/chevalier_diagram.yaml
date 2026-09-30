@@ -2,6 +2,13 @@ layout:
   figure:
     figsize: [12,12]
     dpi: 100
+    layout_engine: constrained
+  subplots:
+    nrows: 1
+    ncols: 1
+    sharex: false
+    sharey: false
+    hide_shared_labels: false
   axes:
     x:
       scale: "log"
@@ -24,123 +31,126 @@ layout:
       minor_length: 8.0
       width: 1.0
       pad: 10.0
-contours:
-  a_wind: &ContourConfigure_tmp
-    unit: "g cm-1"
-    style: &ContourStyle_tmp
-      colors: "#84919B"
-      linestyles: "-"
-    levels:
-      start: null
-      stop: null
-      num: null
-      scale: "log"
-      values:
-        - 1.0e+04
-        - 1.0e+05
-        - 1.0e+06
-        - 1.0e+07
-        - 1.0e+08
-        - 1.0e+09
-    label:
-      inline: true
-      inline_spacing: 5
-      fontsize: 16
-    label_format:
-      prefix: 'A_{\mathrm{w}}'
-      fmt: ".0e"
-      unit: '\mathrm{g\,cm^{-1}}'
-  beta_sh:
-    style:
-      colors: "#84919B"
-      linestyles: "--"
-    levels:
-      start: null
-      stop: null
-      num: null
-      scale: "linear"
-      values:
-        - 0.20
-        - 0.30
-        - 0.40
-        - 0.50
-        - 0.60
-    label:
-      inline: true
-      inline_spacing: 5
-      fontsize: 16
-    label_format:
-      prefix: '\beta_{\mathrm{sh}}'
-      fmt: ".2f"
-      unit: ''
-    unit: ""
-styles:
-  obs_ranges:
-    facecolors: 
-      - "#FFCABF"
-      - "#BFE4FF"
-    edgecolor: "#000000"
-    linewidth: 1.0
-    alpha: 0.8
-    zorder: 1
-    hatches:
-      - "/"
-      - null
-  obs_center:
-    marker: "o"
-    markersize: 64.0
-    markerfacecolor : "#000000"
-    markeredgecolor : "#000000"
-    markeredgewidth: 1.0
-    ecolor: "#000000"
-    elinewidth: 1.0
-    capsize: 1.0
-    capthick: 1.0
-    linestyle: "none"
-    alpha: null
-    zorder: 1.0
-  thin_boundary: 
-    color: "#000000"
-    linewidth: 4.0
-    linestyle: "-"
-    alpha: null
-    zorder: 2.0
-  relativistic_boundary: 
-    color: "#000000"
-    linewidth: 4.0
-    linestyle: "-"
-    alpha: null
-    zorder: 2.0
 metadata:
-  fontsize: 24
-  eps_b:
-    show: true
-    unit: ""
-    label_format:
-      prefix: '\varepsilon_{\mathrm{B}}'
-      fmt: '.1e'
+  fontsize: 18
+  items:
+    eps_b:
+      show: true
       unit: ""
-  eps_th:
-    show: true
-    unit: ""
-    label_format:
-      prefix: '\varepsilon_{\mathrm{th}}'
-      fmt: '.2f'
+      label_format:
+        prefix: '\varepsilon_{\mathrm{B}}'
+        fmt: '.1e'
+        unit: ""
+    eps_th:
+      show: true
       unit: ""
-  mue_mu:
-    show: true
-    unit: ""
-    label_format:
-      prefix: '\mu_{\mathrm{e}}/\mu'
-      fmt: '.1f'
+      label_format:
+        prefix: '\varepsilon_{\mathrm{th}}'
+        fmt: '.2f'
+        unit: ""
+    distance:
+      show: true
+      unit: "kpc"
+      label_format:
+        prefix: 'D'
+        fmt: '.1f'
+        unit: '\mathrm{kpc}'
+    mu_e_mu:
+      show: true
       unit: ""
-  distance:
-    show: true
-    unit: "kpc"
-    label_format:
-      prefix: 'D'
-      fmt: '.1f'
-      unit: '\mathrm{kpc}'
-legend:
-  fontsize: 24
-  loc: "upper left"
+      label_format:
+        prefix: '\mu_{\mathrm{e}}/\mu'
+        fmt: '.1f'
+        unit: ""
+    p_index: 
+      show: true
+      unit: ""
+      label_format:
+        prefix: 'p'
+        fmt: '.1f'
+        unit: ''
+    eps_e: 
+      show: true
+      unit: ""
+      label_format:
+        prefix: '\varepsilon_{\mathrm{e}}'
+        fmt: '.1e'
+        unit: ''
+components:
+  a_wind:
+    type: contour
+    style: &ContourStyle_tmp
+      unit: "g cm-1"
+      lines:
+        colors: "#84919B"
+        linestyles: "-"
+      levels:
+        start: null
+        stop: null
+        num: null
+        scale: "log"
+        values:
+          - 1.0e+04
+          - 1.0e+05
+          - 1.0e+06
+          - 1.0e+07
+          - 1.0e+08
+          - 1.0e+09
+      label: &ContourLabel_tmp
+        inline: true
+        inline_spacing: 5
+        fontsize: 16
+      label_format:
+        prefix: 'A_{\mathrm{w}}'
+        fmt: ".0e"
+        unit: '\mathrm{g\,cm^{-1}}'
+  beta_sh:
+    type: contour
+    style:
+      unit: ""
+      lines:
+        colors: "#84919B"
+        linestyles: "--"
+      levels:
+        start: null
+        stop: null
+        num: null
+        scale: "linear"
+        values:
+          - 0.20
+          - 0.30
+          - 0.40
+          - 0.50
+          - 0.60
+      label:
+        <<: *ContourLabel_tmp
+      label_format:
+        prefix: '\beta_{\mathrm{sh}}'
+        fmt: ".2f"
+        unit: ''
+  # obs_ranges:
+  #   type: rectangle
+  #   facecolors: 
+  #     - "#FFCABF"
+  #     - "#BFE4FF"
+  #   edgecolor: "#000000"
+  #   linewidth: 1.0
+  #   alpha: 0.8
+  #   zorder: 1
+  #   hatches:
+  #     - "/"
+  #     - null
+  # thin_boundary: &BoundaryComponent_tmp
+  #   type: line
+  #   style: &BoundaryStyle_tmp
+  #     colors:
+  #       - "#000000"
+  #     linewidth: 4.0
+  #     linestyle: "-"
+  #     alpha: null
+  #     zorder: 2.0
+  # relativistic_boundary: 
+  #   <<: *BoundaryComponent_tmp
+# legend:
+#   fontsize: 24
+#   loc: "upper left"

@@ -137,13 +137,15 @@ view-chevalier: $(FILEPATH_CHEVALIER_PDF)
 chevalier: $(FILEPATH_CHEVALIER_PDF)
 
 $(FILEPATH_CHEVALIER_PDF): \
+	$(FILEPATH_PEAK_GRID) \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
 	$(FILEPATH_OBSLC) \
 	module/chevalier.py \
 	plotconfigs/chevalier_diagram.yaml \
 	scripts/chevalier.py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--model_table $< \
+		--$(PEAK_GRID) $< \
+		--$(MODEL_PARAMETER_TABLE) $(FILEPATH_MODEL_PARAMETER_TABLE) \
 		--plotconfig plotconfigs/chevalier_diagram.yaml \
 		--obslc $(FILEPATH_OBSLC) \
 		--output $@
