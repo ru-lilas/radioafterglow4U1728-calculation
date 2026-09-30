@@ -84,22 +84,27 @@ def main():
                 binning,
                 drop_incomplete_bin=True
             )
-            fnu_with_bg = lc_binned.fnu_with_bg(obs_lc_sampled.fnu_background)
-            chi2 = ChiSquaredResult.calculate(
-                model_index=model_index,
-                nu_value=nu_value,
-                fnu_model= fnu_with_bg,
-                fnu_data = obs_lc_sampled.fnu_total,
-                fnu_err  = obs_lc_sampled.fnu_total_err,
-                n_params = 2
-            )
-            row = chi2.to_series()
-            results.append(row)
-    df_result = pd.DataFrame(results)
-    df_result.attrs[MetadataNames.NU_UNIT] = nu_unit
+            results.append(lc_binned.to_df(
+                fnu_bg=obs_lc_sampled.fnu_background
+            ))
+            # fnu_with_bg = lc_binned.fnu_with_bg(obs_lc_sampled.fnu_background)
+            # chi2 = ChiSquaredResult.calculate(
+            #     model_index=model_index,
+            #     nu_value=nu_value,
+            #     fnu_model= fnu_with_bg,
+            #     fnu_data = obs_lc_sampled.fnu_total,
+            #     fnu_err  = obs_lc_sampled.fnu_total_err,
+            #     n_params = 2
+            # )
+            # row = chi2.to_series()
+            # results.append(row)
+    longdf_result = pd.concat(
+        results,
+        axis="index"
+    )
     FileWriter.df_to_csv(
         args.output,
-        df_result,
+        longdf_result,
         save_attrs=True
     )
     return

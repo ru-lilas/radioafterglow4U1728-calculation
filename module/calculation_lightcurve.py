@@ -520,6 +520,27 @@ class BinnedLightcurve:
             unit=t_unit
         )
 
+    def to_df(
+        self,
+        fnu_bg: QuantityArray1D,
+        *,
+        nu_unit: str = DefaultUnits.nu,
+        t_unit: str = DefaultUnits.t,
+        fnu_unit: str = DefaultUnits.fnu,
+    )->pd.DataFrame:
+        df = pd.DataFrame({
+            models.ColumnNames.MODEL_INDEX: self.model_index,
+            models.ColumnNames.NU: self.nu.value_in(nu_unit),
+            models.ColumnNames.T_CENTER: self.t_center.to_value_in(t_unit),
+            models.ColumnNames.T_RIGHT: self.t_right.to_value_in(t_unit),
+            models.ColumnNames.T_LEFT: self.t_left.to_value_in(t_unit),
+            models.FluxName.FNU_WITH_BG: self.fnu_with_bg(fnu_bg).to_value_in(fnu_unit),
+        })
+        df.attrs[MetadataNames.NU_UNIT] = nu_unit
+        df.attrs[MetadataNames.FNU_UNIT] = fnu_unit
+        df.attrs[MetadataNames.T_UNIT] = t_unit
+        return df
+
 @dataclass(frozen=True,slots=True)
 class ContinuousLightcurve:
     model_index: int

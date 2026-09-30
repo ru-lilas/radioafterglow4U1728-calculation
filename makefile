@@ -159,7 +159,7 @@ $(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES): \
 	$(FILEPATH_INPUT) \
 	$(FILEPATH_CANDIDATE_LIGHTCURVES) \
 	$(FILEPATH_OBSLC) \
-	scripts/take_bin_average_for_candidates.$(EXTENTION_PY)
+	scripts/compute_$(CANDIDATE_BINNED_LIGHTCURVES).$(EXTENTION_PY)
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		--input $< \
 		--$(CANDIDATE_LIGHTCURVES) $(FILEPATH_CANDIDATE_LIGHTCURVES) \
