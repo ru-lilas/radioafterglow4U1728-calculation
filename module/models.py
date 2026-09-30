@@ -477,9 +477,7 @@ class MolecularWeight:
     def to_ratio(
         self
     )->float:
-        return float(
-            (self.mu_e/self.mu).decompose()
-        )
+        return (self.mu_e/self.mu)
 
     def to_effective_mass_ratio(
         self
@@ -717,6 +715,13 @@ class ModelParameters:
     )->NDArray64:
         beta2 = (32.0*self.effmass_ep*self.theta0/(9.0*self.eps_th))
         return np.sqrt(beta2)
+
+    @property
+    def a_wind(self)->u.Quantity:
+        return (
+            4.0*A_CYC/(9.0*self.eps_b)
+            *(self.phi_th/self.theta**2)**2
+        )
 
     @property
     def r_norm(self):

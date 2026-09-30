@@ -76,6 +76,20 @@ metadata:
         prefix: '\beta_{\mathrm{sh}}'
         fmt: '.2f'
         unit: ''
+    p_index: 
+      show: true
+      unit: ""
+      label_format:
+        prefix: 'p'
+        fmt: '.1f'
+        unit: ''
+    eps_e: 
+      show: true
+      unit: ""
+      label_format:
+        prefix: '\varepsilon_{\mathrm{e}}'
+        fmt: '.1e'
+        unit: ''
     nu: 
       show: true
       unit: "GHz"

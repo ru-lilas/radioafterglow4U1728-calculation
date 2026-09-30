@@ -3,6 +3,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from dataclasses import fields, dataclass
 from matplotlib.backends.backend_pdf import PdfPages
 
 from module import calculation_lightcurve as clc
@@ -11,6 +12,23 @@ from module.models import ColumnNames, FluxName, MetadataNames, ModelParameters
 from module.mydataclasses import LongformatDataFrame, QuantityArray1D, QuantityData
 from module.observation import LongformatLightcurve
 from module.utils import FileReader
+
+@dataclass(frozen=True,slots=True)
+class PlotMetadata:
+    a_wind: QuantityData
+    beta_sh: QuantityData
+    eps_b: QuantityData
+    eps_th: QuantityData
+    mu_e_mu: QuantityData
+    distance: QuantityData
+    p_index: QuantityData
+    eps_e: QuantityData
+
+    def to_dict(self) -> dict[str, QuantityData]:
+        return {
+            field.name: getattr(self, field.name)
+            for field in fields(self)
+        }
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -49,6 +67,7 @@ def main() -> None:
 
     layout = plotconf.layout
     components = plotconf.components
+    metadata_config = plotconf.metadata
     x_unit = layout.axes.x.label.unit
     y_unit = layout.axes.y.label.unit
     nu_unit = df_minchi2.attrs[MetadataNames.NU_UNIT]
@@ -127,7 +146,28 @@ def main() -> None:
 
             # model parameters
             minimum_chi2_model = model_parameters.select_models([model_index])
-            print(minimum_chi2_model)
+            metadata = PlotMetadata(
+                a_wind=QuantityData.from_Quantity(minimum_chi2_model.a_wind.item()),
+                beta_sh=QuantityData(minimum_chi2_model.beta_sh.item(),""),
+                eps_b=QuantityData(minimum_chi2_model.eps_b,""),
+                eps_th=QuantityData(minimum_chi2_model.eps_th,""),
+                eps_e=QuantityData(minimum_chi2_model.powerlaw.eps_e,""),
+                p_index=QuantityData(minimum_chi2_model.powerlaw.p_index,""),
+                mu_e_mu=QuantityData(minimum_chi2_model.molecular_weight.to_ratio(),""),
+                distance=minimum_chi2_model.distance,
+            )
+            strings: list[str] = []
+
+            for name, quantity in metadata.to_dict().items():
+                plot_utils.MetadataComponent(
+                    quantity=quantity,
+                    config=metadata_config.items[name],
+                ).add_strings(strings)
+
+            plotter.title(
+                strings=strings,
+                fontsize=metadata_config.fontsize,
+            )
 
         pdf.savefig(fig)
         plt.close(fig)
