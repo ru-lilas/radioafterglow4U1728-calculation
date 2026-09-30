@@ -395,7 +395,7 @@ class CandidateModelLightcurveGrid:
         candidate_model_index = np.arange(n_model)
 
         df = pd.DataFrame({
-            models.ColumnNames.CANDIDATE_MODEL_INDEX: np.repeat(
+            models.ColumnNames.CANDIDATE_INDEX: np.repeat(
                 candidate_model_index,
                 n_time,
             ),
@@ -892,7 +892,7 @@ class CandidateModelFitResult:
             )
 
         df = pd.DataFrame({
-            models.ColumnNames.CANDIDATE_MODEL_INDEX: np.full(
+            models.ColumnNames.CANDIDATE_INDEX: np.full(
                 n_bin,
                 self.lightcurve.candidate_model_index,
                 dtype=np.int64
@@ -951,7 +951,7 @@ class CandidateModelLightcurve:
 
     @property
     def candidate_model_index(self):
-        idx = self.df.attrs[models.ColumnNames.CANDIDATE_MODEL_INDEX]
+        idx = self.df.attrs[models.ColumnNames.CANDIDATE_INDEX]
         return idx
 
     @property
@@ -1050,7 +1050,7 @@ class CandidateModelLightcurveFrequencyGroup:
             models.ColumnNames.FNU_BG,
             models.ChiSquaredParameters.CHI_SQUARED,
             models.ChiSquaredParameters.N_DOF,
-            models.ColumnNames.CANDIDATE_MODEL_INDEX,
+            models.ColumnNames.CANDIDATE_INDEX,
         ]
 
         for _, df in self.models.items():
@@ -1097,7 +1097,7 @@ class CandidateModelLightcurveTable:
                 models.ColumnNames.FNU_BG,
                 models.ChiSquaredParameters.CHI_SQUARED,
                 models.ChiSquaredParameters.N_DOF,
-                models.ColumnNames.CANDIDATE_MODEL_INDEX,
+                models.ColumnNames.CANDIDATE_INDEX,
             ]
             dfs_model = {}
             for idx,df in df_nu.groupby(
@@ -1211,7 +1211,7 @@ class CandidateModelLightcurveContinuousPlot:
         candidate_model_index: int
     ):
         df_selected:pd.DataFrame = df.loc[
-            df[models.ColumnNames.CANDIDATE_MODEL_INDEX] == candidate_model_index
+            df[models.ColumnNames.CANDIDATE_INDEX] == candidate_model_index
         ]
         return cls(
             candidate_model_index=candidate_model_index,

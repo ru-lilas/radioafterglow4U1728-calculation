@@ -11,7 +11,10 @@ import numpy as np
 import pandas as pd
 from enum import StrEnum, auto
 from dataclasses import dataclass
-from module.mydataclasses import FloatVector, FloatVectorSpace, NDArraySpace, QuantityArray, QuantityArrayBase, QuantityData, QuantityArray1D, ValueArray
+from module.mydataclasses import (
+    FloatVector, FloatVectorSpace, NDArraySpace, QuantityArray, QuantityArrayBase, QuantityData, QuantityArray1D, QuantityGrid, ValueArray,
+    IndexGrid
+)
 from module.synchrotron_numerical_table import ThermalSynchrotronIntegrals
 from module.types import FloatArray, FloatArray1D, FloatArrayLike, FloatGrid
 from scipy import special
@@ -78,7 +81,7 @@ class PhiName(StrEnum):
     PHI = auto()
 
 class ColumnNames(StrEnum):
-    CANDIDATE_MODEL_INDEX = auto()
+    CANDIDATE_INDEX = auto()
     MODEL_INDEX = auto()
     PEAK_COLUMN_INDEX = auto()
     XM = auto()
@@ -1050,6 +1053,32 @@ class SynchrotronPeak:
     phi: u.Quantity
     fnu_total: u.Quantity
     lnu: u.Quantity
+
+    @property
+    def phi_grid(self) -> QuantityGrid:
+        df = self.to_df()
+        return QuantityGrid.from_df(
+            df,
+            column=PhiName.PHI,
+            unit=df.attrs[MetadataNames.PHI_UNIT],
+            index_name=ColumnNames.MODEL_INDEX,
+        )
+
+    @property
+    def fnu_grid(self) -> QuantityGrid:
+        df = self.to_df()
+        return QuantityGrid.from_df(
+            df,
+            column=FluxName.FNU_TOTAL,
+            unit=df.attrs[MetadataNames.FNU_UNIT],
+            index_name=ColumnNames.MODEL_INDEX,
+        )
+
+    @property
+    def index(self) -> IndexGrid:
+        df = self.to_df()
+        ordered = df.sort_values(ColumnNames.MODEL_INDEX)
+        return IndexGrid.from_df(ordered.set_index(ColumnNames.MODEL_INDEX))
 
     @classmethod
     def from_df(cls, df: pd.DataFrame) -> Self:

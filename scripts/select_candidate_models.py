@@ -1,7 +1,8 @@
 import argparse
 import pandas as pd
 from pathlib import Path
-from module.chevalier import ChevalierGrid
+from module import chevalier
+from module.chevalier import ChevalierGrid, PeakGrid
 from module.inputs_as_dataclass import GeneralInputs, ModelParameterTable
 from module.mydataclasses import QuantityData
 from module.observation import LongformatLightcurve
@@ -16,7 +17,7 @@ def parse_args()->argparse.Namespace:
         required=True
     )
     parser.add_argument(
-        "--model_table",
+        "--peak_grid",
         type=Path,
         required=True
     )
@@ -36,45 +37,20 @@ def main():
     args = parse_args()
     outpath:Path = args.output
 
+    df_grid = FileReader.table_from_csv(args.peak_grid)
     general_conf = GeneralInputs.from_yaml(args.input)
     selection_conf = general_conf.candidate_models_selection
-    units = general_conf.units
-
-    df_model = FileReader.table_from_csv(
-        path=args.model_table,
-        idx="index"
-    )
-    grids = ChevalierGrid.from_df(df_model)
     df_obs_long = LongformatLightcurve.from_csv(args.obslc)
-
-    obs_freqs = selection_conf.observation_frequencies.to_QuantityData_list()
-    dfs_obs_nu = [
-        df_obs_long.select_frequency(nu,unit=nu.unit)
-        for nu in obs_freqs
-    ]
-
-    dfs_candidates:list = []
-    for i,df_obs_nu in enumerate(dfs_obs_nu):
-        obs_range = df_obs_nu.peak
-
-        dfs_candidates.append(
-            grids.df_modelcandidates(
-                df=df_model,
-                obs=obs_range,
-                phi_unit=units.phi_unit,
-                fnu_unit=units.fnu_unit
-            )
-        )
-
-    df_long = pd.concat(
-        dfs_candidates,
-        axis="index"
-    ).rename_axis("model_index").reset_index()
+    candidate_longdf = chevalier.build_candidate_longdf(
+        df_peaks=df_grid,
+        df_obs_long=df_obs_long,
+        selection_config=selection_conf
+    )
 
     FileWriter.df_to_csv(
         path=args.output,
-        df=df_long,
-        save_attrs=True
+        df=candidate_longdf,
+        save_attrs=True,
     )
 
 if __name__ == "__main__":

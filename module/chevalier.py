@@ -10,6 +10,8 @@ from numpy.typing import NDArray
 import numpy as np
 
 from module import plot_utils
+from module import observation
+from module.inputs_as_dataclass import CandidateModelsSelection
 from module.mydataclasses import (
     FloatGrid,
     FloatGridPair,
@@ -792,3 +794,77 @@ class ChevalierGrid:
         df_candidates.attrs[models.MetadataNames.NU_UNIT] = obs.nu.unit
 
         return df_candidates
+
+@dataclass(frozen=True,slots=True)
+class PeakGrid:
+    index: IndexGrid
+    phi: QuantityGrid
+    fnu: QuantityGrid
+
+    @classmethod
+    def build_from_df(
+        cls,
+        df:pd.DataFrame
+    )->Self:
+        peaks = models.SynchrotronPeak.from_df(df)
+        return cls(
+            index = peaks.index,
+            phi = peaks.phi_grid,
+            fnu = peaks.fnu_grid
+        )
+
+    def boolgrid_contain_in(
+        self,
+        obs_peak_range: ChevalierComponent,
+        *,
+        phi_unit: str = models.DefaultUnits.phi,
+        fnu_unit: str = models.DefaultUnits.fnu,
+    )->BoolGrid:
+        chevalier_grids = FloatGridPair(
+            x=self.phi.to_FloatGrid(phi_unit),
+            y=self.fnu.to_FloatGrid(fnu_unit)
+        )
+        obs_region = obs_peak_range.allowing_range(
+            x_unit=phi_unit,
+            y_unit=fnu_unit
+        )
+        return chevalier_grids.is_contained_in(obs_region)
+
+    def indices_of_contained_models(
+        self,
+        boolgrid: BoolGrid
+    )->NDArray[np.int64]:
+        return self.index.select(boolgrid)
+
+def build_candidate_longdf(
+    df_peaks:pd.DataFrame,
+    df_obs_long: observation.LongformatLightcurve,
+    selection_config: CandidateModelsSelection
+)->pd.DataFrame:
+    peakgrid = PeakGrid.build_from_df(df_peaks)
+
+    selection_freqs = selection_config.observation_frequencies.to_QuantityData_list()
+    dfs_obs_nu = [
+        df_obs_long.select_frequency(nu,unit=nu.unit)
+        for nu in selection_freqs
+    ]
+
+    dfs_candidates:list = []
+    for i,df_obs_nu in enumerate(dfs_obs_nu):
+        obs_peak_range = df_obs_nu.peak
+
+        is_contained = peakgrid.boolgrid_contain_in(obs_peak_range)
+        model_indices = peakgrid.indices_of_contained_models(is_contained)
+
+        df_candidates:pd.DataFrame = df_peaks.loc[model_indices].copy()
+        df_candidates[ModelColumnNames.NU] = obs_peak_range.nu.value
+        df_candidates.attrs[models.MetadataNames.NU_UNIT] = obs_peak_range.nu.unit
+
+        dfs_candidates.append(
+            df_candidates
+        )
+    longdf = pd.concat(
+        dfs_candidates,
+        axis="index"
+    )
+    return longdf
