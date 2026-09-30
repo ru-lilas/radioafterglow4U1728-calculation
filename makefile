@@ -162,7 +162,7 @@ $(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES): \
 	scripts/take_bin_average_for_candidates.$(EXTENTION_PY)
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		--input $< \
-		--candidate_lcs $(FILEPATH_CANDIDATE_LIGHTCURVES) \
+		--$(CANDIDATE_LIGHTCURVES) $(FILEPATH_CANDIDATE_LIGHTCURVES) \
 		--obslc $(FILEPATH_OBSLC) \
 		--output $@
 

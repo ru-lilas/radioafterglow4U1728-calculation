@@ -79,6 +79,9 @@ class FluxName(StrEnum):
     FNU_THERMAL = auto()
     FNU_POWERLAW = auto()
     FNU_TOTAL = auto()
+    FNU_WITH_BG= auto()
+    FNU_NET = auto()
+    FNU_BG = auto()
 
 class PhiName(StrEnum):
     PHI = auto()
@@ -114,12 +117,14 @@ class ColumnNames(StrEnum):
     T_CENTER = auto()
     T_LEFT = auto()
     T_RIGHT = auto()
+    T_EDGE = auto()
     FNU_OBS_FRAME = auto()
     LNU = auto()
     FNU_SRC_FRAME = auto()
     FNU_FLARE = auto()
     FNU_TOTAL = auto()
     FNU_BG = auto()
+    FNU= auto()
 
 class ChiSquaredParameters(StrEnum):
     CHI_SQUARED = auto()
