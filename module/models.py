@@ -22,12 +22,10 @@ from module.synchrotron_numerical_table import ThermalSynchrotronIntegrals
 from module.types import FloatArray, FloatArray1D, FloatArrayLike, FloatGrid
 from scipy import special
 from numpy.typing import NDArray
-from module import synchrotron_scaling_values
 from module import electron_temperature
 from module.utilities import bisection, unit_aliases as unit
 from module.utils import FileReader
 from astropy.constants import e,c,m_e,m_p
-from module import f_factor
 import astropy.units as u
 e = u.Quantity(e.esu)
 c = u.Quantity(c)
@@ -1609,93 +1607,93 @@ def calculate_xm(
         (phi/phi_theta).to(u.dimensionless_unscaled),
         dtype=np.float64
     )
-
-
-def theta(
-    eps_th:FloatArrayLike,
-    mu: FloatArrayLike,
-    mu_e: FloatArrayLike,
-    beta_sh: FloatArrayLike,
-)->FloatArray:
-    return electron_temperature.calculate_theta_e(
-        eps_th=eps_th,
-        mu=mu,
-        mu_e=mu_e,
-        beta_sh=beta_sh
-    )
-
-def phi_theta(
-    theta:FloatArrayLike,
-    eps_b:FloatArrayLike,
-    a_wind: QuantityArray
-):
-    return synchrotron_scaling_values.calculate_phi_theta(
-        theta = theta,
-        eps_b = eps_b,
-        a_wind = a_wind.quantity
-    )
-
-def tau_theta(
-    theta:FloatArrayLike,
-    eps_b:FloatArrayLike,
-    a_wind: QuantityArray,
-    beta_sh:FloatArrayLike,
-    mu:FloatArrayLike,
-    mu_e:FloatArrayLike
-):
-    return synchrotron_scaling_values.calculate_tau_theta(
-        theta = theta,
-        eps_b = eps_b,
-        a_wind = a_wind.quantity,
-        beta_sh=beta_sh,
-        mu=mu,
-        mu_e=mu_e,
-    )
-
-def lnu_theta(
-    theta:FloatArrayLike,
-    eps_b:FloatArrayLike,
-    a_wind: QuantityArray,
-    beta_sh:FloatArrayLike,
-):
-    return synchrotron_scaling_values.calculate_l_theta(
-        theta = theta,
-        eps_b = eps_b,
-        a_wind =a_wind.quantity,
-        beta_sh=beta_sh,
-    )
-
-def doppler_delta(
-    beta_sh:FloatArrayLike
-):
-    return quantity_converter.beta_into_doppler_delta(beta_sh)
-
-@dataclass(frozen=True,slots=True)
-class ModelMetadata:
-    eps_b: float
-    eps_th: float
-    mue_mu: float
-    distance: QuantityData
-    phi_unit: str
-    lnu_unit: str
-    fnu_unit: str
-    a_wind_unit: str
-
-    @classmethod
-    def from_attrs(
-        cls,
-        attrs:dict[Hashable,Any]
-    )->Self:
-        return cls(
-            eps_b = attrs[MetadataNames.EPS_B],
-            eps_th = attrs[MetadataNames.EPS_TH],
-            mue_mu = attrs[MetadataNames.MU_E_MU],
-            distance = QuantityData(
-                value=attrs[MetadataNames.DISTANCE_VALUE],
-                unit =attrs[MetadataNames.DISTANCE_UNIT]
-            ),
-            a_wind_unit = attrs[MetadataNames.A_WIND_UNIT],
-            phi_unit = attrs[MetadataNames.PHI_UNIT],
-            lnu_unit = attrs[MetadataNames.LNU_UNIT],
-            fnu_unit = attrs[MetadataNames.FNU_UNIT],
-        )
+#
+#
+# def theta(
+#     eps_th:FloatArrayLike,
+#     mu: FloatArrayLike,
+#     mu_e: FloatArrayLike,
+#     beta_sh: FloatArrayLike,
+# )->FloatArray:
+#     return electron_temperature.calculate_theta_e(
+#         eps_th=eps_th,
+#         mu=mu,
+#         mu_e=mu_e,
+#         beta_sh=beta_sh
+#     )
+#
+# def phi_theta(
+#     theta:FloatArrayLike,
+#     eps_b:FloatArrayLike,
+#     a_wind: QuantityArray
+# ):
+#     return synchrotron_scaling_values.calculate_phi_theta(
+#         theta = theta,
+#         eps_b = eps_b,
+#         a_wind = a_wind.quantity
+#     )
+#
+# def tau_theta(
+#     theta:FloatArrayLike,
+#     eps_b:FloatArrayLike,
+#     a_wind: QuantityArray,
+#     beta_sh:FloatArrayLike,
+#     mu:FloatArrayLike,
+#     mu_e:FloatArrayLike
+# ):
+#     return synchrotron_scaling_values.calculate_tau_theta(
+#         theta = theta,
+#         eps_b = eps_b,
+#         a_wind = a_wind.quantity,
+#         beta_sh=beta_sh,
+#         mu=mu,
+#         mu_e=mu_e,
+#     )
+#
+# def lnu_theta(
+#     theta:FloatArrayLike,
+#     eps_b:FloatArrayLike,
+#     a_wind: QuantityArray,
+#     beta_sh:FloatArrayLike,
+# ):
+#     return synchrotron_scaling_values.calculate_l_theta(
+#         theta = theta,
+#         eps_b = eps_b,
+#         a_wind =a_wind.quantity,
+#         beta_sh=beta_sh,
+#     )
+#
+# def doppler_delta(
+#     beta_sh:FloatArrayLike
+# ):
+#     return quantity_converter.beta_into_doppler_delta(beta_sh)
+#
+# @dataclass(frozen=True,slots=True)
+# class ModelMetadata:
+#     eps_b: float
+#     eps_th: float
+#     mue_mu: float
+#     distance: QuantityData
+#     phi_unit: str
+#     lnu_unit: str
+#     fnu_unit: str
+#     a_wind_unit: str
+#
+#     @classmethod
+#     def from_attrs(
+#         cls,
+#         attrs:dict[Hashable,Any]
+#     )->Self:
+#         return cls(
+#             eps_b = attrs[MetadataNames.EPS_B],
+#             eps_th = attrs[MetadataNames.EPS_TH],
+#             mue_mu = attrs[MetadataNames.MU_E_MU],
+#             distance = QuantityData(
+#                 value=attrs[MetadataNames.DISTANCE_VALUE],
+#                 unit =attrs[MetadataNames.DISTANCE_UNIT]
+#             ),
+#             a_wind_unit = attrs[MetadataNames.A_WIND_UNIT],
+#             phi_unit = attrs[MetadataNames.PHI_UNIT],
+#             lnu_unit = attrs[MetadataNames.LNU_UNIT],
+#             fnu_unit = attrs[MetadataNames.FNU_UNIT],
+#         )

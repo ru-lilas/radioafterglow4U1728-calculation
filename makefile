@@ -214,6 +214,7 @@ peak_grid: $(FILEPATH_PEAK_GRID)
 $(FILEPATH_PEAK_GRID): \
 	$(FILEPATH_INPUT) \
 	$(FILEPATH_INTEGRAL_TABLE) \
+	$(FILEPATH_MODEL_PARAMETER_TABLE) \
 	scripts/compute_$(PEAK_GRID).$(EXTENTION_PY)
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		--input $< \

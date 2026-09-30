@@ -7,7 +7,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 from module import calculation_lightcurve as clc
 from module import plot_utils
-from module.models import ColumnNames, FluxName, MetadataNames
+from module.models import ColumnNames, FluxName, MetadataNames, ModelParameters
 from module.mydataclasses import LongformatDataFrame, QuantityArray1D, QuantityData
 from module.observation import LongformatLightcurve
 from module.utils import FileReader
@@ -43,6 +43,9 @@ def main() -> None:
     dfs_continuous_nu = longdf_continuous.parse(ColumnNames.NU)
 
     lcs_obs = LongformatLightcurve.from_csv(args.obslc)
+
+    df_model_parameter = FileReader.table_from_csv(args.model_parameter_table)
+    model_parameters = ModelParameters.from_df(df_model_parameter)
 
     layout = plotconf.layout
     components = plotconf.components
@@ -121,6 +124,11 @@ def main() -> None:
                 yerr=lc_obs.fnu_total_err.to_value_in(y_unit),
                 style=components["observed"].resolve_errorbar_style(i)
             )
+
+            # model parameters
+            minimum_chi2_model = model_parameters.select_models([model_index])
+            print(minimum_chi2_model)
+
         pdf.savefig(fig)
         plt.close(fig)
 

@@ -7,9 +7,8 @@ from pathlib import Path
 from typing import Self
 import numpy as np
 
-from module.parameter_table import ModelParameterTable, ParameterGrid
 from module.types import FloatArray
-from module import electron_temperature, models,synchrotron_scaling_values,quantity_converter
+from module import models,quantity_converter
 from module.mydataclasses import (
     FloatVectorSpace,
     QuantityArray,

@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from dataclasses import dataclass,asdict
-from module.input_reader import InputReader
 from module.mydataclasses import YAMLReadable
 from module.types import FloatArray, FloatGrid,FloatArray1D
 from module.utils import FileReader, FileWriter
@@ -199,9 +198,6 @@ class Chi2Test:
             alpha=self.alpha,
             two_sided=self.two_sided
         )
-
-def load_chi2_test_conf(path:Path = Path("input/chi2_test.yaml")):
-    return InputReader.read(path,Chi2Test)
 
 @dataclass
 class EstimatedBackground:
