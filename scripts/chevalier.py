@@ -3,7 +3,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from module import plot_utils
-from module.chevalier import PeakGrid
+from module.chevalier import ChevalierContours, PeakGrid, RelativisticBoundary
 from module.models import ModelParameters
 from module.mydataclasses import QuantityData
 from module.observation import LongformatLightcurve
@@ -48,41 +48,40 @@ def main():
         fig, axes = layout.create()
         plotter=plot_utils.Plotter(axes.flat[0])
 
-        # A_wind contour
-        style = plotcomponents["a_wind"].contour_style_config
-        grid = grids.a_wind_grid(model_parameters).to_FloatGrid(style.unit)
-        grid_visible = grid.masking(is_out_of_plotregion)
-
-        ctr = plotter.contour(
-            x=plotregion.x_in_plotregion.values,
-            y=plotregion.y_in_plotregion.values,
-            z=grid_visible.values,
-            style=style
+        non_relativistic_boundary = RelativisticBoundary.build(
+            phi_plot=plotregion.x,
+            fnu_plot=plotregion.y,
+            theta=grids.theta_grid(model_parameters).to_FloatGrid(""),
+            theta_crit=1.0,
+            style=plotcomponents["non_relativistic_boundary"].resolve_line_style(0)
         )
-        plotter.contour_labels(ctr,style)
+        non_relativistic_boundary.plot(plotter)
+
+        ultra_relativistic_boundary = RelativisticBoundary.build(
+            phi_plot=plotregion.x,
+            fnu_plot=plotregion.y,
+            theta=grids.theta_grid(model_parameters).to_FloatGrid(""),
+            theta_crit=10.0,
+            style=plotcomponents["ultra_relativistic_boundary"].resolve_line_style(0)
+        )
+        ultra_relativistic_boundary.plot(plotter)
+
+        # A_wind contour
+        a_wind_contour = ChevalierContours.build(
+            plotregion,
+            grids.a_wind_grid(model_parameters),
+            style=plotcomponents["a_wind"].contour_style_config
+        )
+        a_wind_contour.plot(plotter)
 
         # beta_sh contour
-        style = plotcomponents["beta_sh"].contour_style_config
-        grid = grids.beta_sh_grid(model_parameters).to_FloatGrid(style.unit)
-        grid_visible = grid.masking(is_out_of_plotregion)
-
-        ctr = plotter.contour(
-            x=plotregion.x_in_plotregion.values,
-            y=plotregion.y_in_plotregion.values,
-            z=grid_visible.values,
-            style=style
+        beta_sh_contour = ChevalierContours.build(
+            plotregion,
+            grids.beta_sh_grid(model_parameters),
+            style=plotcomponents["beta_sh"].contour_style_config
         )
-        plotter.contour_labels(ctr,style)
+        beta_sh_contour.plot(plotter)
 
-        #
-        #
-        # grids.plot_main_contour(
-        #     ax,
-        #     plotconf=plotconf,
-        #     phi_unit=phi_unit,
-        #     fnu_unit=fnu_unit,
-        #     plotranges=ranges
-        # )
         # grids.metadata.plot(
         #     ax=ax,
         #     conf=plotconf.metadata

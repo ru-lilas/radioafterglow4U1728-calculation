@@ -140,17 +140,17 @@ components:
   #   hatches:
   #     - "/"
   #     - null
-  # thin_boundary: &BoundaryComponent_tmp
-  #   type: line
-  #   style: &BoundaryStyle_tmp
-  #     colors:
-  #       - "#000000"
-  #     linewidth: 4.0
-  #     linestyle: "-"
-  #     alpha: null
-  #     zorder: 2.0
-  # relativistic_boundary: 
-  #   <<: *BoundaryComponent_tmp
+  ultra_relativistic_boundary: &BoundaryComponent_tmp
+    type: line
+    style: &BoundaryStyle_tmp
+      colors:
+        - "#000000"
+      linewidth: 4.0
+      linestyle: "-"
+      alpha: null
+      zorder: 2.0
+  non_relativistic_boundary: 
+    <<: *BoundaryComponent_tmp
 # legend:
 #   fontsize: 24
 #   loc: "upper left"

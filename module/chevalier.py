@@ -154,14 +154,9 @@ class RelativisticBoundary:
 
     def plot(
         self,
-        ax:Axes
+        plotter:plot_utils.Plotter
     ):
-        self.label(ax)
-        return ax.plot(
-            self.phi_boundary,
-            self.fnu_boundary,
-            **self.style.to_kwargs()
-        )
+        plotter.line(self.phi_boundary,self.fnu_boundary,self.style)
 
 
 @dataclass(frozen=True,slots=True)
@@ -215,11 +210,6 @@ class OpticallythinBoundary:
             **self.style.to_kwargs()
         )
 
-# @dataclass(frozen=True,slots=True)
-# class ChevalierContour:
-#     z_quantitygrid: QuantityGrid
-#     mask_invisible: BoolGrid
-#     contourconf: plot_utils.ContourStyleConfig
 #
 #     @property
 #     def z_floatgrid(self):
@@ -343,6 +333,39 @@ class PlotRegion:
     @property
     def y_in_plotregion(self):
         return self.y.masking(self.out_of_plotregion)
+
+@dataclass(frozen=True,slots=True)
+class ChevalierContours:
+    plotregion: PlotRegion
+    z_grid: FloatGrid
+    style: plot_utils.ContourStyleConfig
+#     mask_invisible: BoolGrid
+#     contourconf: plot_utils.ContourStyleConfig
+
+    @classmethod
+    def build(
+        cls,
+        plotregion:PlotRegion,
+        z_grid_quantity: QuantityGrid,
+        style:plot_utils.ContourStyleConfig,
+    )->Self:
+        z_grid = z_grid_quantity.to_FloatGrid(style.unit)
+        return cls(
+            plotregion = plotregion,
+            z_grid=z_grid.masking(plotregion.out_of_plotregion),
+            style=style
+        )
+
+    def plot(self,plotter:plot_utils.Plotter):
+        pr = self.plotregion
+        style = self.style
+        ctr = plotter.contour(
+            x=pr.x_in_plotregion.values,
+            y=pr.y_in_plotregion.values,
+            z=self.z_grid.values,
+            style=style
+        )
+        plotter.contour_labels(ctr,style)
 
 @dataclass(frozen=True,slots=True)
 class ColorMap:
