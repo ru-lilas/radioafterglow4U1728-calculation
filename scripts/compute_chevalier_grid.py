@@ -25,6 +25,11 @@ def parse_args()->argparse.Namespace:
         required=True
     )
     parser.add_argument(
+        "--model_parameter_table",
+        type=Path,
+        required=True
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         required=True
@@ -34,10 +39,10 @@ def parse_args()->argparse.Namespace:
 def main():
     args = parse_args()
 
-    input_general = GeneralInputs.from_yaml(args.input)
     conf_lc = GeneralInputs.from_yaml(args.input).model_lightcurves
     table = ThermalSynchrotronIntegrals.from_csv(args.integral_table)
-    model_params = ModelParameters.build_from_input(input_general.model_parameters)
+    df_model = FileReader.table_from_csv(args.model_parameter_table)
+    model_params = ModelParameters.from_df(df_model)
 
     results = SynchrotronResults.compute_from(
         model_params=model_params,

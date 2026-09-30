@@ -197,6 +197,7 @@ $(FILEPATH_CHEVALIER_GRID): \
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		--input $< \
 		--integral_table $(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE) \
+		--$(MODEL_PARAMETER_TABLE) $(FILEPATH_MODEL_PARAMETER_TABLE) \
 		--output $@
 
 lc_all: $(FILEPATH_MODEL_LIGHTCURVES)
@@ -210,16 +211,11 @@ $(FILEPATH_MODEL_LIGHTCURVES): \
 		--output $@
 
 modeltable: $(FILEPATH_MODEL_PARAMETER_TABLE)
-
 $(FILEPATH_MODEL_PARAMETER_TABLE): \
 	$(FILEPATH_INPUT) \
-	$(FILEPATH_THERMAL_PEAK_TABLE) \
-	module/parameter_table.py \
-	module/models.py \
-	scripts/$(MODEL_PARAMETER_TABLE).py
+	scripts/build_$(MODEL_PARAMETER_TABLE).py
 	python3 -m $(subst /,.,$(basename $(lastword $^))) \
 		$< \
-		--peak_table $(FILEPATH_THERMAL_PEAK_TABLE) \
 		--output $@ \
 
 peak_table: $(FILEPATH_THERMAL_PEAK_TABLE)

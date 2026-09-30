@@ -51,8 +51,14 @@ class DefaultUnits(StrEnum):
 class MetadataNames(StrEnum):
     PHI_TH = auto()
     THETA0 = auto()
+    GRID_NROWS = auto()
+    GRID_NCOLS = auto()
     EPS_B = auto()
     EPS_TH = auto()
+    MU_E = auto()
+    MU = auto()
+    P_INDEX = auto()
+    EPS_E = auto()
     MU_E_MU = auto()
     DISTANCE_VALUE = auto()
     DISTANCE_UNIT = auto()
@@ -585,6 +591,64 @@ class ModelParameters:
             distance=input.distance,
             powerlaw=input.powerlaw,
 
+        )
+
+    def to_df(self) -> pd.DataFrame:
+        if self.phi_th.shape != self.theta0.shape or self.phi_th.ndim != 2:
+            raise ValueError("phi_thとtheta0は同じ形状の2次元配列が必要です.")
+
+        df = pd.DataFrame({
+            ColumnNames.MODEL_INDEX: np.arange(self.phi_th.size),
+            ColumnNames.PHI_TH: self.phi_th.ravel(),
+            ColumnNames.THETA0: self.theta0.ravel(),
+        })
+        df.attrs = {
+            MetadataNames.GRID_NROWS: self.phi_th.shape[0],
+            MetadataNames.GRID_NCOLS: self.phi_th.shape[1],
+            MetadataNames.EPS_TH: float(self.eps_th),
+            MetadataNames.EPS_B: float(self.eps_b),
+            MetadataNames.MU_E: float(self.molecular_weight.mu_e),
+            MetadataNames.MU: float(self.molecular_weight.mu),
+            MetadataNames.P_INDEX: float(self.powerlaw.p_index),
+            MetadataNames.EPS_E: float(self.powerlaw.eps_e),
+            MetadataNames.DISTANCE_VALUE: float(self.distance.value),
+            MetadataNames.DISTANCE_UNIT: self.distance.unit,
+        }
+        return df
+
+    @classmethod
+    def from_df(cls, df: pd.DataFrame) -> Self:
+        nrows = int(df.attrs[MetadataNames.GRID_NROWS])
+        ncols = int(df.attrs[MetadataNames.GRID_NCOLS])
+        if nrows <= 0 or ncols <= 0 or len(df) != nrows*ncols:
+            raise ValueError("格子形状とDataFrameの行数が一致しません.")
+        ordered = df.sort_values(ColumnNames.MODEL_INDEX)
+        model_index = ordered[ColumnNames.MODEL_INDEX].to_numpy()
+        if not pd.Index(model_index).is_unique:
+            raise ValueError(
+                "model_indexに重複があってはなりません."
+            )
+
+        return cls(
+            phi_th=ordered[ColumnNames.PHI_TH]
+                .to_numpy(dtype=np.float64).reshape(nrows, ncols),
+            theta0=ordered[ColumnNames.THETA0]
+                .to_numpy(dtype=np.float64).reshape(nrows, ncols),
+            eps_th=float(df.attrs[MetadataNames.EPS_TH]),
+            eps_b=float(df.attrs[MetadataNames.EPS_B]),
+            molecular_weight=MolecularWeight(
+                mu_e=float(df.attrs[MetadataNames.MU_E]),
+                mu=float(df.attrs[MetadataNames.MU]),
+            ),
+            powerlaw=PowerlawParameters(
+                p_index=float(df.attrs[MetadataNames.P_INDEX]),
+                eps_e=float(df.attrs[MetadataNames.EPS_E]),
+            ),
+            distance=QuantityData.from_attrs(
+                df,
+                key=MetadataNames.DISTANCE_VALUE,
+                unit_key=MetadataNames.DISTANCE_UNIT,
+            ),
         )
 
     @property
