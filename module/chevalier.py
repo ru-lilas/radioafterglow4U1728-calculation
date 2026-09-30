@@ -867,4 +867,17 @@ def build_candidate_longdf(
         dfs_candidates,
         axis="index"
     )
+    columns = [
+        models.ColumnNames.MODEL_INDEX,
+        models.ColumnNames.NU
+    ]
+    longdf = longdf[columns]
+    longdf.attrs = {
+        models.MetadataNames.NU_UNIT:
+            longdf.attrs[models.MetadataNames.NU_UNIT]
+    }
+    if not isinstance(longdf,pd.DataFrame):
+        raise TypeError(
+            f"longdfの型が不正です:{type(longdf)}"
+        )
     return longdf
