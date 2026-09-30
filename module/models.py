@@ -1215,6 +1215,18 @@ class SynchrotronResults:
             u.dimensionless_unscaled,
         )
 
+    def to_lightcurve(self, nu: QuantityData) -> "SynchrotronLightcurves":
+        return SynchrotronLightcurves(
+            model_params=self.model_params,
+            xm=self.xm,
+            j_nu=self.j_nu,
+            alpha_nu=self.alpha_nu,
+            tau=self.tau,
+            lnu=self.lnu,
+            fnu_obsframe=self.fnu_obsframe,
+            nu=nu,
+        )
+
     @property
     def peak(self) -> SynchrotronPeak:
         fnu_total = self.fnu_obsframe.total
@@ -1327,6 +1339,33 @@ class SynchrotronResults:
             lnu=lnu,
             fnu_obsframe=fnu_obsframe
         )
+
+@dataclass(frozen=True, slots=True)
+class SynchrotronLightcurves(SynchrotronResults):
+    nu: QuantityData
+
+    @property
+    def t(self) -> u.Quantity:
+        return self.phi / self.nu.quantity
+
+    def to_df(
+        self,
+        *,
+        fnu_unit: str = DefaultUnits.fnu,
+        phi_unit: str = DefaultUnits.phi,
+        nu_unit: str = DefaultUnits.nu,
+        t_unit: str = DefaultUnits.t,
+    ) -> pd.DataFrame:
+        df = SynchrotronResults.to_df(
+            self,
+            fnu_unit=fnu_unit,
+            phi_unit=phi_unit,
+        )
+        df[ColumnNames.NU] = self.nu.value_in(nu_unit)
+        df[ColumnNames.T] = self.t.to_value(t_unit).ravel()
+        df.attrs[MetadataNames.NU_UNIT] = str(nu_unit)
+        df.attrs[MetadataNames.T_UNIT] = str(t_unit)
+        return df
 
 @dataclass(frozen=True,slots=True)
 class ThermalSynchrotronTable:

@@ -64,6 +64,10 @@ def main():
             raise TypeError(
                 f"nu_valueのtypeが不正です:{type(nu_value)}"
             )
+        nu = QuantityData(
+            value=nu_value,
+            unit=df_cand.attrs[MetadataNames.NU_UNIT]
+        )
         indices = list(np.asarray(df_cand[ColumnNames.MODEL_INDEX],dtype=np.int64))
         cand_params = model_params.select_models(indices)
 
@@ -72,10 +76,8 @@ def main():
             xm=conf_lc.xm.to_floatvector().values[None,:],
             table=table
         )
-        df_lc = results.to_df()
-        df_lc[ColumnNames.NU] = nu_value
-        df_lc.attrs[MetadataNames.NU_UNIT] = df_cand.attrs[MetadataNames.NU_UNIT]
-        dfs_lc.append(df_lc)
+        results_lc = results.to_lightcurve(nu)
+        dfs_lc.append(results_lc.to_df())
 
     longdf_lc = pd.concat(
         dfs_lc,
