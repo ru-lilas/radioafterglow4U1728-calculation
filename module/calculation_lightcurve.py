@@ -8,7 +8,7 @@ from matplotlib.patches import StepPatch
 from module import plot_utils, quantity_converter
 from module import models,dataframe_utils
 from module import mystatistics
-from module.models import ColumnNames, DefaultUnits, FluxName, PhaseParameter, ScenarioParameter, ThermalSynchrotronUtils, calculate_xm
+from module.models import ChiSquaredParameters, ColumnNames, DefaultUnits, FluxName, PhaseParameter, ScenarioParameter, ThermalSynchrotronUtils, calculate_xm
 from module.mydataclasses import IntVector, QuantityArray, QuantityArray1D, QuantityData, QuantityGrid,FloatGrid, YAMLReadable
 from module.mystatistics import CalculateChiSquared, MinimumChiSquared
 from module.plot_utils import LineStyle, MetadataConfig
@@ -439,15 +439,22 @@ class ParameterNames(StrEnum):
 #
 #
 @dataclass(frozen=True,slots=True)
-class ChiSquared:
+class ChiSquaredResult:
     model_index: int
+    nu: float
     chi_squared: float
     ndof: int
+
+    def to_series(
+        self
+    )->pd.Series:
+        return pd.Series(asdict(self))
 
     @classmethod
     def calculate(
         cls,
         model_index: int,
+        nu_value: float,
         fnu_model: QuantityArray1D,
         fnu_data: QuantityArray1D,
         fnu_err: QuantityArray1D,
@@ -474,6 +481,7 @@ class ChiSquared:
 
         return cls(
             model_index=model_index,
+            nu=nu_value,
             chi_squared=chi2,
             ndof=n_data-n_params
         )
@@ -511,37 +519,6 @@ class BinnedLightcurve:
             values=bin_edges,
             unit=t_unit
         )
-
-@dataclass(frozen=True,slots=True)
-class BinnedLightcurveResult:
-    model_index: int
-    nu: QuantityData
-    t_center: QuantityArray1D
-    t_left: QuantityArray1D
-    t_right: QuantityArray1D
-    fnu_with_bg: QuantityArray1D
-    chi_squared: float
-    ndof: int
-
-    def to_df(
-        self,
-        *,
-        nu_unit: str = DefaultUnits.nu,
-        t_unit: str = DefaultUnits.t,
-        fnu_unit: str = DefaultUnits.fnu,
-    )->pd.DataFrame:
-        df = pd.DataFrame({
-            ColumnNames.MODEL_INDEX: self.model_index,
-            ColumnNames.NU: self.nu.value_in(nu_unit),
-            FluxName.FNU_WITH_BG: self.fnu_with_bg.to_value_in(fnu_unit),
-            ColumnNames.T_CENTER: self.t_center.to_value_in(t_unit),
-            ColumnNames.T_RIGHT: self.t_right.to_value_in(t_unit),
-            ColumnNames.T_LEFT: self.t_left.to_value_in(t_unit),
-        })
-        df.attrs[MetadataNames.NU_UNIT] = nu_unit
-        df.attrs[MetadataNames.FNU_UNIT] = fnu_unit
-        df.attrs[MetadataNames.T_UNIT] = t_unit
-        return df
 
 @dataclass(frozen=True,slots=True)
 class ContinuousLightcurve:

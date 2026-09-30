@@ -8,7 +8,7 @@ from .types import FloatArray1D, ValueScale,FloatArray
 import astropy.units as u
 from module.utils import FileReader
 from cattrs import Converter
-from typing import Any, Literal, Self
+from typing import Any, Hashable, Literal, Self
 DATACLASS_CONVERTER = Converter()
 
 class YAMLReadable:
@@ -885,3 +885,21 @@ class WideFormatDataFrames:
             self.dfs,
             ignore_index=True,
         )
+
+@dataclass(frozen=True,slots=True)
+class LongformatDataFrame:
+    longdf: pd.DataFrame
+
+    @classmethod
+    def read_from(cls,path:Path)->Self:
+        return cls(longdf=FileReader.table_from_csv(path))
+
+    def parse(
+        self,
+        columns: str
+    )->dict[Hashable,pd.DataFrame]:
+        return {
+            key: df.drop(columns=columns)
+            for key,df in self.longdf.groupby(columns)
+        }
+
