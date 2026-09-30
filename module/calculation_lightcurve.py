@@ -485,6 +485,50 @@ class ChiSquaredResult:
             chi_squared=chi2,
             ndof=n_data-n_params
         )
+@dataclass(frozen=True,slots=True)
+class BinnedLightcurveWithBackground:
+    model_index: int
+    nu: QuantityData
+    t_center: QuantityArray1D
+    t_left: QuantityArray1D
+    t_right: QuantityArray1D
+    fnu_with_bg: QuantityArray1D
+
+    @property
+    def bin_edges(self):
+        t_unit = self.t_left.unit
+        t_left = self.t_left.to_value_in(t_unit)
+        t_right = self.t_right.to_value_in(t_unit)
+        bin_edges = np.concatenate(
+            (
+                t_left,
+                np.array([t_right[-1]]),
+            )
+        )
+        return QuantityArray1D(
+            values=bin_edges,
+            unit=t_unit
+        )
+
+    @classmethod
+    def from_df(
+        cls,
+        df: pd.DataFrame
+    )-> Self:
+        attrs = df.attrs
+        nu = QuantityData(
+            value=attrs[ColumnNames.NU],
+            unit=attrs[MetadataNames.NU_UNIT],
+        )
+        return cls(
+            model_index = attrs[ColumnNames.MODEL_INDEX],
+            nu = nu,
+            t_center = QuantityArray1D.from_df(df,ColumnNames.T_CENTER,MetadataNames.T_UNIT),
+            t_right = QuantityArray1D.from_df(df,ColumnNames.T_RIGHT,MetadataNames.T_UNIT),
+            t_left = QuantityArray1D.from_df(df,ColumnNames.T_LEFT,MetadataNames.T_UNIT),
+            fnu_with_bg = QuantityArray1D.from_df(df,FluxName.FNU_WITH_BG,MetadataNames.FNU_UNIT),
+        )
+
 
 @dataclass(frozen=True,slots=True)
 class BinnedLightcurve:
