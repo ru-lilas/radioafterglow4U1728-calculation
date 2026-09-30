@@ -1,13 +1,14 @@
 """
-    compute_estimated_lightcurve.py
-    chi-square fittingで推定したパラメータの光度曲線を計算する
+    compute_candidate.py
 """
 
 import argparse
 from pathlib import Path
+import numpy as np
+import pandas as pd
 
 from module.inputs_as_dataclass import GeneralInputs
-from module.models import ModelParameters, SynchrotronResults
+from module.models import ColumnNames, MetadataNames, ModelParameters, SynchrotronResults
 from module.mydataclasses import QuantityData
 from module.utils import FileReader, FileWriter
 from module.synchrotron_numerical_table import ThermalSynchrotronIntegrals
@@ -26,6 +27,16 @@ def parse_args()->argparse.Namespace:
         required=True
     )
     parser.add_argument(
+        "--candidate_models",
+        type=Path,
+        required=True
+    )
+    parser.add_argument(
+        "--model_parameter_table",
+        type=Path,
+        required=True
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         required=True
@@ -35,20 +46,45 @@ def parse_args()->argparse.Namespace:
 def main():
     args = parse_args()
 
-    input_general = GeneralInputs.from_yaml(args.input)
     conf_lc = GeneralInputs.from_yaml(args.input).model_lightcurves
     table = ThermalSynchrotronIntegrals.from_csv(args.integral_table)
-    model_params = ModelParameters.build_from_input(input_general.model_parameters)
+    df_model = FileReader.table_from_csv(args.model_parameter_table)
+    model_params = ModelParameters.from_df(df_model)
+    longdf_cand = FileReader.table_from_csv(args.candidate_models)
 
-    results = SynchrotronResults.compute_from(
-        model_params=model_params,
-        xm=conf_lc.xm.to_floatvector().values[None,:],
-        table=table
+    dfs_cand = {
+        nu: df_cand.drop(columns=ColumnNames.NU)
+        for nu,df_cand in longdf_cand.groupby(ColumnNames.NU)
+    }
+
+    dfs_lc:list = []
+
+    for nu_value,df_cand in dfs_cand.items():
+        if not isinstance(nu_value,float):
+            raise TypeError(
+                f"nu_valueのtypeが不正です:{type(nu_value)}"
+            )
+        indices = list(np.asarray(df_cand[ColumnNames.MODEL_INDEX],dtype=np.int64))
+        cand_params = model_params.select_models(indices)
+
+        results = SynchrotronResults.compute_from(
+            model_params=cand_params,
+            xm=conf_lc.xm.to_floatvector().values[None,:],
+            table=table
+        )
+        df_lc = results.to_df()
+        df_lc[ColumnNames.NU] = nu_value
+        df_lc.attrs[MetadataNames.NU_UNIT] = df_cand.attrs[MetadataNames.NU_UNIT]
+        dfs_lc.append(df_lc)
+
+    longdf_lc = pd.concat(
+        dfs_lc,
+        axis="index"
     )
-    print("dumping now...")
     FileWriter.df_to_csv(
-        path=args.output,
-        df=results.to_df(),
+        args.output,
+        longdf_lc,
+        save_attrs=True
     )
     return
 

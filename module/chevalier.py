@@ -836,6 +836,11 @@ class PeakGrid:
     )->NDArray[np.int64]:
         return self.index.select(boolgrid)
 
+@dataclass(frozen=True,slots=True)
+class CandidateModels:
+    model_index: NDArray[np.int64]
+    nu: QuantityData
+
 def build_candidate_longdf(
     df_peaks:pd.DataFrame,
     df_obs_long: observation.LongformatLightcurve,

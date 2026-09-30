@@ -12,8 +12,11 @@ import pandas as pd
 from enum import StrEnum, auto
 from dataclasses import dataclass
 from module.mydataclasses import (
-    FloatVector, FloatVectorSpace, NDArraySpace, QuantityArray, QuantityArrayBase, QuantityData, QuantityArray1D, QuantityGrid, ValueArray,
-    IndexGrid
+    FloatVector, FloatVectorSpace,
+    NDArraySpace, QuantityArray,
+    QuantityArrayBase, QuantityData,
+    QuantityArray1D, QuantityGrid,
+    ValueArray,IndexGrid
 )
 from module.synchrotron_numerical_table import ThermalSynchrotronIntegrals
 from module.types import FloatArray, FloatArray1D, FloatArrayLike, FloatGrid
@@ -81,7 +84,7 @@ class PhiName(StrEnum):
     PHI = auto()
 
 class ColumnNames(StrEnum):
-    CANDIDATE_INDEX = auto()
+    CANDIDATE_MODEL_INDEX = auto()
     MODEL_INDEX = auto()
     PEAK_COLUMN_INDEX = auto()
     XM = auto()
@@ -578,6 +581,26 @@ class ModelParameters:
     molecular_weight: MolecularWeight
     powerlaw:PowerlawParameters
     distance:QuantityData
+    model_index: NDArray[np.int64] | None = None
+
+    def __post_init__(self) -> None:
+        if self.phi_th.ndim != 2 or self.phi_th.shape != self.theta0.shape:
+            raise ValueError("phi_thとtheta0は同じ形状の2次元配列が必要です.")
+        model_index = (
+            np.arange(self.phi_th.size, dtype=np.int64).reshape(self.phi_th.shape)
+            if self.model_index is None else np.asarray(self.model_index)
+        )
+        if model_index.shape != self.phi_th.shape or model_index.dtype.kind not in "iu":
+            raise ValueError("model_indexはモデル格子と同じ形状の整数配列が必要です.")
+        if not pd.Index(model_index.ravel()).is_unique:
+            raise ValueError("model_indexに重複があってはなりません.")
+        object.__setattr__(self, "model_index", model_index.astype(np.int64))
+
+    @property
+    def model_indices(self) -> NDArray[np.int64]:
+        if self.model_index is None:
+            raise RuntimeError("model_indexが初期化されていません.")
+        return self.model_index
 
     @classmethod
     def build_from_input(
@@ -601,7 +624,7 @@ class ModelParameters:
             raise ValueError("phi_thとtheta0は同じ形状の2次元配列が必要です.")
 
         df = pd.DataFrame({
-            ColumnNames.MODEL_INDEX: np.arange(self.phi_th.size),
+            ColumnNames.MODEL_INDEX: self.model_indices.ravel(),
             ColumnNames.PHI_TH: self.phi_th.ravel(),
             ColumnNames.THETA0: self.theta0.ravel(),
         })
@@ -618,6 +641,28 @@ class ModelParameters:
             MetadataNames.DISTANCE_UNIT: self.distance.unit,
         }
         return df
+
+    def select_models(self, model_indices: list[int]) -> Self:
+        """to_df()のmodel_indexで指定したモデルを入力順に取り出す."""
+        indices = np.asarray(model_indices)
+        if indices.ndim != 1 or indices.dtype.kind not in "iu" or indices.size == 0:
+            raise ValueError("model_indicesには空でない整数のlistが必要です.")
+        if not pd.Index(indices).is_unique:
+            raise ValueError("model_indicesに重複があってはなりません.")
+        positions = pd.Index(self.model_indices.ravel()).get_indexer(indices)
+        if np.any(positions < 0):
+            raise KeyError(f"存在しないmodel_indexがあります: {indices[positions < 0].tolist()}")
+
+        return type(self)(
+            phi_th=self.phi_th.ravel()[positions].reshape(-1, 1),
+            theta0=self.theta0.ravel()[positions].reshape(-1, 1),
+            eps_th=self.eps_th,
+            eps_b=self.eps_b,
+            molecular_weight=self.molecular_weight,
+            powerlaw=self.powerlaw,
+            distance=self.distance,
+            model_index=self.model_indices.ravel()[positions].reshape(-1, 1),
+        )
 
     @classmethod
     def from_df(cls, df: pd.DataFrame) -> Self:
@@ -637,6 +682,7 @@ class ModelParameters:
                 .to_numpy(dtype=np.float64).reshape(nrows, ncols),
             theta0=ordered[ColumnNames.THETA0]
                 .to_numpy(dtype=np.float64).reshape(nrows, ncols),
+            model_index=model_index.reshape(nrows, ncols),
             eps_th=float(df.attrs[MetadataNames.EPS_TH]),
             eps_b=float(df.attrs[MetadataNames.EPS_B]),
             molecular_weight=MolecularWeight(
@@ -1053,6 +1099,24 @@ class SynchrotronPeak:
     phi: u.Quantity
     fnu_total: u.Quantity
     lnu: u.Quantity
+    model_index: NDArray[np.int64] | None = None
+
+    def __post_init__(self) -> None:
+        model_index = (
+            np.arange(self.xm.shape[0], dtype=np.int64).reshape(-1, 1)
+            if self.model_index is None else np.asarray(self.model_index)
+        )
+        if model_index.shape != self.xm.shape or model_index.dtype.kind not in "iu":
+            raise ValueError("model_indexはpeakと同じ形状の整数配列が必要です.")
+        if not pd.Index(model_index.ravel()).is_unique:
+            raise ValueError("model_indexに重複があってはなりません.")
+        object.__setattr__(self, "model_index", model_index.astype(np.int64))
+
+    @property
+    def model_indices(self) -> NDArray[np.int64]:
+        if self.model_index is None:
+            raise RuntimeError("model_indexが初期化されていません.")
+        return self.model_index
 
     @property
     def phi_grid(self) -> QuantityGrid:
@@ -1084,15 +1148,16 @@ class SynchrotronPeak:
     def from_df(cls, df: pd.DataFrame) -> Self:
         ordered = df.sort_values(ColumnNames.MODEL_INDEX)
         model_index = ordered[ColumnNames.MODEL_INDEX].to_numpy()
-        if not np.array_equal(model_index, np.arange(len(ordered))):
+        if not pd.Index(model_index).is_unique:
             raise ValueError(
-                "model_indexは0から始まる重複のない連番でなければなりません."
+                "model_indexに重複があってはなりません."
             )
 
         fnu_unit = df.attrs[MetadataNames.FNU_UNIT]
         phi_unit = df.attrs[MetadataNames.PHI_UNIT]
         lnu_unit = df.attrs[MetadataNames.LNU_UNIT]
         return cls(
+            model_index=model_index.reshape(-1, 1),
             column_index=ordered[ColumnNames.PEAK_COLUMN_INDEX]
                 .to_numpy(dtype=np.intp).reshape(-1, 1),
             xm=ordered[ColumnNames.XM]
@@ -1120,9 +1185,8 @@ class SynchrotronPeak:
         phi_unit: str = DefaultUnits.phi,
         lnu_unit: str = DefaultUnits.lnu,
     ) -> pd.DataFrame:
-        n_models = self.xm.shape[0]
         df = pd.DataFrame({
-            ColumnNames.MODEL_INDEX: np.arange(n_models),
+            ColumnNames.MODEL_INDEX: self.model_indices.ravel(),
             ColumnNames.PEAK_COLUMN_INDEX: self.column_index.ravel(),
             ColumnNames.XM: self.xm.ravel(),
             PhiName.PHI: self.phi.to_value(phi_unit).ravel(),
@@ -1178,6 +1242,7 @@ class SynchrotronResults:
             phi=phi_peak,
             fnu_total=fnu_total_peak,
             lnu=lnu_peak,
+            model_index=self.model_params.model_indices.reshape(-1, 1),
         )
 
     def to_df(
@@ -1186,11 +1251,11 @@ class SynchrotronResults:
         fnu_unit: str = DefaultUnits.fnu,
         phi_unit: str = DefaultUnits.phi,
     ) -> pd.DataFrame:
-        n_models, n_xm = self.xm.shape
+        _, n_xm = self.xm.shape
         fnu = self.fnu_obsframe
 
         df = pd.DataFrame({
-            ColumnNames.MODEL_INDEX: np.repeat(np.arange(n_models), n_xm),
+            ColumnNames.MODEL_INDEX: np.repeat(self.model_params.model_indices.ravel(), n_xm),
             ColumnNames.XM: self.xm.ravel(),
             PhiName.PHI: self.phi.to_value(phi_unit).ravel(),
             FluxName.FNU_THERMAL: fnu.thermal_only.to_value(fnu_unit).ravel(),
