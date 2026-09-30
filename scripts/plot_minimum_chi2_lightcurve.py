@@ -1,8 +1,8 @@
 from module import dataframe_processors, dataframe_utils
 from module.inputs_as_dataclass import GeneralInputs
 from dataclasses import dataclass
-from module.models import ColumnNames, MetadataNames
-from module.mydataclasses import QuantityData, YAMLReadable
+from module.models import ColumnNames, FluxName, MetadataNames
+from module.mydataclasses import LongformatDataFrame, QuantityArray1D, QuantityData, YAMLReadable
 from module.utilities import filereaders as fr
 from pathlib import Path
 import argparse
@@ -13,7 +13,6 @@ import numpy as np
 import pandas as pd
 from module import plot_utils,observation
 from module.observation import LongformatLightcurve
-from module.calculation_lightcurve import CandidateModelLightcurveContinuous, CandidateModelLightcurveContinuousPlot, CandidateModelLightcurveTable, CandidateModelMetadata
 from module import calculation_lightcurve as clc
 from module.utils import FileReader
 
@@ -26,7 +25,12 @@ def parse_args()->argparse.Namespace:
         required=True
     )
     parser.add_argument(
-        "--minimum_chi2_lightcurve",
+        "--minimum_chi_squared",
+        type=Path,
+        required=True
+    )
+    parser.add_argument(
+        "--candidate_binned_lightcurves",
         type=Path,
         required=True
     )
@@ -36,7 +40,7 @@ def parse_args()->argparse.Namespace:
         required=True
     )
     parser.add_argument(
-        "--candidate_models",
+        "--model_parameter_table",
         type=Path,
         required=True
     )
@@ -65,25 +69,15 @@ def main():
     conf = GeneralInputs.from_yaml(args.input)
     plotconf = plot_utils.PlotConfig.from_yaml(args.plotconfig)
 
-    # observed lightcurve
+    df_minchi2 = FileReader.table_from_csv(args.minimum_chi_squared)
+
+    longdf_binned = LongformatDataFrame.read_from(args.candidate_binned_lightcurves)
+    dfs_binned_nu = longdf_binned.parse(ColumnNames.NU)
+
+    longdf_continuous = LongformatDataFrame.read_from(args.candidate_lightcurves)
+    dfs_continuous_nu = longdf_continuous.parse(ColumnNames.NU)
+
     lcs_obs = LongformatLightcurve.from_csv(args.obslc)
-
-    # model table
-    df_models = FileReader.table_from_csv(args.candidate_models)
-    print(df_models)
-
-    df_long_minchi2 = FileReader.table_from_csv(
-        args.minimum_chi2_lightcurve
-    )
-
-    lc_table_minchi2 = clc.CandidateModelLightcurveTable.from_df_long(
-        df_long_minchi2
-    )
-    df_cont = FileReader.table_from_csv(args.candidate_lightcurves)
-    lcs = [
-        lc.select_unique()
-        for lc in lc_table_minchi2.devide_into_frequency_groups()
-    ]
 
     layout = plotconf.layout
     components = plotconf.components
@@ -91,30 +85,73 @@ def main():
     y_unit = layout.axes.y.label.unit
     with PdfPages(outpath) as pdf:
         fig,axes = layout.create()
-        for i,lc in enumerate(lcs):
+        for i,row in df_minchi2.iterrows():
+            if not isinstance(i,int):
+                raise TypeError(
+                    f"iのtypeが不正です:{type(i)}"
+                )
+            minchi2 = clc.ChiSquaredResult.from_series(row)
+            model_index = int(minchi2.model_index)
+
             plotter = plot_utils.Plotter(axes.flat[i])
-            nu = lc.nu
-
-            lc_obs = lcs_obs.select_frequency(nu,unit=nu.unit)
-            model_index = lc.candidate_model_index
-            lc_cont = CandidateModelLightcurveContinuousPlot.from_df(
-                df=df_cont,
-                candidate_model_index=model_index
+            nu_value = row[ColumnNames.NU]
+            if not isinstance(nu_value,float):
+                raise TypeError(
+                    f"nu_valueのtypeが不正です:{type(nu_value)}"
+                )
+            nu_unit = df_minchi2.attrs[MetadataNames.NU_UNIT]
+            nu = QuantityData(
+                value=nu_value,
+                unit=nu_unit
             )
-            row = df_models.loc[
-                df_models["model_index"] == lc.model_index
-            ].iloc[0]
-            print(row)
-            
-            eps_b = lc.df.attrs[MetadataNames.EPS_B]
+            lc_obs = lcs_obs.select_frequency(nu,unit=nu.unit)
 
+            # binned lightcurve
             binned = components["binned"]
-            binned_style = binned.style.resolve(i)
+            df_binned_nu = dfs_binned_nu[nu_value]
+            df_binned_plot:pd.DataFrame = df_binned_nu.loc[
+                df_binned_nu[ColumnNames.MODEL_INDEX] == model_index
+            ]
+            df_binned_plot.attrs[ColumnNames.NU] = nu_value
+            df_binned_plot.attrs[ColumnNames.MODEL_INDEX] = model_index
+            binned_lc = clc.BinnedLightcurveWithBackground.from_df(df_binned_plot)
             plotter.step(
-                edges=lc.bin_edges.to_value_in(x_unit),
-                values=lc.fnu_total.to_value_in(y_unit),
+                edges=binned_lc.bin_edges.to_value_in(x_unit),
+                values=binned_lc.fnu_with_bg.to_value_in(y_unit),
                 style=binned.resolve_line_style(i),
-                baseline=lc.fnu_bg.value_in(y_unit)
+                baseline=lc_obs.fnu_background.to_value_in(y_unit)[0]
+            )
+            
+            # continuous lightcurve
+            df_continuous_nu = dfs_continuous_nu[nu_value]
+            df_continuous_plot:pd.DataFrame = df_continuous_nu.loc[
+                df_continuous_nu[ColumnNames.MODEL_INDEX] == model_index
+            ]
+            print(df_continuous_plot)
+            continuous_lc = clc.ContinuousLightcurve(
+                model_index=model_index,
+                nu=nu,
+                t=QuantityArray1D.from_df(
+                    df_continuous_plot,
+                    ColumnNames.T,
+                    unit_key=MetadataNames.T_UNIT
+                ),
+                fnu_net=QuantityArray1D.from_df(
+                    df_continuous_plot,
+                    FluxName.FNU_TOTAL,
+                    unit_key=MetadataNames.FNU_UNIT
+                )
+            )
+            plotter.line(
+                x=continuous_lc.t.to_value_in(x_unit),
+                y=continuous_lc.fnu_with_bg(lc_obs.fnu_background.index(0)).to_value_in(y_unit),
+                style=components["continuous"].resolve_line_style(i)
+            )
+
+            plotter.line(
+                x=lc_obs.t.to_value_in(x_unit),
+                y=lc_obs.fnu_background.to_value_in(y_unit),
+                style=components["background"].resolve_line_style(i)
             )
             plotter.errorbar(
                 x=lc_obs.t.to_value_in(x_unit),
@@ -122,17 +159,6 @@ def main():
                 yerr=lc_obs.fnu_total_err.to_value_in(y_unit),
                 style=components["observed"].resolve_errorbar_style(i)
             )
-            plotter.line(
-                x=lc_obs.t.to_value_in(x_unit),
-                y=lc_obs.fnu_background.to_value_in(y_unit),
-                style=components["background"].resolve_line_style(i)
-            )
-            plotter.line(
-                x=lc_cont.t.to_value_in(x_unit),
-                y=lc_cont.fnu_with_bg(lc_obs.fnu_background.index(0)).to_value_in(y_unit),
-                style=components["continuous"].resolve_line_style(i)
-            )
-
         pdf.savefig(fig)
         plt.close(fig)
 

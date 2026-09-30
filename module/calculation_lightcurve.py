@@ -451,6 +451,13 @@ class ChiSquaredResult:
         return pd.Series(asdict(self))
 
     @classmethod
+    def from_series(
+        cls,
+        row:pd.Series
+    )->Self:
+        return cls(**row.to_dict())
+
+    @classmethod
     def calculate(
         cls,
         model_index: int,
@@ -804,6 +811,14 @@ class ContinuousLightcurve:
                     .to_numpy(dtype=np.float64),
                 unit=t_unit,
             ),
+        )
+
+    def fnu_with_bg(
+        self,
+        fnu_bg:QuantityData
+    )->QuantityArray1D:
+        return QuantityArray1D.from_quantity(
+            self.fnu_net.quantity + fnu_bg.quantity
         )
 
 # @dataclass(frozen=True,slots=True)
