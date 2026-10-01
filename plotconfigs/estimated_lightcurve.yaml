@@ -37,14 +37,17 @@ metadata:
     eps_b:
       show: true
       unit: ""
-      label_format:
+      label_format: &LabelFormatTmp
         prefix: '\varepsilon_{\mathrm{B}}'
         fmt: '.1e'
         unit: ""
+        suffix: ""
+        show_equals: false
     eps_th:
       show: true
       unit: ""
       label_format:
+        <<: *LabelFormatTmp
         prefix: '\varepsilon_{\mathrm{th}}'
         fmt: '.2f'
         unit: ""
@@ -52,6 +55,7 @@ metadata:
       show: true
       unit: "kpc"
       label_format:
+        <<: *LabelFormatTmp
         prefix: 'D'
         fmt: '.1f'
         unit: '\mathrm{kpc}'
@@ -59,6 +63,7 @@ metadata:
       show: true
       unit: ""
       label_format:
+        <<: *LabelFormatTmp
         prefix: '\mu_{\mathrm{e}}/\mu'
         fmt: '.1f'
         unit: ""
@@ -66,6 +71,7 @@ metadata:
       show: true
       unit: "g cm-1"
       label_format:
+        <<: *LabelFormatTmp
         prefix: 'A_{\mathrm{w}}'
         fmt: '.1e'
         unit: '\mathrm{g/cm}'
@@ -73,6 +79,7 @@ metadata:
       show: true
       unit: ""
       label_format:
+        <<: *LabelFormatTmp
         prefix: '\beta_{\mathrm{sh}}'
         fmt: '.2f'
         unit: ''
@@ -80,6 +87,7 @@ metadata:
       show: true
       unit: ""
       label_format:
+        <<: *LabelFormatTmp
         prefix: 'p'
         fmt: '.1f'
         unit: ''
@@ -87,6 +95,7 @@ metadata:
       show: true
       unit: ""
       label_format:
+        <<: *LabelFormatTmp
         prefix: '\varepsilon_{\mathrm{e}}'
         fmt: '.1e'
         unit: ''
@@ -94,6 +103,7 @@ metadata:
       show: true
       unit: ""
       label_format:
+        <<: *LabelFormatTmp
         prefix: '\chi^2'
         fmt: '.1f'
         unit: ''

@@ -71,6 +71,8 @@ class QuantityLabel:
     prefix: str
     fmt: str
     unit: str
+    suffix: str = ""
+    show_equals: bool = True
 
     def formatted_value(
         self,
@@ -93,16 +95,10 @@ class QuantityLabel:
             value: float,
         ) -> str:
             formatted = self.formatted_value(value)
-
-            if self.unit == "":
-                return (
-                    rf"${self.prefix}={formatted}$"
-                )
-
-            return (
-                rf"${self.prefix}={formatted}"
-                rf"\,{self.unit}$"
-            )
+            separator = ("=" if self.show_equals else r"\,") if self.prefix else ""
+            unit = rf"\,{self.unit}" if self.unit else ""
+            suffix = rf"\,{self.suffix}" if self.suffix else ""
+            return rf"${self.prefix}{separator}{formatted}{unit}{suffix}$"
 
 @dataclass
 class LabelConfigure:

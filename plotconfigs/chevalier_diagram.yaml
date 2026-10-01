@@ -145,9 +145,11 @@ components:
         - "/"
         - null
     label_format:
-      prefix: '\nu'
+      prefix: ''
       fmt: '.1f'
+      suffix: '\mathrm{(Russell+24)}'
       unit: '\mathrm{GHz}'
+      show_equals: false
   non_relativistic_boundary: &BoundaryComponent_tmp
     type: line
     legend: false
