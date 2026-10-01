@@ -1,7 +1,7 @@
 # pyright: reportAttributeAccessIssue=false
 # pyright: reportUnknownMemberType=false
 
-from typing import Self
+from typing import Literal, Self
 import astropy.units as u
 from matplotlib.axes import Axes
 from module import plot_utils, quantity_converter
@@ -36,6 +36,7 @@ log10_2 = np.log10(2.0)
 log10_3 = np.log10(3.0)
 TWO_TO_FIVE:float = 2**5
 THREE_TO_SEVEN = 3**7
+SYNCHROTRON_MODEL = Literal["thermal","total"]
 
 class DefaultUnits(StrEnum):
     fnu = "mJy"
@@ -62,8 +63,10 @@ class MetadataNames(StrEnum):
     PHI_UNIT = auto()
     LNU_UNIT = auto()
     FNU_UNIT = auto()
+    PEAK_COMPONENT = auto()
     NU_UNIT = auto()
     T_UNIT = auto()
+    SYNCHROTRON_MODEL = auto()
 
 class FluxName(StrEnum):
     FNU_THERMAL = auto()
@@ -282,6 +285,7 @@ class InputParametersRaw:
     molecular_weight: MolecularWeight
     distance: QuantityData
     powerlaw:PowerlawParameters
+    synchrotron_model: SYNCHROTRON_MODEL
 
     @property
     def phi_arr(self)->FloatVector:
@@ -316,6 +320,7 @@ class ModelParameters:
     molecular_weight: MolecularWeight
     powerlaw:PowerlawParameters
     distance:QuantityData
+    synchrotron_model: SYNCHROTRON_MODEL
     model_index: NDArray[np.int64] | None = None
 
     def __post_init__(self) -> None:
@@ -351,6 +356,7 @@ class ModelParameters:
             molecular_weight=input.molecular_weight,
             distance=input.distance,
             powerlaw=input.powerlaw,
+            synchrotron_model=input.synchrotron_model
 
         )
 
@@ -372,6 +378,7 @@ class ModelParameters:
             MetadataNames.MU: float(self.molecular_weight.mu),
             MetadataNames.P_INDEX: float(self.powerlaw.p_index),
             MetadataNames.EPS_E: float(self.powerlaw.eps_e),
+            MetadataNames.SYNCHROTRON_MODEL: self.synchrotron_model,
             MetadataNames.DISTANCE_VALUE: float(self.distance.value),
             MetadataNames.DISTANCE_UNIT: self.distance.unit,
         }
@@ -396,6 +403,7 @@ class ModelParameters:
             molecular_weight=self.molecular_weight,
             powerlaw=self.powerlaw,
             distance=self.distance,
+            synchrotron_model=self.synchrotron_model,
             model_index=self.model_indices.ravel()[positions].reshape(-1, 1),
         )
 
@@ -428,6 +436,7 @@ class ModelParameters:
                 p_index=float(df.attrs[MetadataNames.P_INDEX]),
                 eps_e=float(df.attrs[MetadataNames.EPS_E]),
             ),
+            synchrotron_model=df.attrs[MetadataNames.SYNCHROTRON_MODEL],
             distance=QuantityData.from_attrs(
                 df,
                 key=MetadataNames.DISTANCE_VALUE,
@@ -839,11 +848,14 @@ class SynchrotronPeak:
     column_index: NDArray[np.intp]
     xm: NDArray64
     phi: u.Quantity
-    fnu_total: u.Quantity
+    fnu: u.Quantity
     lnu: u.Quantity
     model_index: NDArray[np.int64] | None = None
+    component: Literal["thermal", "total"] = "total"
 
     def __post_init__(self) -> None:
+        if self.component not in ("thermal", "total"):
+            raise ValueError(f"未対応のpeak成分です: {self.component}")
         model_index = (
             np.arange(self.xm.shape[0], dtype=np.int64).reshape(-1, 1)
             if self.model_index is None else np.asarray(self.model_index)
@@ -875,7 +887,7 @@ class SynchrotronPeak:
         df = self.to_df()
         return QuantityGrid.from_df(
             df,
-            column=FluxName.FNU_TOTAL,
+            column=ColumnNames.FNU_PEAK,
             unit=df.attrs[MetadataNames.FNU_UNIT],
             index_name=ColumnNames.MODEL_INDEX,
         )
@@ -923,6 +935,11 @@ class SynchrotronPeak:
         fnu_unit = df.attrs[MetadataNames.FNU_UNIT]
         phi_unit = df.attrs[MetadataNames.PHI_UNIT]
         lnu_unit = df.attrs[MetadataNames.LNU_UNIT]
+        fnu_column = (
+            ColumnNames.FNU_PEAK
+            if ColumnNames.FNU_PEAK in ordered.columns
+            else FluxName.FNU_TOTAL
+        )
         return cls(
             model_index=model_index.reshape(-1, 1),
             column_index=ordered[ColumnNames.PEAK_COLUMN_INDEX]
@@ -933,8 +950,8 @@ class SynchrotronPeak:
                 ordered[PhiName.PHI].to_numpy(dtype=np.float64).reshape(-1, 1),
                 unit=phi_unit,
             ).to(u.dimensionless_unscaled),
-            fnu_total=u.Quantity(
-                ordered[FluxName.FNU_TOTAL]
+            fnu=u.Quantity(
+                ordered[fnu_column]
                     .to_numpy(dtype=np.float64).reshape(-1, 1),
                 unit=fnu_unit,
             ),
@@ -943,6 +960,7 @@ class SynchrotronPeak:
                     .to_numpy(dtype=np.float64).reshape(-1, 1),
                 unit=lnu_unit,
             ),
+            component=df.attrs.get(MetadataNames.PEAK_COMPONENT, "total"),
         )
 
     def to_df(
@@ -957,12 +975,13 @@ class SynchrotronPeak:
             ColumnNames.PEAK_COLUMN_INDEX: self.column_index.ravel(),
             ColumnNames.XM: self.xm.ravel(),
             PhiName.PHI: self.phi.to_value(phi_unit).ravel(),
-            FluxName.FNU_TOTAL: self.fnu_total.to_value(fnu_unit).ravel(),
+            ColumnNames.FNU_PEAK: self.fnu.to_value(fnu_unit).ravel(),
             ColumnNames.LNU: self.lnu.to_value(lnu_unit).ravel(),
         })
         df.attrs[MetadataNames.FNU_UNIT] = str(fnu_unit)
         df.attrs[MetadataNames.PHI_UNIT] = str(phi_unit)
         df.attrs[MetadataNames.LNU_UNIT] = str(lnu_unit)
+        df.attrs[MetadataNames.PEAK_COMPONENT] = self.component
         return df
 
 @dataclass(frozen=True,slots=True)
@@ -996,20 +1015,34 @@ class SynchrotronResults:
 
     @property
     def peak(self) -> SynchrotronPeak:
-        fnu_total = self.fnu_obsframe.total
-        column_index = np.argmax(fnu_total.value, axis=1)[:, np.newaxis]
+        return self.peak_for("total")
+
+    def peak_for(
+        self,
+        component: Literal["thermal", "total"] = "total",
+    ) -> SynchrotronPeak:
+        if component == "thermal":
+            fnu = self.fnu_obsframe.thermal_only
+            lnu = self.lnu.thermal_quantity
+        elif component == "total":
+            fnu = self.fnu_obsframe.total
+            lnu = self.lnu.total_quantity
+        else:
+            raise ValueError(f"未対応のpeak成分です: {component}")
+
+        column_index = np.argmax(fnu.value, axis=1)[:, np.newaxis]
         row_index = np.arange(self.xm.shape[0])[:, np.newaxis]
-        fnu_total_peak = fnu_total[row_index, column_index]
-        if not isinstance(fnu_total_peak, u.Quantity):
+        fnu_peak = fnu[row_index, column_index]
+        if not isinstance(fnu_peak, u.Quantity):
             raise TypeError(
-                "fnu_total_peak をQuantityとして返せません."
+                "fnu_peak をQuantityとして返せません."
             )
         phi_peak = self.phi[row_index, column_index]
         if not isinstance(phi_peak, u.Quantity):
             raise TypeError(
                 "phi_peak をQuantityとして返せません."
             )
-        lnu_peak = self.lnu.total_quantity[row_index, column_index]
+        lnu_peak = lnu[row_index, column_index]
         if not isinstance(lnu_peak, u.Quantity):
             raise TypeError(
                 "lnu_peak をQuantityとして返せません."
@@ -1019,9 +1052,10 @@ class SynchrotronResults:
             column_index=column_index,
             xm=self.xm[row_index, column_index],
             phi=phi_peak,
-            fnu_total=fnu_total_peak,
+            fnu=fnu_peak,
             lnu=lnu_peak,
             model_index=self.model_params.model_indices.reshape(-1, 1),
+            component=component,
         )
 
     def to_df(

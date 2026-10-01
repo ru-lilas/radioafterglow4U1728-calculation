@@ -49,7 +49,7 @@ def main():
         xm=conf_lc.xm.to_floatvector().values[None,:],
         table=table
     )
-    peaks = results.peak
+    peaks = results.peak_for(model_params.synchrotron_model)
     print("dumping now...")
     FileWriter.df_to_csv(
         path=args.output,

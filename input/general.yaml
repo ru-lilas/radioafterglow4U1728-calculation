@@ -27,6 +27,7 @@ model_parameters:
   powerlaw:
     p_index: 3.0
     eps_e: 1.0e-02
+  synchrotron_model: total
 
 candidate_models_selection:
   observation_frequencies:
