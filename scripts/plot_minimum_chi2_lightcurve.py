@@ -160,6 +160,20 @@ def main() -> None:
             )
             strings: list[str] = []
 
+            # synchrotron components
+            if model_parameters.synchrotron_model == "total":
+                syn_model_str = "thermal+powerlaw"
+            elif model_parameters.synchrotron_model == "thermal":
+                syn_model_str = "thermal only"
+            else:
+                syn_model_str = model_parameters.synchrotron_model
+            plotter.text(
+                x=0.98,y=0.98,
+                label=syn_model_str,
+                style=components["synchrotron_component"].text_style_config,
+                coordinates="axes"
+            )
+
             for name, quantity in metadata.to_dict().items():
                 plot_utils.MetadataComponent(
                     quantity=quantity,

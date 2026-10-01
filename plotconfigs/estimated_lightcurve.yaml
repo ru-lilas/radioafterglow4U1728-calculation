@@ -155,3 +155,11 @@ components:
       linestyle: "--"
       alpha: null
       zorder: 1.0
+  synchrotron_component:
+    type: text
+    legend: false
+    style:
+      color: "#000000"
+      fontsize: 36
+      ha: right
+      va: top

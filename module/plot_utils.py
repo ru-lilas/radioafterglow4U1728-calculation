@@ -991,8 +991,19 @@ class Plotter:
         y: float,
         label: str,
         style: TextStyle,
+        *,
+        coordinates: Literal["data", "axes"] = "data",
     ) -> Text:
-        return self.ax.text(x, y, label, **style.to_kwargs())
+        transform = (
+            self.ax.transAxes
+            if coordinates == "axes"
+            else self.ax.transData
+        )
+        return self.ax.text(
+            x, y, label,
+            transform=transform,
+            **style.to_kwargs(),
+        )
 
     def legend(
         self,
