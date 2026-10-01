@@ -8,7 +8,7 @@ from matplotlib.patches import StepPatch
 from module import plot_utils, quantity_converter
 from module import models,dataframe_utils
 from module import mystatistics
-from module.models import ChiSquaredParameters, ColumnNames, DefaultUnits, FluxName, PhaseParameter, ScenarioParameter, ThermalSynchrotronUtils, calculate_xm
+from module.models import ChiSquaredParameters, ColumnNames, DefaultUnits, FluxName, ScenarioParameter
 from module.mydataclasses import IntVector, QuantityArray, QuantityArray1D, QuantityData, QuantityGrid,FloatGrid, YAMLReadable
 from module.mystatistics import CalculateChiSquared, MinimumChiSquared
 from module.plot_utils import LineStyle, MetadataConfig
