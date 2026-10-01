@@ -23,6 +23,7 @@ class PlotMetadata:
     distance: QuantityData
     p_index: QuantityData
     eps_e: QuantityData
+    chi_squared: QuantityData
 
     def to_dict(self) -> dict[str, QuantityData]:
         return {
@@ -153,6 +154,7 @@ def main() -> None:
                 eps_th=QuantityData(minimum_chi2_model.eps_th,""),
                 eps_e=QuantityData(minimum_chi2_model.powerlaw.eps_e,""),
                 p_index=QuantityData(minimum_chi2_model.powerlaw.p_index,""),
+                chi_squared=QuantityData(minchi2.chi_squared,""),
                 mu_e_mu=QuantityData(minimum_chi2_model.molecular_weight.to_ratio(),""),
                 distance=minimum_chi2_model.distance,
             )

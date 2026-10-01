@@ -77,6 +77,7 @@ class FluxName(StrEnum):
     FNU_THERMAL = auto()
     FNU_POWERLAW = auto()
     FNU_TOTAL = auto()
+    FNU_WITH_BG= auto()
 
 class PhiName(StrEnum):
     PHI = auto()
@@ -473,7 +474,7 @@ class MolecularWeight:
         self
     )->float:
         return float(
-            (self.mu_e/self.mu).decompose()
+            (self.mu_e/self.mu)
         )
 
     def to_effective_mass_ratio(

@@ -90,6 +90,13 @@ metadata:
         prefix: '\varepsilon_{\mathrm{e}}'
         fmt: '.1e'
         unit: ''
+    chi_squared: 
+      show: true
+      unit: ""
+      label_format:
+        prefix: '\chi^2'
+        fmt: '.1f'
+        unit: ''
     nu: 
       show: true
       unit: "GHz"
