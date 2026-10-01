@@ -6,6 +6,17 @@
 %=========================================================%
 \begin{document}
 \maketitle
+\section{}
+Type-I thermonuclear X-ray burst is
+one of the most bright X-ray transients
+in the our galaxy,
+which is driven by
+explosive nuclear burning
+on the surface of a accreting neutron star.
+
+X-ray burster 4U 1728--34 is
+a NS-LMXB, which 
+
   
 \section{}
 \(\epsB = \num{1.0e-2},\epsth = \num{0.40} \) are set,
@@ -429,25 +440,32 @@ exact one is smaller than \qty{0.5}{\percent}.
   \Theta_0^2
   \melecc
 \end{empheq}
-\section{Power-law component}
+\section{Synchrotron Model}
 \subsection{Emissivity}
 \begin{equation}
-  \mathscr{J}_{\powerlaw}
-  \coloneq
-  \jnupl\ab(\frac{\melecc}{(ct)^3})^{-1}
+  \jnuth
   =
+  \mathscr{J}_{\thermal}
+  \ab(\frac{\melecc}{(ct)^3})
+\end{equation}
+\begin{equation}
+  \mathscr{J}_{\thermal}
+  \coloneq
   N_{j}
   \zeta_{\powerlaw}(\xm)
 \end{equation}
 \begin{equation}
-  \mathscr{A}_{\powerlaw}
-  \coloneq
-  \anupl(ct)
+  \jnupl
   =
-  N_{\alpha}
-  \eta_{\powerlaw}(\xm)
+  \mathscr{J}_{\powerlaw}
+  \ab(\frac{\melecc}{(ct)^3})
 \end{equation}
-
+\begin{equation}
+  \mathscr{J}_{\powerlaw}
+  \coloneq
+  N_{j}
+  \zeta_{\powerlaw}(\xm)
+\end{equation}
 \begin{equation}
   \label{eq:definition_of_N_j}
   N_{j}
@@ -456,6 +474,47 @@ exact one is smaller than \qty{0.5}{\percent}.
   \frac{\epsth}{8\pi\epsB\Theta_0}
   \ab(\frac{\phith}{\Theta^2})^3
 \end{equation}
+\begin{equation}
+  \label{eq:definition_of_zeta_th}
+  \zeta_{\thermal}(\xm)
+  \coloneq 
+  \frac{\sqrt{3}}{8\pi}
+  f(\Theta)
+  \xm
+  I'(\xm)
+\end{equation}
+\begin{equation}
+  \label{eq:definition_of_zeta_pl}
+  \zeta_{\powerlaw}(\xm)
+  \coloneq 
+  C_{j}\varepsilon_{\ele}
+  g(\Theta)\xm^{-(p-1)/2}
+\end{equation}
+%%=======================================================%%
+\subsection{Absorption Coefficient}
+\begin{equation}
+  \anuth
+  =
+  \mathscr{A}_{\thermal}\frac{1}{ct}
+\end{equation}
+\begin{equation}
+  \mathscr{A}_{\thermal}
+  \coloneq
+  N_{\alpha}
+  \eta_{\thermal}(\xm)
+\end{equation}
+\begin{equation}
+  \anupl
+  =
+  \mathscr{A}_{\powerlaw}\frac{1}{ct}
+\end{equation}
+\begin{equation}
+  \mathscr{A}_{\powerlaw}
+  \coloneq
+  N_{\alpha}
+  \eta_{\powerlaw}(\xm)
+\end{equation}
+
 \begin{equation}
   \label{eq:definition_of_N_alpha}
   N_{\alpha}
@@ -466,11 +525,13 @@ exact one is smaller than \qty{0.5}{\percent}.
   \Theta^{-5}
 \end{equation}
 \begin{equation}
-  \label{eq:definition_of_zeta_pl}
-  \zeta_{\powerlaw}(\xm)
-  \coloneq 
-  C_{j}\varepsilon_{\ele}
-  g(\Theta)\xm^{-(p-1)/2}
+  \label{eq:definition_of_eta_th}
+  \eta_{\thermal}(\xm)
+  \coloneq
+  \frac{\pi}{3^{3/2}}
+  f(\Theta)
+  \xm^{-1}
+  I'(\xm)
 \end{equation}
 \begin{equation}
   \label{eq:definition_of_eta_pl}
@@ -478,6 +539,13 @@ exact one is smaller than \qty{0.5}{\percent}.
   \coloneq
   C_{\alpha}\varepsilon_{\ele}
   g(\Theta)\xm^{-(p+4)/2}
+\end{equation}
+
+\subsection{Optical Depth}
+\begin{equation}
+  \tau_{\nu}
+  =
+  \alpha_{\nu}R
 \end{equation}
 
 \section{Results}
