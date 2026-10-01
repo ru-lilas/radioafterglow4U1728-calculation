@@ -549,34 +549,65 @@ exact one is smaller than \qty{0.5}{\percent}.
 \end{equation}
 
 \section{Results}
-Figure \ref{fig:chevalier_diagram} shows
-a $F_{\nu,\mathrm{net},\peak}-\nu\tpeak$ diagram,
-where $F_{\nu,\mathrm{net},\peak}$ is
-the net-flux density at \tpeak.
-\begin{figure}
-  \centering
-  \includegraphics[
-    width = 0.9\linewidth
-  ]{figs/chevalier_diagram.pdf}
-  \caption{
-    Net-flux density at \tpeak,
-    $F_{\nu,\mathrm{net},\peak}$,
-    against $\nu\tpeak$.
-    Solid lines represent \(\Awind = \text{const.}\),
-    and dashed ones represent \(\betash = \text{const.}\)
-    Black bullet is a estimated point from the observation
-    (Russell et al. 2024).
-    Shaded region shows the uncertaincy of the black point.
-  }
-  \label{fig:chevalier_diagram}
-\end{figure}
+% Figure \ref{fig:chevalier_diagram} shows
+% a $F_{\nu,\mathrm{net},\peak}-\nu\tpeak$ diagram,
+% where $F_{\nu,\mathrm{net},\peak}$ is
+% the net-flux density at \tpeak.
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figs/chevalier_diagram_00001.pdf}
+        \caption{}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figs/chevalier_diagram_00002.pdf}
+        \caption{}
+    \end{subfigure}
 
-\begin{figure}
-  \centering
-  \includegraphics[
-    width = 0.9\linewidth
-  ]{figs/lc.pdf}
-  \label{fig:lightcurve}
+    \caption{
+      $F_{\nu,\mathrm{net},\peak}$
+      (net-flux density at \tpeak)
+      against $\nu\tpeak$.
+      Solid lines represent \(\Awind = \text{const.}\),
+      and dashed ones represent \(\betash = \text{const.}\)
+      Shaded region shows the estimated region from the observation
+      (Russell et al. 2024).
+      Two black thick lines show \(\Theta=1,10\).
+      left panel corresponds to the case where the
+      synchrotron radiation
+      from thermal and non-thermal electrons
+      is considered;
+      right one corresponds to the case where
+      the radiation from only thermal electrons.
+    }
+    \label{fig:chevalier_diagram}
 \end{figure}
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}{0.8\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figs/lc_00001.pdf}
+        \caption{}
+    \end{subfigure}
 
+    \vspace{0.5cm}
+
+    \begin{subfigure}{0.8\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figs/lc_00002.pdf}
+        \caption{}
+    \end{subfigure}
+
+    \caption{
+      The lightcurves which
+      provide the minimum-$\chi^2$ value
+      in the region of figure \ref{fig:chevalier_diagram}.
+      left panel: \qty{5.5}{\GHz},
+      right panel: \qty{9}{\GHz}
+    }
+    \label{fig:lightcurve}
+\end{figure}
 \end{document}
