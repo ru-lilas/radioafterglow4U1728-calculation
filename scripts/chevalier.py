@@ -8,6 +8,22 @@ from module.models import ModelParameters
 from module.mydataclasses import QuantityData
 from module.observation import LongformatLightcurve
 from module.utils import FileReader, FileWriter
+from dataclasses import fields, dataclass
+
+@dataclass(frozen=True,slots=True)
+class PlotMetadata:
+    eps_b: QuantityData
+    eps_th: QuantityData
+    mu_e_mu: QuantityData
+    distance: QuantityData
+    p_index: QuantityData
+    eps_e: QuantityData
+
+    def to_dict(self) -> dict[str, QuantityData]:
+        return {
+            field.name: getattr(self, field.name)
+            for field in fields(self)
+        }
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -40,6 +56,7 @@ def main():
     layout = plotconfig.layout
     axesconfig = layout.axes
     plotcomponents = plotconfig.components
+    plotmetadataconfig = plotconfig.metadata
     plotrange = axesconfig.range()
     plotregion = grids.reduce_to_plotregion(
         plotrange,
@@ -97,19 +114,27 @@ def main():
             )
             obs_region.plot(plotter)
 
+        # metadata
+        metadata = PlotMetadata(
+            eps_b=QuantityData(model_parameters.eps_b,""),
+            eps_th=QuantityData(model_parameters.eps_th,""),
+            eps_e=QuantityData(model_parameters.powerlaw.eps_e,""),
+            p_index=QuantityData(model_parameters.powerlaw.p_index,""),
+            mu_e_mu=QuantityData(model_parameters.molecular_weight.to_ratio(),""),
+            distance=model_parameters.distance,
+        )
+        strings: list[str] = []
+        for name, quantity in metadata.to_dict().items():
+            plot_utils.MetadataComponent(
+                quantity=quantity,
+                config=plotmetadataconfig.items[name],
+            ).add_strings(strings)
 
-        # grids.metadata.plot(
-        #     ax=ax,
-        #     conf=plotconf.metadata
-        # )
-        # style_obs_ranges = plotconf.styles.obs_ranges.to_stylelist()
-        # for i,obs_range in enumerate(obs_ranges):
-        #     obs_range.plot_range(
-        #         ax,
-        #         style=style_obs_ranges[i],
-        #         phi_unit=phi_unit,
-        #         fnu_unit=fnu_unit
-        #     )
+        plotter.title(
+            strings=strings,
+            fontsize=plotmetadataconfig.fontsize,
+        )
+
         # ax.legend(**plotconf.legend.to_kwargs())
         pdf.savefig(fig)
         plt.close(fig)
