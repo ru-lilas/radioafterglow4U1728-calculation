@@ -6,6 +6,8 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize,ListedColormap
 from matplotlib.container import ErrorbarContainer
 from matplotlib.contour import QuadContourSet
+from matplotlib.artist import Artist
+from matplotlib.legend import Legend
 from matplotlib.lines import Line2D
 from matplotlib.patches import Rectangle, StepPatch
 from matplotlib.text import Text
@@ -31,6 +33,7 @@ ComponentType = Literal[
     "errorbar",
     "contour",
     "rectangle",
+    "legend",
 ]
 
 StyleValue = TypeVar("StyleValue")
@@ -647,6 +650,11 @@ class MetadataGroupConfig:
     items: dict[str,MetadataConfig]
 
 @dataclass(frozen=True, slots=True)
+class LegendStyle(Style):
+    fontsize: int
+    loc: str = "best"
+
+@dataclass(frozen=True, slots=True)
 class ComponentConfig:
     type: ComponentType
     style: (
@@ -654,7 +662,10 @@ class ComponentConfig:
         | ErrorbarStyleConfig
         | ContourStyleConfig
         | RectangleStyleConfig
+        | LegendStyle
     )
+    show_legend: bool = False
+    label_format: QuantityLabel | None = None
 
     def __post_init__(self) -> None:
         if self.type in ("line", "step"):
@@ -700,6 +711,18 @@ class ComponentConfig:
                     "RectangleStyleConfigが必要です: "
                     f"{type(self.style).__name__}"
                 )
+
+        elif self.type == "legend":
+            if not isinstance(self.style, LegendStyle):
+                raise TypeError(
+                    "type='legend'にはLegendStyleが必要です: "
+                    f"{type(self.style).__name__}"
+                )
+
+        if self.show_legend and self.label_format is None:
+            raise ValueError(
+                "legend=trueのcomponentにはlabel_formatが必要です."
+            )
 
     @property
     def line_style_config(
@@ -789,6 +812,22 @@ class ComponentConfig:
 
         return self.style
 
+    @property
+    def legend_style_config(self) -> LegendStyle:
+        if self.type != "legend" or not isinstance(self.style, LegendStyle):
+            raise TypeError(
+                "legend_style_configへアクセスできるのは"
+                "type='legend'の場合だけです."
+            )
+        return self.style
+
+    def legend_label(self, value: float | None = None) -> str:
+        if self.label_format is None:
+            raise ValueError("legend用label_formatが設定されていません.")
+        if value is None:
+            return self.label_format.prefix
+        return self.label_format.to_text(value)
+
     def resolve_line_style(
         self,
         index: int,
@@ -821,6 +860,8 @@ def structure_component_config(
         style_type = ContourStyleConfig
     elif component_type == "rectangle":
         style_type = RectangleStyleConfig
+    elif component_type == "legend":
+        style_type = LegendStyle
     else:
         raise ValueError(
             "未対応のcomponent typeです: "
@@ -833,12 +874,34 @@ def structure_component_config(
             data["style"],
             style_type,
         ),
+        show_legend=data.get("legend", False),
+        label_format=(
+            converter.structure(data["label_format"], QuantityLabel)
+            if data.get("label_format") is not None
+            else None
+        ),
     )
 
 converter.register_structure_hook(
     ComponentConfig,
     structure_component_config,
 )
+
+def structure_components(
+    data: dict[str, Any],
+    _: Any,
+) -> dict[str, ComponentConfig]:
+    return {
+        name: (
+            ComponentConfig(
+                type="legend",
+                style=converter.structure(component, LegendStyle),
+            )
+            if name == "legend"
+            else converter.structure(component, ComponentConfig)
+        )
+        for name, component in data.items()
+    }
 
 @dataclass(frozen=True, slots=True)
 class PlotConfig:
@@ -852,9 +915,10 @@ class PlotConfig:
         path: Path,
     )->Self:
         data = FileReader.yaml_safe(path)
-        return converter.structure(
-            data,
-            cls,
+        return cls(
+            layout=converter.structure(data["layout"], PlotLayout),
+            metadata=converter.structure(data["metadata"], MetadataGroupConfig),
+            components=structure_components(data["components"], dict),
         )
 
 @dataclass(frozen=True, slots=True)
@@ -889,12 +953,31 @@ class LineLabel:
         )
 
 @dataclass(frozen=True, slots=True)
-class LegendStyle(Style):
-    fontsize: int
+class LegendEntry:
+    component: ComponentConfig
+    artist: Artist
+    value: float | None = None
 
 @dataclass(frozen=True, slots=True)
 class Plotter:
     ax: Axes
+
+    def legend(
+        self,
+        entries: Sequence[LegendEntry],
+        config: ComponentConfig,
+    ) -> Legend | None:
+        selected = [entry for entry in entries if entry.component.show_legend]
+        if not selected:
+            return None
+        return self.ax.legend(
+            handles=[entry.artist for entry in selected],
+            labels=[
+                entry.component.legend_label(entry.value)
+                for entry in selected
+            ],
+            **config.legend_style_config.to_kwargs(),
+        )
 
     def line(
         self,

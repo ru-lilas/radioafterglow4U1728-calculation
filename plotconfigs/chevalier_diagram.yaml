@@ -79,6 +79,7 @@ metadata:
 components:
   a_wind:
     type: contour
+    legend: false
     style: &ContourStyle_tmp
       unit: "g cm-1"
       lines:
@@ -106,6 +107,7 @@ components:
         unit: '\mathrm{g\,cm^{-1}}'
   beta_sh:
     type: contour
+    legend: false
     style:
       unit: ""
       lines:
@@ -130,6 +132,7 @@ components:
         unit: ''
   obs_ranges:
     type: rectangle
+    legend: true
     style:
       facecolors: 
         - "#FFCABF"
@@ -141,8 +144,13 @@ components:
       hatches:
         - "/"
         - null
+    label_format:
+      prefix: '\nu'
+      fmt: '.1f'
+      unit: '\mathrm{GHz}'
   non_relativistic_boundary: &BoundaryComponent_tmp
     type: line
+    legend: false
     style: &BoundaryStyle_tmp
       colors:
         - "#000000"
@@ -150,8 +158,8 @@ components:
       linestyle: "-"
       alpha: null
       zorder: 2.0
-  ultra_relativistic_boundary: 
+  ultra_relativistic_boundary:
     <<: *BoundaryComponent_tmp
-# legend:
-#   fontsize: 24
-#   loc: "upper left"
+  legend:
+    fontsize: 24
+    loc: "upper left"

@@ -67,6 +67,7 @@ def main():
     with PdfPages(outpath) as pdf:
         fig, axes = layout.create()
         plotter=plot_utils.Plotter(axes.flat[0])
+        legends = []
 
         non_relativistic_boundary = RelativisticBoundary.build(
             phi_plot=plotregion.x,
@@ -112,7 +113,14 @@ def main():
                 y_err=obs_peak.fnu_peak_err.value_in(axesconfig.y_unit),
                 style=plotcomponents["obs_ranges"].resolve_rectangle_style(i)
             )
-            obs_region.plot(plotter)
+            patch = obs_region.plot(plotter)
+            legends.append(
+                plot_utils.LegendEntry(
+                    plotcomponents["obs_ranges"],
+                    patch,
+                    value=obs_peak.nu.value
+                )
+            )
 
         # metadata
         metadata = PlotMetadata(
@@ -129,6 +137,12 @@ def main():
                 quantity=quantity,
                 config=plotmetadataconfig.items[name],
             ).add_strings(strings)
+
+        # legend
+        plotter.legend(
+            entries= legends,
+            config = plotcomponents["legend"]
+        )
 
         plotter.title(
             strings=strings,
