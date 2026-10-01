@@ -1,13 +1,13 @@
 from dataclasses import asdict, dataclass, field
 from functools import cached_property
-from typing import Any, Literal, Self
+from typing import Any, Literal, Self, Sequence, TypeVar
 from cattrs import Converter
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize,ListedColormap
 from matplotlib.container import ErrorbarContainer
 from matplotlib.contour import QuadContourSet
 from matplotlib.lines import Line2D
-from matplotlib.patches import StepPatch
+from matplotlib.patches import Rectangle, StepPatch
 from matplotlib.text import Text
 from matplotlib.ticker import LogLocator
 from matplotlib import colormaps
@@ -25,7 +25,15 @@ from module.utils import FileReader
 from module.types import FloatArray, ValueScale,FloatPair
 
 AxisDirection = Literal["x","y"]
-ComponentType = Literal["line","step","errorbar","contour"]
+ComponentType = Literal[
+    "line",
+    "step",
+    "errorbar",
+    "contour",
+    "rectangle",
+]
+
+StyleValue = TypeVar("StyleValue")
 
 converter = Converter()
 
@@ -348,9 +356,9 @@ class LineStyle(Style):
     zorder: float | None = None
 
 def select_style_value(
-    values: list[str],
+    values: Sequence[StyleValue],
     index: int,
-)->str:
+) -> StyleValue:
     if len(values) == 0:
         raise ValueError(
             "styleの候補が設定されていません."
@@ -444,35 +452,39 @@ class ErrorbarStyleConfig(YAMLReadable):
 @dataclass(frozen=True, slots=True)
 class RectangleStyle(Style):
     facecolor: str
-    edgecolor: str
-    linewidth: float
-    alpha: float
-    zorder: float|None
-    hatch: str|None
+    edgecolor: str = "#000000"
+    linewidth: float = 1.0
+    alpha: float = 1.0
+    zorder: float | None = None
+    hatch: str | None = None
 
 @dataclass(frozen=True, slots=True)
-class RectangleStyles:
+class RectangleStyleConfig(YAMLReadable):
     facecolors: list[str]
-    edgecolor: str
-    linewidth: float
-    alpha: float
-    zorder: float|None
-    hatches: list[str|None]
+    hatches: list[str | None]
+    edgecolor: str = "#000000"
+    linewidth: float = 1.0
+    alpha: float = 1.0
+    zorder: float | None = None
 
-    def to_stylelist(self)->list[RectangleStyle]:
-        return [
-            RectangleStyle(
-                facecolor=fc,
-                edgecolor=self.edgecolor,
-                linewidth=self.linewidth,
-                alpha=self.alpha,
-                zorder=self.zorder,
-                hatch=self.hatches[i]
-                if self.hatches[i] is not None
-                else None
-            )
-            for i,fc in enumerate(self.facecolors)
-        ]
+    def resolve(
+        self,
+        index: int,
+    ) -> RectangleStyle:
+        return RectangleStyle(
+            facecolor=select_style_value(
+                self.facecolors,
+                index,
+            ),
+            edgecolor=self.edgecolor,
+            linewidth=self.linewidth,
+            alpha=self.alpha,
+            zorder=self.zorder,
+            hatch=select_style_value(
+                self.hatches,
+                index,
+            ),
+        )
 
 @dataclass(frozen=True, slots=True)
 class ContourLevelConfig:
@@ -641,6 +653,7 @@ class ComponentConfig:
         LineStyleConfig
         | ErrorbarStyleConfig
         | ContourStyleConfig
+        | RectangleStyleConfig
     )
 
     def __post_init__(self) -> None:
@@ -674,6 +687,17 @@ class ComponentConfig:
                 raise TypeError(
                     "type='contour'には"
                     "ContourStyleConfigが必要です: "
+                    f"{type(self.style).__name__}"
+                )
+
+        elif self.type == "rectangle":
+            if not isinstance(
+                self.style,
+                RectangleStyleConfig,
+            ):
+                raise TypeError(
+                    "type='rectangle'には"
+                    "RectangleStyleConfigが必要です: "
                     f"{type(self.style).__name__}"
                 )
 
@@ -743,6 +767,28 @@ class ComponentConfig:
 
         return self.style
 
+    @property
+    def rectangle_style_config(
+        self,
+    ) -> RectangleStyleConfig:
+        if self.type != "rectangle":
+            raise TypeError(
+                "rectangle_style_configへアクセスできるのは"
+                "type='rectangle'の場合だけです: "
+                f"type={self.type!r}"
+            )
+
+        if not isinstance(
+            self.style,
+            RectangleStyleConfig,
+        ):
+            raise TypeError(
+                "styleがRectangleStyleConfigではありません: "
+                f"{type(self.style).__name__}"
+            )
+
+        return self.style
+
     def resolve_line_style(
         self,
         index: int,
@@ -754,6 +800,12 @@ class ComponentConfig:
         index: int,
     ) -> ErrorbarStyle:
         return self.errorbar_style_config.resolve(index)
+
+    def resolve_rectangle_style(
+        self,
+        index: int,
+    ) -> RectangleStyle:
+        return self.rectangle_style_config.resolve(index)
 
 def structure_component_config(
     data: dict[str, Any],
@@ -767,6 +819,8 @@ def structure_component_config(
         style_type = ErrorbarStyleConfig
     elif component_type == "contour":
         style_type = ContourStyleConfig
+    elif component_type == "rectangle":
+        style_type = RectangleStyleConfig
     else:
         raise ValueError(
             "未対応のcomponent typeです: "
@@ -905,6 +959,22 @@ class Plotter:
             fmt=style.label_format.to_text,
             **style.label.to_kwargs(),
         )
+
+    def rectangle(
+        self,
+        xy: tuple[float, float],
+        width: float,
+        height: float,
+        style: RectangleStyle,
+    ) -> Rectangle:
+        patch = Rectangle(
+            xy,
+            width,
+            height,
+            **style.to_kwargs(),
+        )
+        self.ax.add_patch(patch)
+        return patch
 
     def title(
         self,

@@ -43,41 +43,41 @@ class ColormapConfigures:
     a_syn: plot_utils.ColormapConfigure
     a_wind: plot_utils.ColormapConfigure
 
-@dataclass(frozen=True,slots=True)
-class Styles:
-    obs_center: plot_utils.ErrorbarStyle
-    obs_ranges: plot_utils.RectangleStyles
-    thin_boundary: plot_utils.LineStyle
-    relativistic_boundary: plot_utils.LineStyle
+# @dataclass(frozen=True,slots=True)
+# class Styles:
+#     obs_center: plot_utils.ErrorbarStyle
+#     obs_ranges: plot_utils.RectangleStyles
+#     thin_boundary: plot_utils.LineStyle
+#     relativistic_boundary: plot_utils.LineStyle
 
-@dataclass(frozen=True, slots=True)
-class OpticallythinBoundaryPlotConfig(YAMLReadable):
-    layout: plot_utils.PlotLayout
-    thin_boundary: plot_utils.LineStyle
-
-@dataclass(frozen=True,slots=True)
-class ChevalierMetadataConfig:
-    fontsize: float
-    eps_b:  plot_utils.MetadataConfig
-    eps_th: plot_utils.MetadataConfig
-    mue_mu: plot_utils.MetadataConfig
-    distance: plot_utils.MetadataConfig
-
-@dataclass(frozen=True, slots=True)
-class PlotConfig(YAMLReadable):
-    layout: plot_utils.PlotLayout
-    contours: ContourConfigures
-    styles: Styles
-    metadata: ChevalierMetadataConfig
-    legend: LegendStyle
-
-@dataclass(frozen=True, slots=True)
-class ColormapPlotConfig(YAMLReadable):
-    layout: plot_utils.PlotLayout
-    colormaps: ColormapConfigures
-    metadata: ChevalierMetadataConfig
-    styles: Styles
-    legend: LegendStyle
+# @dataclass(frozen=True, slots=True)
+# class OpticallythinBoundaryPlotConfig(YAMLReadable):
+#     layout: plot_utils.PlotLayout
+#     thin_boundary: plot_utils.LineStyle
+#
+# @dataclass(frozen=True,slots=True)
+# class ChevalierMetadataConfig:
+#     fontsize: float
+#     eps_b:  plot_utils.MetadataConfig
+#     eps_th: plot_utils.MetadataConfig
+#     mue_mu: plot_utils.MetadataConfig
+#     distance: plot_utils.MetadataConfig
+#
+# @dataclass(frozen=True, slots=True)
+# class PlotConfig(YAMLReadable):
+#     layout: plot_utils.PlotLayout
+#     contours: ContourConfigures
+#     styles: Styles
+#     metadata: ChevalierMetadataConfig
+#     legend: LegendStyle
+#
+# @dataclass(frozen=True, slots=True)
+# class ColormapPlotConfig(YAMLReadable):
+#     layout: plot_utils.PlotLayout
+#     colormaps: ColormapConfigures
+#     metadata: ChevalierMetadataConfig
+#     styles: Styles
+#     legend: LegendStyle
 
 # @dataclass(frozen=True,slots=True)
 # class ChevalierMetadata(models.ModelMetadata):
@@ -366,6 +366,43 @@ class ChevalierContours:
             style=style
         )
         plotter.contour_labels(ctr,style)
+
+@dataclass(frozen=True,slots=True)
+class ObservedRegion:
+    x: float
+    y: float
+    width: float
+    height: float
+    style: plot_utils.RectangleStyle
+
+    @classmethod
+    def build(
+        cls,
+        x:float,
+        y:float,
+        *,
+        x_err:float,
+        y_err:float,
+        style:plot_utils.RectangleStyle
+    )->Self:
+        return cls(
+            x = x - x_err,
+            y = y - y_err,
+            width = 2.0 * x_err,
+            height = 2.0 * y_err,
+            style = style
+        )
+
+    def plot(
+        self,
+        plotter:plot_utils.Plotter
+    )->pltpatch.Rectangle:
+        return plotter.rectangle(
+            xy=(self.x,self.y),
+            width=self.width,
+            height=self.height,
+            style=self.style
+        )
 
 @dataclass(frozen=True,slots=True)
 class ColorMap:

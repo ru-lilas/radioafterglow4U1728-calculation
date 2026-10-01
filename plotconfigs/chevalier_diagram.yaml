@@ -128,19 +128,20 @@ components:
         prefix: '\beta_{\mathrm{sh}}'
         fmt: ".2f"
         unit: ''
-  # obs_ranges:
-  #   type: rectangle
-  #   facecolors: 
-  #     - "#FFCABF"
-  #     - "#BFE4FF"
-  #   edgecolor: "#000000"
-  #   linewidth: 1.0
-  #   alpha: 0.8
-  #   zorder: 1
-  #   hatches:
-  #     - "/"
-  #     - null
-  ultra_relativistic_boundary: &BoundaryComponent_tmp
+  obs_ranges:
+    type: rectangle
+    style:
+      facecolors: 
+        - "#FFCABF"
+        - "#BFE4FF"
+      edgecolor: "#000000"
+      linewidth: 1.0
+      alpha: 0.8
+      zorder: 1
+      hatches:
+        - "/"
+        - null
+  non_relativistic_boundary: &BoundaryComponent_tmp
     type: line
     style: &BoundaryStyle_tmp
       colors:
@@ -149,7 +150,7 @@ components:
       linestyle: "-"
       alpha: null
       zorder: 2.0
-  non_relativistic_boundary: 
+  ultra_relativistic_boundary: 
     <<: *BoundaryComponent_tmp
 # legend:
 #   fontsize: 24

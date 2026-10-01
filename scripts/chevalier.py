@@ -3,7 +3,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from module import plot_utils
-from module.chevalier import ChevalierContours, PeakGrid, RelativisticBoundary
+from module.chevalier import ChevalierContours, ObservedRegion, PeakGrid, RelativisticBoundary
 from module.models import ModelParameters
 from module.mydataclasses import QuantityData
 from module.observation import LongformatLightcurve
@@ -30,6 +30,9 @@ def main():
 
     df_model_parameter = FileReader.table_from_csv(args.model_parameter_table)
     model_parameters = ModelParameters.from_df(df_model_parameter)
+
+    long_lcs_obs = LongformatLightcurve.from_csv(args.obslc)
+    lcs_obs = long_lcs_obs.group_by_frequency()
 
     df_peak = FileReader.table_from_csv(args.peak_grid)
     grids = PeakGrid.from_df(df_peak)
@@ -82,6 +85,19 @@ def main():
         )
         beta_sh_contour.plot(plotter)
 
+        # observation
+        for i,lc_obs in enumerate(lcs_obs.values()):
+            obs_peak = lc_obs.peak
+            obs_region = ObservedRegion.build(
+                x=obs_peak.phi_peak.value_in(axesconfig.x_unit),
+                y=obs_peak.fnu_peak.value_in(axesconfig.y_unit),
+                x_err=obs_peak.phi_peak_err.value_in(axesconfig.x_unit),
+                y_err=obs_peak.fnu_peak_err.value_in(axesconfig.y_unit),
+                style=plotcomponents["obs_ranges"].resolve_rectangle_style(i)
+            )
+            obs_region.plot(plotter)
+
+
         # grids.metadata.plot(
         #     ax=ax,
         #     conf=plotconf.metadata
@@ -94,18 +110,6 @@ def main():
         #         phi_unit=phi_unit,
         #         fnu_unit=fnu_unit
         #     )
-    #     est_params = grids.select_parameters_in(
-    #         obs_scat,
-    #         peak_table,
-    #         phi_unit=phi_unit,
-    #         fnu_unit=fnu_unit
-    #     )
-    #     df = est_params.to_df(
-    #         phi_unit=phi_unit,
-    #         fnu_unit=fnu_unit,
-    #         lnu_unit="erg s-1 Hz-1"
-    #     )
-    #
         # ax.legend(**plotconf.legend.to_kwargs())
         pdf.savefig(fig)
         plt.close(fig)
