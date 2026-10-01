@@ -4,7 +4,7 @@ import argparse
 import csv
 import hashlib
 import json
-import sys
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -32,10 +32,92 @@ def load_yaml(path: Path) -> CommentedMap:
 
     return config
 
+@dataclass(frozen=True, slots=True)
+class ConfigRow:
+    group: str
+    name: str
+    key_path: str
+    value: Any
 
-def print_yaml(config: CommentedMap) -> None:
-    yaml.dump(config, sys.stdout)
+def build_config_rows(config: CommentedMap) -> list[ConfigRow]:
+    """格子設定・値と単位・関連するスカラーを1行にまとめる。"""
+    rows: list[ConfigRow] = []
 
+    def add(group: str, name: str, path: str, value: Any) -> None:
+        if isinstance(value, dict):
+            contents = value.get("values", value)
+            if isinstance(contents, dict) and any(
+                isinstance(item, dict) for item in contents.values()
+            ):
+                for key, item in value.items():
+                    add(group, f"{name}.{key}", f"{path}.{key}", item)
+                return
+        rows.append(ConfigRow(group, name, path, value))
+
+    # モデルを先頭に置き、共通の単位定義は最後に表示する。
+    groups = [key for key in config if key != "units"]
+    if "units" in config:
+        groups.append("units")
+    for group in groups:
+        values = config[group]
+        if isinstance(values, dict):
+            for name, value in values.items():
+                add(str(group), str(name), f"{group}.{name}", value)
+        else:
+            add(str(group), str(group), str(group), values)
+    return rows
+
+def format_table_value(value: Any) -> tuple[str, str]:
+    unit = "—"
+    if isinstance(value, dict):
+        unit = str(value.get("unit", "—"))
+        if "values" in value:
+            value = value["values"]
+        elif "value" in value:
+            value = value["value"]
+        else:
+            value = {key: item for key, item in value.items() if key != "unit"}
+    if isinstance(value, dict):
+        text = ", ".join(f"{key}={item}" for key, item in value.items())
+    elif isinstance(value, list):
+        text = json.dumps(normalize_for_hash(value), ensure_ascii=False)
+    else:
+        text = str(value)
+    return text, unit
+
+
+def print_config_table(config: CommentedMap) -> list[ConfigRow]:
+    from rich.console import Console
+    from rich.table import Table
+    from rich.text import Text
+
+    rows = build_config_rows(config)
+    table = Table(title="runの設定", show_lines=False)
+    table.add_column("番号", justify="right", no_wrap=True)
+    table.add_column("グループ", style="cyan")
+    table.add_column("パラメータ")
+    table.add_column("現在値", ratio=2)
+    table.add_column("単位", no_wrap=True)
+    for i, row in enumerate(rows):
+        value, unit = format_table_value(row.value)
+        group = row.group if i == 0 or rows[i - 1].group != row.group else ""
+        end_section = i == len(rows) - 1 or rows[i + 1].group != row.group
+        table.add_row(
+            str(i + 1), Text(group), Text(row.name), Text(value), Text(unit),
+            end_section=end_section,
+        )
+    Console().print(table)
+    return rows
+
+def editable_paths(value: Any, path: str) -> list[str]:
+    """複合パラメータの編集先を列挙。周波数のリストはまとめて編集する。"""
+    if isinstance(value, dict):
+        return [
+            leaf
+            for key, item in value.items()
+            for leaf in editable_paths(item, f"{path}.{key}")
+        ]
+    return [path]
 
 def get_nested_value(
     config: CommentedMap,
@@ -89,63 +171,71 @@ def parse_value(text: str) -> Any:
 
 def edit_config(config: CommentedMap) -> None:
     while True:
-        print()
-        print_yaml(config)
-        print()
-        print("操作:")
-        print("  e: 値を変更")
-        print("  y: この設定でrunを生成")
-        print("  q: 終了")
-
+        rows = print_config_table(config)
+        print("操作: 番号で編集 / e: キー指定で編集 / y: runを生成 / q: 終了")
         command = input("> ").strip().lower()
-
-        if command == "e":
-            edit_one_value(config)
-
+        if command == "e" or command.isdecimal():
+            edit_one_value(config, rows, command if command != "e" else None)
         elif command == "y":
             return
-
         elif command == "q":
             raise KeyboardInterrupt
-
         else:
             print(f"Unknown command: {command!r}")
 
 
-def edit_one_value(config: CommentedMap) -> None:
-    key_path = input(
-        "変更するキーをドット区切りで入力してください: "
-    ).strip()
+def edit_one_value(
+    config: CommentedMap,
+    rows: list[ConfigRow],
+    selection: str | None = None,
+) -> None:
+    selection = selection or input("変更する番号またはドット区切りのキー: ").strip()
+    if selection.isdecimal():
+        index = int(selection) - 1
+        if not 0 <= index < len(rows):
+            print("表示されている番号を指定してください")
+            return
+        row = rows[index]
+        paths = editable_paths(row.value, row.key_path)
+        if not paths:
+            print("編集する値がありません")
+            return
+        if len(paths) == 1:
+            key_path = paths[0]
+        else:
+            print(f"{row.key_path}の編集項目:")
+            for i, path in enumerate(paths, start=1):
+                name = path.removeprefix(row.key_path + ".")
+                print(f"  {i}: {name} = {get_nested_value(config, path)!r}")
+            field = input("変更する項目の番号（空欄で戻る）: ").strip()
+            if not field:
+                return
+            if not field.isdecimal() or not 1 <= int(field) <= len(paths):
+                print("表示されている番号を指定してください")
+                return
+            key_path = paths[int(field) - 1]
+    else:
+        key_path = selection
 
     try:
         current_value = get_nested_value(config, key_path)
     except KeyError as error:
         print(error)
         return
-
-    print(f"現在値: {current_value!r}")
-
-    raw_value = input("新しい値: ").strip()
-
+    print(f"{key_path}: {current_value!r}")
+    raw_value = input("新しい値（空欄で戻る）: ").strip()
+    if not raw_value:
+        return
     try:
         new_value = parse_value(raw_value)
     except YAMLError as error:
         print(f"値を解釈できませんでした: {error}")
         return
-
     print(f"変更後: {new_value!r}")
-
-    confirm = input("この変更を適用しますか？ [y/N]: ").strip().lower()
-
-    if confirm != "y":
+    if input("この変更を適用しますか？ [y/N]: ").strip().lower() != "y":
         print("変更を取り消しました")
         return
-
-    set_nested_value(
-        config=config,
-        key_path=key_path,
-        value=new_value,
-    )
+    set_nested_value(config, key_path, new_value)
 
 
 def normalize_for_hash(value: Any) -> Any:
@@ -452,7 +542,6 @@ def main() -> None:
         parser.exit(1, f"エラー: {error}\n")
 
     print(f"生成しました: {run_dir}")
-
 
 if __name__ == "__main__":
     main()

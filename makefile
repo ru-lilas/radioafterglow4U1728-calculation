@@ -66,16 +66,11 @@ FILEPATH_THERMAL_PEAK_TABLE := $(DATADIR)/$(THERMAL_PEAK_TABLE).$(EXTENTION_CSV)
 
 FILEPATH_CANDIDATE_LIGHTCURVES_PDF := $(FIGDIR)/$(RUN_DIR)/$(CANDIDATE_LIGHTCURVES).$(EXTENTION_PDF)
 
-param: \
-	$(FILEPATH_LC_EST) \
-	$(FILEPATH_INPUT) \
-	scripts/estimate_system_property.py
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--estimated $< \
-		--input $(FILEPATH_INPUT)
+all: view-best-lc view-chevalier
 
-minchi2lcfig: $(FILEPATH_MINIMUM_CHI2_LC_PDF)
+view-best-lc: $(FILEPATH_MINIMUM_CHI2_LC_PDF)
 	evince $< >/dev/null 2>&1 &
+
 $(FILEPATH_MINIMUM_CHI2_LC_PDF): \
 	$(FILEPATH_INPUT) \
 	$(FILEPATH_MINIMUM_CHI_SQUARED) \
@@ -90,26 +85,6 @@ $(FILEPATH_MINIMUM_CHI2_LC_PDF): \
 		--$(MINIMUM_CHI_SQUARED) $(FILEPATH_MINIMUM_CHI_SQUARED) \
 		--$(CANDIDATE_BINNED_LIGHTCURVES) $(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES) \
 		--$(MODEL_PARAMETER_TABLE) $(FILEPATH_MODEL_PARAMETER_TABLE) \
-		--$(CANDIDATE_LIGHTCURVES) $(FILEPATH_CANDIDATE_LIGHTCURVES) \
-		--obslc $(FILEPATH_OBSLC) \
-		--plotconfig plotconfigs/estimated_lightcurve.yaml \
-		--output $@
-
-lcfig: $(FILEPATH_CANDIDATE_LIGHTCURVES_PDF)
-	evince $< >/dev/null 2>&1 &
-
-$(FILEPATH_CANDIDATE_LIGHTCURVES_PDF): \
-	$(FILEPATH_INPUT) \
-	$(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES) \
-	$(FILEPATH_CANDIDATE_LIGHTCURVES) \
-	$(FILEPATH_CANDIDATE_MODELS) \
-	$(FILEPATH_OBSLC) \
-	plotconfigs/estimated_lightcurve.yaml \
-	scripts/plot_lightcurve.py
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--input $< \
-		--$(CANDIDATE_BINNED_LIGHTCURVES) $(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES) \
-		--$(CANDIDATE_MODELS) $(FILEPATH_CANDIDATE_MODELS) \
 		--$(CANDIDATE_LIGHTCURVES) $(FILEPATH_CANDIDATE_LIGHTCURVES) \
 		--obslc $(FILEPATH_OBSLC) \
 		--plotconfig plotconfigs/estimated_lightcurve.yaml \

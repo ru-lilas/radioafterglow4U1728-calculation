@@ -16,7 +16,6 @@ from matplotlib import colormaps
 from matplotlib.colorbar import Colorbar
 from numpy.typing import ArrayLike, NDArray
 from module.mydataclasses import FloatGrid, NDArraySpace, QuantityData, QuantityGrid, ValueArray, YAMLReadable
-from module.utilities import build_nparray
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt

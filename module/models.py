@@ -4,7 +4,7 @@
 from typing import Literal, Self
 import astropy.units as u
 from matplotlib.axes import Axes
-from module import plot_utils, quantity_converter
+from module import quantity_converter
 import numpy as np
 import pandas as pd
 from enum import StrEnum, auto
@@ -146,18 +146,6 @@ class MaxwellJuttnerFactor:
     )->FloatArray:
         theta_val = theta.values
         return np.ones_like(theta_val)
-
-    def plot(
-        self,
-        theta:ElectronTemperature,
-        ax:Axes,
-        style:plot_utils.LineStyle,
-    ):
-        f_exact = self.exact(theta.values)
-        return ax.plot(
-            theta.values,f_exact,
-            **style.to_kwargs()
-        )
 
 class PowerlawDistributionFactor:
     @staticmethod
