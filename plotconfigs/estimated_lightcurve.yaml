@@ -42,7 +42,7 @@ metadata:
         fmt: '.1e'
         unit: ""
         suffix: ""
-        show_equals: false
+        show_equals: true
     eps_th:
       show: true
       unit: ""

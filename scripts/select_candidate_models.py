@@ -2,8 +2,8 @@ import argparse
 import pandas as pd
 from pathlib import Path
 from module import chevalier
-from module.chevalier import ChevalierGrid, PeakGrid
-from module.inputs_as_dataclass import GeneralInputs, ModelParameterTable
+from module.chevalier import PeakGrid
+from module.inputs_as_dataclass import GeneralInputs
 from module.mydataclasses import QuantityData
 from module.observation import LongformatLightcurve
 from module.utils import FileReader, FileWriter

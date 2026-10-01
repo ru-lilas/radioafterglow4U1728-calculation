@@ -1,18 +1,20 @@
 from __future__ import annotations
 
+import argparse
 import csv
 import hashlib
 import json
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
+from ruamel.yaml.error import YAMLError
 
 TEMPLATE_PATH = Path("input/general.yaml")
 RUNS_DIR = Path("data")
-INDEX_PATH = RUNS_DIR / "index.csv"
 
 yaml = YAML()
 yaml.preserve_quotes = True
@@ -30,9 +32,8 @@ def load_yaml(path: Path) -> CommentedMap:
 
     return config
 
-def print_yaml(config: CommentedMap) -> None:
-    import sys
 
+def print_yaml(config: CommentedMap) -> None:
     yaml.dump(config, sys.stdout)
 
 
@@ -63,32 +64,13 @@ def set_nested_value(
     key_path: str,
     value: Any,
 ) -> None:
-    keys = key_path.split(".")
-    current: Any = config
-
-    for key in keys[:-1]:
-        if not isinstance(current, dict):
-            raise KeyError(
-                f"{key!r} cannot be accessed because "
-                "its parent is not a mapping"
-            )
-
-        if key not in current:
-            raise KeyError(f"Key not found: {key_path}")
-
-        current = current[key]
-
-    final_key = keys[-1]
-
-    if not isinstance(current, dict):
-        raise KeyError(
-            f"Cannot set {final_key!r}: parent is not a mapping"
-        )
-
-    if final_key not in current:
+    parent_path, separator, final_key = key_path.rpartition(".")
+    parent = get_nested_value(config, parent_path) if separator else config
+    if not isinstance(parent, dict):
+        raise KeyError(f"Cannot set {key_path!r}: parent is not a mapping")
+    if final_key not in parent:
         raise KeyError(f"Key not found: {key_path}")
-
-    current[final_key] = value
+    parent[final_key] = value
 
 
 def parse_value(text: str) -> Any:
@@ -147,7 +129,7 @@ def edit_one_value(config: CommentedMap) -> None:
 
     try:
         new_value = parse_value(raw_value)
-    except Exception as error:
+    except YAMLError as error:
         print(f"値を解釈できませんでした: {error}")
         return
 
@@ -251,29 +233,54 @@ def write_config(
 def extract_index_values(
     config: CommentedMap,
 ) -> dict[str, Any]:
-    free_parameters = config["chi2fitting"]["free_parameters"]
-
-    return {
-        "n_free_parameters": len(free_parameters),
-        "free_parameters": "|".join(
-            str(parameter)
-            for parameter in free_parameters
-        ),
-        "eps_th": config["physical_parameters"]["eps_th"],
-        "eps_b": config["physical_parameters"]["eps_b"],
-        "time_min": (
-            config["chi2fitting"]
-            ["sampling"]
-            ["timewindow"]
-            ["min"]
-        ),
-        "time_max": (
-            config["chi2fitting"]
-            ["sampling"]
-            ["timewindow"]
-            ["max"]
-        ),
+    """general.yamlの主要設定を索引へ記録する（logのstart/stopもそのまま）。"""
+    paths = {
+        "phi_th_start": "model_parameters.phi_th.values.start",
+        "phi_th_stop": "model_parameters.phi_th.values.stop",
+        "phi_th_num": "model_parameters.phi_th.values.num",
+        "phi_th_scale": "model_parameters.phi_th.values.scale",
+        "phi_th_unit": "model_parameters.phi_th.unit",
+        "theta0_start": "model_parameters.theta0.start",
+        "theta0_stop": "model_parameters.theta0.stop",
+        "theta0_num": "model_parameters.theta0.num",
+        "theta0_scale": "model_parameters.theta0.scale",
+        "eps_th": "model_parameters.eps_th",
+        "eps_b": "model_parameters.eps_b",
+        "mu": "model_parameters.molecular_weight.mu",
+        "mu_e": "model_parameters.molecular_weight.mu_e",
+        "distance": "model_parameters.distance.value",
+        "distance_unit": "model_parameters.distance.unit",
+        "p_index": "model_parameters.powerlaw.p_index",
+        "eps_e": "model_parameters.powerlaw.eps_e",
+        "observation_frequencies": "candidate_models_selection.observation_frequencies.values",
+        "nu_unit": "candidate_models_selection.observation_frequencies.unit",
+        "time_min": "chi2.timewindow.min",
+        "time_max": "chi2.timewindow.max",
+        "time_unit": "chi2.timewindow.unit",
+        "burster_name": "burster_property.burster_name",
     }
+    values = {
+        name: get_nested_value(config, path)
+        for name, path in paths.items()
+    }
+    values["observation_frequencies"] = json.dumps(
+        normalize_for_hash(values["observation_frequencies"]),
+        ensure_ascii=False,
+    )
+    return values
+
+
+def validate_index_header(index_path: Path, fieldnames: list[str]) -> None:
+    """旧形式への追記で列がずれるのを防ぐ。"""
+    if not index_path.exists() or index_path.stat().st_size == 0:
+        return
+    with index_path.open("r", encoding="utf-8", newline="") as file:
+        header = next(csv.reader(file), [])
+    if header != fieldnames:
+        raise ValueError(
+            f"{index_path}の列構成が現在の設定形式と異なります。"
+            "別の保存先を--runs-dirで指定してください。"
+        )
 
 
 def append_index(
@@ -303,7 +310,8 @@ def append_index(
     }
 
     fieldnames = list(row.keys())
-    file_exists = index_path.exists()
+    validate_index_header(index_path, fieldnames)
+    file_exists = index_path.exists() and index_path.stat().st_size > 0
 
     with index_path.open(
         "a",
@@ -342,19 +350,35 @@ def find_duplicate_hash(
     return None
 
 
-def create_run(config: CommentedMap) -> Path:
+def create_run(
+    config: CommentedMap,
+    *,
+    runs_dir: Path = RUNS_DIR,
+    allow_duplicate: bool = False,
+    interactive: bool = True,
+) -> Path:
+    index_path = runs_dir / "index.csv"
+    # 設定キーと索引の互換性をファイル生成前に確認する。
+    extracted = extract_index_values(config)
+    validate_index_header(index_path, [
+        "run_id", "run_name", "config_hash", "created_at", "input_path",
+        *extracted,
+    ])
     config_hash = calculate_config_hash(config)
 
     duplicate_run = find_duplicate_hash(
-        INDEX_PATH,
+        index_path,
         config_hash,
     )
 
-    if duplicate_run is not None:
+    if duplicate_run is not None and not allow_duplicate:
         print(
             "同じ設定がすでに存在します: "
             f"{duplicate_run}"
         )
+
+        if not interactive:
+            raise RuntimeError("重複runを生成する場合は--allow-duplicateを指定してください")
 
         confirm = input(
             "重複したrunを生成しますか？ [y/N]: "
@@ -363,10 +387,10 @@ def create_run(config: CommentedMap) -> Path:
         if confirm != "y":
             raise RuntimeError("run生成を中止しました")
 
-    run_id = generate_next_run_id(INDEX_PATH)
+    run_id = generate_next_run_id(index_path)
     run_name = f"run_{run_id:06d}"
 
-    run_dir = RUNS_DIR / run_name
+    run_dir = runs_dir / run_name
     input_path = run_dir / "input.yaml"
 
     write_config(
@@ -375,7 +399,7 @@ def create_run(config: CommentedMap) -> Path:
     )
 
     append_index(
-        index_path=INDEX_PATH,
+        index_path=index_path,
         run_id=run_id,
         config_hash=config_hash,
         input_path=input_path,
@@ -385,35 +409,48 @@ def create_run(config: CommentedMap) -> Path:
     return run_dir
 
 
+def apply_overrides(config: CommentedMap, overrides: list[str]) -> None:
+    """--set KEY=VALUEを順に適用する。VALUEはYAMLとして解釈する。"""
+    for override in overrides:
+        key, separator, raw_value = override.partition("=")
+        if not separator or not key.strip() or not raw_value.strip():
+            raise ValueError(f"--setはKEY=VALUE形式で指定してください: {override!r}")
+        set_nested_value(config, key.strip(), parse_value(raw_value))
+
+
 def main() -> None:
-    config = load_yaml(TEMPLATE_PATH)
+    parser = argparse.ArgumentParser(
+        description="general.yamlを基にrunのinput.yamlとindex.csvを生成する。"
+    )
+    parser.add_argument("--template", type=Path, default=TEMPLATE_PATH)
+    parser.add_argument("--runs-dir", type=Path, default=RUNS_DIR)
+    parser.add_argument(
+        "--set", dest="overrides", action="append", default=[], metavar="KEY=VALUE",
+        help="ドット区切りのキーとYAML値を指定（複数指定可）",
+    )
+    parser.add_argument("--yes", action="store_true", help="対話操作を省略して生成")
+    parser.add_argument(
+        "--allow-duplicate", action="store_true", help="同じ設定のrun生成を許可"
+    )
+    args = parser.parse_args()
 
     try:
-        edit_config(config)
-    except KeyboardInterrupt:
-        print()
-        print("終了しました")
+        config = load_yaml(args.template)
+        apply_overrides(config, args.overrides)
+        if not args.yes:
+            edit_config(config)
+        run_dir = create_run(
+            config,
+            runs_dir=args.runs_dir,
+            allow_duplicate=args.allow_duplicate,
+            interactive=not args.yes,
+        )
+    except (KeyboardInterrupt, EOFError):
+        print("\n終了しました")
         return
+    except (OSError, KeyError, TypeError, ValueError, RuntimeError, YAMLError) as error:
+        parser.exit(1, f"エラー: {error}\n")
 
-    print()
-    print("最終設定:")
-    print_yaml(config)
-
-    confirm = input(
-        "この設定でディレクトリを生成しますか？ [y/N]: "
-    ).strip().lower()
-
-    if confirm != "y":
-        print("生成を中止しました")
-        return
-
-    try:
-        run_dir = create_run(config)
-    except RuntimeError as error:
-        print(error)
-        return
-
-    print()
     print(f"生成しました: {run_dir}")
 
 

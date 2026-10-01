@@ -6,15 +6,15 @@ units:
 model_parameters:
   phi_th:
     values:
-      start: -1.0
+      start: -2.0
       stop: 3.0
-      num: 128
+      num: 256
       scale: "log"
     unit: *phi_unit
   theta0:
     start: 3.0
-    stop: 90.0
-    num: 128
+    stop: 60.0
+    num: 256
     scale: "linear"
   eps_th: 0.4
   eps_b: 1.0e-02
@@ -37,11 +37,10 @@ candidate_models_selection:
 
 model_lightcurves:
   xm:
-    values:
-      start: 1.0e-02
-      stop: 1.0e+04
-      num: 256
-      scale: log
+    start: 1.0e-02
+    stop: 1.0e+04
+    num: 256
+    scale: log
   time:
     values:
       start:  1.0e-02
