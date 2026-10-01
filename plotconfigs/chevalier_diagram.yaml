@@ -145,11 +145,9 @@ components:
         - "/"
         - null
     label_format:
-      prefix: ''
+      prefix: 'Russell+24'
       fmt: '.1f'
-      suffix: '\mathrm{(Russell+24)}'
       unit: '\mathrm{GHz}'
-      show_equals: false
   non_relativistic_boundary: &BoundaryComponent_tmp
     type: line
     legend: false
@@ -162,6 +160,21 @@ components:
       zorder: 2.0
   ultra_relativistic_boundary:
     <<: *BoundaryComponent_tmp
+  non_relativistic_boundary_label: &BoundaryLabelComponent_tmp
+    type: text
+    legend: false
+    style:
+      color: "#000000"
+      fontsize: 36
+      ha: left
+      va: top
+  ultra_relativistic_boundary_label:
+    <<: *BoundaryLabelComponent_tmp
+    style:
+      color: "#000000"
+      fontsize: 36
+      ha: right
+      va: bottom
   legend:
     fontsize: 24
     loc: "upper left"

@@ -33,6 +33,7 @@ ComponentType = Literal[
     "errorbar",
     "contour",
     "rectangle",
+    "text",
     "legend",
 ]
 
@@ -354,6 +355,13 @@ class LineStyle(Style):
     alpha: float | None = None
     zorder: float | None = None
 
+@dataclass(frozen=True, slots=True)
+class TextStyle(Style):
+    color: str
+    fontsize: float = 12.0
+    ha: str = "left"
+    va: str = "top"
+
 def select_style_value(
     values: Sequence[StyleValue],
     index: int,
@@ -658,6 +666,7 @@ class ComponentConfig:
         | ErrorbarStyleConfig
         | ContourStyleConfig
         | RectangleStyleConfig
+        | TextStyle
         | LegendStyle
     )
     show_legend: bool = False
@@ -705,6 +714,13 @@ class ComponentConfig:
                 raise TypeError(
                     "type='rectangle'には"
                     "RectangleStyleConfigが必要です: "
+                    f"{type(self.style).__name__}"
+                )
+
+        elif self.type == "text":
+            if not isinstance(self.style, TextStyle):
+                raise TypeError(
+                    "type='text'にはTextStyleが必要です: "
                     f"{type(self.style).__name__}"
                 )
 
@@ -809,6 +825,15 @@ class ComponentConfig:
         return self.style
 
     @property
+    def text_style_config(self) -> TextStyle:
+        if self.type != "text" or not isinstance(self.style, TextStyle):
+            raise TypeError(
+                "text_style_configへアクセスできるのは"
+                "type='text'の場合だけです."
+            )
+        return self.style
+
+    @property
     def legend_style_config(self) -> LegendStyle:
         if self.type != "legend" or not isinstance(self.style, LegendStyle):
             raise TypeError(
@@ -856,6 +881,8 @@ def structure_component_config(
         style_type = ContourStyleConfig
     elif component_type == "rectangle":
         style_type = RectangleStyleConfig
+    elif component_type == "text":
+        style_type = TextStyle
     elif component_type == "legend":
         style_type = LegendStyle
     else:
@@ -957,6 +984,15 @@ class LegendEntry:
 @dataclass(frozen=True, slots=True)
 class Plotter:
     ax: Axes
+
+    def text(
+        self,
+        x: float,
+        y: float,
+        label: str,
+        style: TextStyle,
+    ) -> Text:
+        return self.ax.text(x, y, label, **style.to_kwargs())
 
     def legend(
         self,

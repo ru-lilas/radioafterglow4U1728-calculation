@@ -3,7 +3,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from module import plot_utils
-from module.chevalier import ChevalierContours, ObservedRegion, PeakGrid, RelativisticBoundary
+from module.chevalier import BoundaryLabel, ChevalierContours, ObservedRegion, PeakGrid, RelativisticBoundary
 from module.models import ModelParameters
 from module.mydataclasses import QuantityData
 from module.observation import LongformatLightcurve
@@ -69,29 +69,44 @@ def main():
         plotter=plot_utils.Plotter(axes.flat[0])
         legends = []
 
+        theta = grids.theta_grid(model_parameters).to_FloatGrid("")
         non_relativistic_boundary = RelativisticBoundary.build(
-            phi_plot=plotregion.x,
-            fnu_plot=plotregion.y,
-            theta=grids.theta_grid(model_parameters).to_FloatGrid(""),
+            plotregion=plotregion,
+            theta=theta,
             theta_crit=1.0,
             style=plotcomponents["non_relativistic_boundary"].resolve_line_style(0)
         )
+        non_relativistic_boundary_label = non_relativistic_boundary.build_label(
+            plotcomponents["non_relativistic_boundary_label"].text_style_config
+        )
         non_relativistic_boundary.plot(plotter)
+        non_relativistic_boundary_label.plot(plotter)
+        is_non_relativistic = theta.less_than(1.0)
 
         ultra_relativistic_boundary = RelativisticBoundary.build(
-            phi_plot=plotregion.x,
-            fnu_plot=plotregion.y,
-            theta=grids.theta_grid(model_parameters).to_FloatGrid(""),
+            plotregion=plotregion,
+            theta=theta,
             theta_crit=10.0,
             style=plotcomponents["ultra_relativistic_boundary"].resolve_line_style(0)
         )
+        ultra_relativistic_boundary_label = ultra_relativistic_boundary.build_label(
+            plotcomponents["ultra_relativistic_boundary_label"].text_style_config
+        )
         ultra_relativistic_boundary.plot(plotter)
+        ultra_relativistic_boundary_label.plot(plotter)
+        is_ultra_relativistic = theta.greater_than(10.0)
+
+        invisible = is_out_of_plotregion.take_or([
+            is_non_relativistic,
+            is_ultra_relativistic
+        ])
 
         # A_wind contour
         a_wind_contour = ChevalierContours.build(
             plotregion,
             grids.a_wind_grid(model_parameters),
-            style=plotcomponents["a_wind"].contour_style_config
+            style=plotcomponents["a_wind"].contour_style_config,
+            mask=invisible
         )
         a_wind_contour.plot(plotter)
 
@@ -99,7 +114,8 @@ def main():
         beta_sh_contour = ChevalierContours.build(
             plotregion,
             grids.beta_sh_grid(model_parameters),
-            style=plotcomponents["beta_sh"].contour_style_config
+            style=plotcomponents["beta_sh"].contour_style_config,
+            mask=invisible
         )
         beta_sh_contour.plot(plotter)
 
@@ -149,7 +165,6 @@ def main():
             fontsize=plotmetadataconfig.fontsize,
         )
 
-        # ax.legend(**plotconf.legend.to_kwargs())
         pdf.savefig(fig)
         plt.close(fig)
 
