@@ -71,7 +71,7 @@ $(FILEPATH_MINIMUM_CHI2_LC_PDF): \
 	$(FILEPATH_CANDIDATE_LIGHTCURVES) \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
 	$(FILEPATH_OBSLC) \
-	$(PLOTCONFIGDIR)/estimated_lightcurve.yaml \
+	$(PLOTCONFIGDIR)/minimum_chi_squared_lightcurves.yaml \
 	scripts/plot_minimum_chi2_lightcurve.py
 	$(PYTHON) -m scripts.plot_minimum_chi2_lightcurve \
 		$(ARGS_INPUT) \
@@ -80,7 +80,7 @@ $(FILEPATH_MINIMUM_CHI2_LC_PDF): \
 		$(ARGS_MODEL_PARAMETER_TABLE) \
 		$(ARGS_CANDIDATE_LIGHTCURVES) \
 		$(ARGS_OBSLC) \
-		--plotconfig $(PLOTCONFIGDIR)/estimated_lightcurve.yaml \
+		--plotconfig $(PLOTCONFIGDIR)/minimum_chi_squared_lightcurves.yaml \
 		$(ARGS_OUTPUT)
 
 # 既存のターゲット名を互換用に残す

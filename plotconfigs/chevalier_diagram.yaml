@@ -69,7 +69,7 @@ metadata:
         prefix: 'p'
         fmt: '.2f'
         unit: ''
-    eps_e: 
+    f_e: 
       show: true
       unit: ""
       label_format:

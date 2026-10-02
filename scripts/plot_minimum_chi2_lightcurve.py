@@ -1,5 +1,7 @@
 import argparse
 from pathlib import Path
+from typing import Hashable, Literal, get_args
+import numpy as np
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -22,7 +24,7 @@ class PlotMetadata:
     mu_e_mu: QuantityData
     distance: QuantityData
     p_index: QuantityData
-    eps_e: QuantityData
+    f_e: QuantityData
     chi_squared: QuantityData
 
     def to_dict(self) -> dict[str, QuantityData]:
@@ -69,27 +71,25 @@ def main() -> None:
     layout = plotconf.layout
     components = plotconf.components
     metadata_config = plotconf.metadata
-    x_unit = layout.axes.x.label.unit
-    y_unit = layout.axes.y.label.unit
     nu_unit = df_minchi2.attrs[MetadataNames.NU_UNIT]
+
     with PdfPages(outpath) as pdf:
         fig, axes = layout.create()
-        for i, (_, row) in enumerate(df_minchi2.iterrows()):
-            minchi2 = clc.ChiSquaredResult.from_series(row)
-            model_index = int(minchi2.model_index)
+        for (row,col), ax in np.ndenumerate(axes):
+            row_minchi2 = clc.ChiSquaredResult.from_series(df_minchi2.iloc[col])
+            axis_config = plotconf.layout.axes.for_subplot(row,col)
+            plotter = plot_utils.Plotter(ax)
+            x_unit:str = axis_config.x_unit
+            y_unit:str = axis_config.y_unit
+            model_index = int(row_minchi2.model_index)
 
-            plotter = plot_utils.Plotter(axes.flat[i])
-            nu_value = row[ColumnNames.NU]
-            if not isinstance(nu_value,float):
-                raise TypeError(
-                    f"nu_valueのtypeが不正です:{type(nu_value)}"
-                )
+            nu_value = row_minchi2.nu
+
             nu = QuantityData(
                 value=nu_value,
                 unit=nu_unit
             )
             lc_obs = lcs_obs.select_frequency(nu, unit=nu.unit)
-            t_obs = lc_obs.t.to_value_in(x_unit)
             fnu_background = lc_obs.fnu_background.to_value_in(y_unit)
 
             # binned lightcurve
@@ -100,18 +100,38 @@ def main() -> None:
             df_binned_plot.attrs[ColumnNames.NU] = nu_value
             df_binned_plot.attrs[ColumnNames.MODEL_INDEX] = model_index
             binned_lc = clc.BinnedLightcurveWithBackground.from_df(df_binned_plot)
-            plotter.step(
-                edges=binned_lc.bin_edges.to_value_in(x_unit),
-                values=binned_lc.fnu_with_bg.to_value_in(y_unit),
-                style=components["binned"].resolve_line_style(i),
-                baseline=fnu_background[0]
-            )
 
-            # continuous lightcurve
+
+            # continuous
             df_continuous_nu = dfs_continuous_nu[nu_value]
             df_continuous_plot: pd.DataFrame = df_continuous_nu.loc[
                 df_continuous_nu[ColumnNames.MODEL_INDEX] == model_index
             ]
+
+
+            # observed lightcurve
+            t_obs = lc_obs.t.to_value_in(x_unit)
+            plotter.line(
+                x=t_obs,
+                y=fnu_background,
+                style=components["background"].resolve_line_style(col)
+            )
+            plotter.errorbar(
+                x=t_obs,
+                y=lc_obs.fnu_total.to_value_in(y_unit),
+                yerr=lc_obs.fnu_total_err.to_value_in(y_unit),
+                style=components["observed"].resolve_errorbar_style(col)
+            )
+
+            # binned lightcurve
+            plotter.step(
+                edges=binned_lc.bin_edges.to_value_in(x_unit),
+                values=binned_lc.fnu_with_bg.to_value_in(y_unit),
+                style=components["binned"].resolve_line_style(col),
+                baseline=fnu_background[0]
+            )
+
+            # continuous lightcurve
             continuous_lc = clc.ContinuousLightcurve(
                 model_index=model_index,
                 nu=nu,
@@ -129,20 +149,7 @@ def main() -> None:
             plotter.line(
                 x=continuous_lc.t.to_value_in(x_unit),
                 y=continuous_lc.fnu_with_bg(lc_obs.fnu_background.index(0)).to_value_in(y_unit),
-                style=components["continuous"].resolve_line_style(i)
-            )
-
-            # observed lightcurve
-            plotter.line(
-                x=t_obs,
-                y=fnu_background,
-                style=components["background"].resolve_line_style(i)
-            )
-            plotter.errorbar(
-                x=t_obs,
-                y=lc_obs.fnu_total.to_value_in(y_unit),
-                yerr=lc_obs.fnu_total_err.to_value_in(y_unit),
-                style=components["observed"].resolve_errorbar_style(i)
+                style=components["continuous"].resolve_line_style(col)
             )
 
             # model parameters
@@ -152,9 +159,9 @@ def main() -> None:
                 beta_sh=QuantityData(minimum_chi2_model.beta_sh.item(),""),
                 eps_b=QuantityData(minimum_chi2_model.eps_b,""),
                 eps_th=QuantityData(minimum_chi2_model.eps_th,""),
-                eps_e=QuantityData(minimum_chi2_model.powerlaw.f_e,""),
+                f_e=QuantityData(minimum_chi2_model.powerlaw.f_e,""),
                 p_index=QuantityData(minimum_chi2_model.powerlaw.p_index,""),
-                chi_squared=QuantityData(minchi2.chi_squared,""),
+                chi_squared=QuantityData(row_minchi2.chi_squared,""),
                 mu_e_mu=QuantityData(minimum_chi2_model.molecular_weight.to_ratio(),""),
                 distance=minimum_chi2_model.distance,
             )

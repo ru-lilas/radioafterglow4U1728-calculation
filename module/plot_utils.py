@@ -117,8 +117,8 @@ class LabelConfigure:
 class SubplotConfig:
     nrows: int = 1
     ncols: int = 1
-    sharex: bool = False
-    sharey: bool = False
+    sharex: bool | Literal["row", "col", "all", "none"] = False
+    sharey: bool | Literal["row", "col", "all", "none"] = False
     hide_shared_labels: bool = True
 
     def __post_init__(self) -> None:
@@ -127,10 +127,26 @@ class SubplotConfig:
                 "nrowsとncolsは1以上でなければなりません: "
                 f"nrows={self.nrows}, ncols={self.ncols}"
             )
+        for name, value in (("sharex", self.sharex), ("sharey", self.sharey)):
+            if value not in (True, False, "row", "col", "all", "none"):
+                raise ValueError(f"{name}に未対応の値が指定されています: {value!r}")
 
     @property
     def size(self) -> int:
         return self.nrows * self.ncols
+
+
+def structure_subplot_config(data: dict[str, Any], _: Any) -> SubplotConfig:
+    return SubplotConfig(
+        nrows=data.get("nrows", 1),
+        ncols=data.get("ncols", 1),
+        sharex=data.get("sharex", False),
+        sharey=data.get("sharey", False),
+        hide_shared_labels=data.get("hide_shared_labels", True),
+    )
+
+
+converter.register_structure_hook(SubplotConfig, structure_subplot_config)
 
 @dataclass(frozen=True,slots=True)
 class AxisRange:
@@ -175,25 +191,59 @@ class TickStyle:
 
 @dataclass(frozen=True, slots=True)
 class AxesConfig:
-    x: AxisConfig
-    y: AxisConfig
+    x: AxisConfig | tuple[AxisConfig, ...]
+    y: AxisConfig | tuple[AxisConfig, ...]
     ticks: TickStyle
+
+    @staticmethod
+    def _single_axis(
+        value: AxisConfig | tuple[AxisConfig, ...],
+    ) -> AxisConfig:
+        if isinstance(value, AxisConfig):
+            return value
+        if len(value) == 1:
+            return value[0]
+        raise ValueError(
+            "複数の軸設定がある場合はfor_subplot(row, col)で"
+            "対象のAxesConfigを取得してください."
+        )
+
+    def for_subplot(self, row: int, col: int) -> Self:
+        x = self.x if isinstance(self.x, AxisConfig) else self.x[col]
+        y = self.y if isinstance(self.y, AxisConfig) else self.y[row]
+        return type(self)(x=x, y=y, ticks=self.ticks)
 
     def range(
         self
     )->AxesRange:
         return AxesRange(
-            x=self.x.range(),
-            y=self.y.range()
+            x=self._single_axis(self.x).range(),
+            y=self._single_axis(self.y).range()
         )
 
     @property
-    def x_unit(self):
-        return self.x.label.unit
+    def x_unit(self)->str:
+        return self._single_axis(self.x).label.unit
 
     @property
-    def y_unit(self):
-        return self.y.label.unit
+    def y_unit(self)->str:
+        return self._single_axis(self.y).label.unit
+
+
+def structure_axes_config(data: dict[str, Any], _: Any) -> AxesConfig:
+    def structure_axis(value: Any) -> AxisConfig | tuple[AxisConfig, ...]:
+        if isinstance(value, list):
+            return tuple(converter.structure(item, AxisConfig) for item in value)
+        return converter.structure(value, AxisConfig)
+
+    return AxesConfig(
+        x=structure_axis(data["x"]),
+        y=structure_axis(data["y"]),
+        ticks=converter.structure(data["ticks"], TickStyle),
+    )
+
+
+converter.register_structure_hook(AxesConfig, structure_axes_config)
 
 @dataclass(frozen=True, slots=True)
 class FigureConfig:
@@ -226,6 +276,23 @@ class PlotLayout:
         figure_config = self.figure
         subplot_config = self.subplots
 
+        x_configs = self.axes.x
+        y_configs = self.axes.y
+        if isinstance(x_configs, tuple) and len(x_configs) != subplot_config.ncols:
+            raise ValueError(
+                "x軸設定の数はncolsと一致させてください: "
+                f"{len(x_configs)} != {subplot_config.ncols}"
+            )
+        if isinstance(y_configs, tuple) and len(y_configs) != subplot_config.nrows:
+            raise ValueError(
+                "y軸設定の数はnrowsと一致させてください: "
+                f"{len(y_configs)} != {subplot_config.nrows}"
+            )
+        if isinstance(x_configs, tuple) and len(x_configs) > 1 and subplot_config.sharex not in (False, "none", "col"):
+            raise ValueError("列ごとに異なるx軸にはsharex: colまたはfalseを指定してください.")
+        if isinstance(y_configs, tuple) and len(y_configs) > 1 and subplot_config.sharey not in (False, "none", "row"):
+            raise ValueError("行ごとに異なるy軸にはsharey: rowまたはfalseを指定してください.")
+
         fig, axes = plt.subplots(
             nrows=subplot_config.nrows,
             ncols=subplot_config.ncols,
@@ -237,19 +304,22 @@ class PlotLayout:
             squeeze=False,
         )
 
-        for ax in axes.flat:
-            AxesConfigurator.apply(
-                ax,
-                self.axes,
-            )
+        for (row, col), ax in np.ndenumerate(axes):
+            AxesConfigurator.apply(ax, self.axes.for_subplot(row, col))
 
         if subplot_config.hide_shared_labels:
-            if subplot_config.sharex:
+            if subplot_config.sharex in (True, "all", "col"):
                 for ax in axes[:-1, :].flat:
                     ax.set_xlabel("")
-
-            if subplot_config.sharey:
+            elif subplot_config.sharex == "row":
                 for ax in axes[:, 1:].flat:
+                    ax.set_xlabel("")
+
+            if subplot_config.sharey in (True, "all", "row"):
+                for ax in axes[:, 1:].flat:
+                    ax.set_ylabel("")
+            elif subplot_config.sharey == "col":
+                for ax in axes[1:, :].flat:
                     ax.set_ylabel("")
 
         return fig, axes
@@ -333,8 +403,8 @@ class AxesConfigurator:
         ax: Axes,
         config: AxesConfig,
     )->None:
-        cls.apply_axis(ax,"x",config.x)
-        cls.apply_axis(ax,"y",config.y)
+        cls.apply_axis(ax,"x",config._single_axis(config.x))
+        cls.apply_axis(ax,"y",config._single_axis(config.y))
         cls.apply_tick_style(ax,config.ticks)
 
 @dataclass(frozen=True, slots=True)
