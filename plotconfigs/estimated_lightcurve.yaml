@@ -89,14 +89,14 @@ metadata:
       label_format:
         <<: *LabelFormatTmp
         prefix: 'p'
-        fmt: '.1f'
+        fmt: '.2f'
         unit: ''
     eps_e: 
       show: true
       unit: ""
       label_format:
         <<: *LabelFormatTmp
-        prefix: '\varepsilon_{\mathrm{e}}'
+        prefix: 'f_{\mathrm{e}}'
         fmt: '.1e'
         unit: ''
     chi_squared: 
