@@ -110,6 +110,15 @@ class ModelLightcurveConfig:
     time: QuantityArray1DSpace
 
 @dataclass(frozen=True)
+class PowerlawSensitivity:
+    p_indices: FloatVectorSpace
+    f_es: FloatVectorSpace
+
+@dataclass(frozen=True)
+class WorkFlows:
+    powerlaw_sensitivity: PowerlawSensitivity
+
+@dataclass(frozen=True)
 class GeneralInputs(YAMLReadable):
     units: Units
     model_parameters: models.InputParametersRaw
@@ -117,4 +126,5 @@ class GeneralInputs(YAMLReadable):
     model_lightcurves: ModelLightcurveConfig
     chi2: Chi2Configure
     burster_property: ObservedBursterProperty
+    workflows: WorkFlows
 

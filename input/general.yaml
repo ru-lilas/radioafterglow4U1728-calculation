@@ -69,3 +69,16 @@ burster_property:
   eps_nuc:
     value: 6.75e+18
     unit: "erg g-1"
+
+workflows:
+  powerlaw_sensitivity:
+    p_indices:
+      start: 2.01
+      stop: 3.01
+      num: 16
+      scale: linear
+    f_es:
+      start: 1.0e-03
+      stop: 1.0e+03
+      num: 16
+      scale: log
