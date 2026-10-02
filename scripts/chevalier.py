@@ -17,7 +17,7 @@ class PlotMetadata:
     mu_e_mu: QuantityData
     distance: QuantityData
     p_index: QuantityData
-    eps_e: QuantityData
+    f_e: QuantityData
 
     def to_dict(self) -> dict[str, QuantityData]:
         return {
@@ -142,7 +142,7 @@ def main():
         metadata = PlotMetadata(
             eps_b=QuantityData(model_parameters.eps_b,""),
             eps_th=QuantityData(model_parameters.eps_th,""),
-            eps_e=QuantityData(model_parameters.powerlaw.eps_e,""),
+            f_e=QuantityData(model_parameters.powerlaw.f_e,""),
             p_index=QuantityData(model_parameters.powerlaw.p_index,""),
             mu_e_mu=QuantityData(model_parameters.molecular_weight.to_ratio(),""),
             distance=model_parameters.distance,

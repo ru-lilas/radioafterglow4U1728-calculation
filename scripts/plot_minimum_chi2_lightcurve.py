@@ -152,7 +152,7 @@ def main() -> None:
                 beta_sh=QuantityData(minimum_chi2_model.beta_sh.item(),""),
                 eps_b=QuantityData(minimum_chi2_model.eps_b,""),
                 eps_th=QuantityData(minimum_chi2_model.eps_th,""),
-                eps_e=QuantityData(minimum_chi2_model.powerlaw.eps_e,""),
+                eps_e=QuantityData(minimum_chi2_model.powerlaw.f_e,""),
                 p_index=QuantityData(minimum_chi2_model.powerlaw.p_index,""),
                 chi_squared=QuantityData(minchi2.chi_squared,""),
                 mu_e_mu=QuantityData(minimum_chi2_model.molecular_weight.to_ratio(),""),

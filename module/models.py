@@ -55,7 +55,7 @@ class MetadataNames(StrEnum):
     MU_E = auto()
     MU = auto()
     P_INDEX = auto()
-    EPS_E = auto()
+    F_E = auto()
     MU_E_MU = auto()
     DISTANCE_VALUE = auto()
     DISTANCE_UNIT = auto()
@@ -220,7 +220,7 @@ class MolecularWeight:
 @dataclass(frozen=True,slots=True)
 class PowerlawParameters:
     p_index:float
-    eps_e: float
+    f_e: float
 
     @property
     def cj(
@@ -265,14 +265,22 @@ class ParameterGrid:
     theta0: NDArray64
 
 @dataclass(frozen=True,slots=True)
-class InputParametersRaw:
-    phi_th: QuantityArrayBase
-    theta0: FloatVectorSpace
+class CommonShockParameters:
     eps_th: float
     eps_b: float
     molecular_weight: MolecularWeight
+
+@dataclass(frozen=True,slots=True)
+class ShockParameters:
+    common: CommonShockParameters
+    powerlaw: PowerlawParameters
+
+@dataclass(frozen=True,slots=True)
+class InputParametersRaw:
+    phi_th: QuantityArrayBase
+    theta0: FloatVectorSpace
     distance: QuantityData
-    powerlaw:PowerlawParameters
+    shock: ShockParameters
     synchrotron_model: SYNCHROTRON_MODEL
 
     @property
@@ -339,11 +347,11 @@ class ModelParameters:
         return cls(
             phi_th=grid.phi_th,
             theta0=grid.theta0,
-            eps_th=input.eps_th,
-            eps_b =input.eps_b,
-            molecular_weight=input.molecular_weight,
+            eps_th=input.shock.common.eps_th,
+            eps_b =input.shock.common.eps_b,
+            molecular_weight=input.shock.common.molecular_weight,
             distance=input.distance,
-            powerlaw=input.powerlaw,
+            powerlaw=input.shock.powerlaw,
             synchrotron_model=input.synchrotron_model
 
         )
@@ -365,7 +373,7 @@ class ModelParameters:
             MetadataNames.MU_E: float(self.molecular_weight.mu_e),
             MetadataNames.MU: float(self.molecular_weight.mu),
             MetadataNames.P_INDEX: float(self.powerlaw.p_index),
-            MetadataNames.EPS_E: float(self.powerlaw.eps_e),
+            MetadataNames.F_E: float(self.powerlaw.f_e),
             MetadataNames.SYNCHROTRON_MODEL: self.synchrotron_model,
             MetadataNames.DISTANCE_VALUE: float(self.distance.value),
             MetadataNames.DISTANCE_UNIT: self.distance.unit,
@@ -422,7 +430,7 @@ class ModelParameters:
             ),
             powerlaw=PowerlawParameters(
                 p_index=float(df.attrs[MetadataNames.P_INDEX]),
-                eps_e=float(df.attrs[MetadataNames.EPS_E]),
+                f_e=float(df.attrs[MetadataNames.F_E]),
             ),
             synchrotron_model=df.attrs[MetadataNames.SYNCHROTRON_MODEL],
             distance=QuantityData.from_attrs(
@@ -1097,7 +1105,7 @@ class SynchrotronResults:
             ca=model_params.powerlaw.ca,
             cj=model_params.powerlaw.cj,
             p=model_params.powerlaw.p_index,
-            eps_e=model_params.powerlaw.eps_e,
+            eps_e=model_params.powerlaw.f_e,
             x=xm_grid,
             ip=model_params.ip(xm,table),
             f_factor=model_params.f_factor.reshape(-1,1),

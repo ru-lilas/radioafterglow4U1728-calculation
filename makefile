@@ -41,8 +41,7 @@ FILEPATH_CANDIDATE_BINNED_LIGHTCURVES := $(call run_data,candidate_binned_lightc
 FILEPATH_CHI_SQUARED := $(call run_data,chi_squared.csv)
 FILEPATH_MINIMUM_CHI_SQUARED := $(call run_data,minimum_chi_squared.csv)
 
-# 図の出力先（minimum_chi2_lightcurve.pdf は従来どおり data 配下）
-FILEPATH_MINIMUM_CHI2_LC_PDF := $(call run_data,minimum_chi2_lightcurve.pdf)
+FILEPATH_MINIMUM_CHI2_LC_PDF := $(call run_fig,minimum_chi2_lightcurve.pdf)
 FILEPATH_CHEVALIER_PDF := $(call run_fig,chevalier_diagram.pdf)
 FILEPATH_CHEVALIER_COLORMAP_PDF := $(call run_fig,chevalier_colormap.pdf)
 

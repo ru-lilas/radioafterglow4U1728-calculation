@@ -1,4 +1,5 @@
 from matplotlib.collections import QuadMesh
+from matplotlib.container import ErrorbarContainer
 from matplotlib.contour import QuadContourSet
 from matplotlib.figure import Figure
 from matplotlib import patches as pltpatch
@@ -253,6 +254,39 @@ class ObservedRegion:
             xy=(self.x,self.y),
             width=self.width,
             height=self.height,
+            style=self.style
+        )
+
+@dataclass(frozen=True,slots=True)
+class BestfitPoint:
+    x: float
+    y: float
+    style: plot_utils.ErrorbarStyle
+
+    @classmethod
+    def build(
+        cls,
+        x:float,
+        y:float,
+        *,
+        x_err:float,
+        y_err:float,
+        style:plot_utils.ErrorbarStyle
+    )->Self:
+        return cls(
+            x = x - x_err,
+            y = y - y_err,
+            style = style
+        )
+
+    def plot(
+        self,
+        plotter:plot_utils.Plotter
+    )->ErrorbarContainer:
+        return plotter.errorbar(
+            x=self.x,
+            y=self.y,
+            yerr=0,
             style=self.style
         )
 
