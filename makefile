@@ -1,75 +1,69 @@
+# 実行例: make RUN_ID=1 chi2
+.DEFAULT_GOAL := all
+
+PYTHON ?= python3
+PDF_VIEWER ?= evince
+
 INPUTDIR := input
 DATADIR := data
 FIGDIR := fig
 OBSDIR := obs
 PLOTCONFIGDIR := plotconfigs
-EXTENTION_CSV := csv
-EXTENTION_YAML := yaml
-EXTENTION_PDF := pdf
-EXTENTION_SVG := svg
-EXTENTION_PY := py
-SUFFIX_TMP := _tmp
-INTEGRAL_TABLE := integral_table
-PARAMETER_TABLE := parameter_table
-ESTIMATED_LIGHTCURVE := estimated_lightcurve
-CHI2FIT_PARAMETERS := chi2fit_parameters
-OBSERVATION_LIGHTCURVE := obslc
-CHI2_ESTIMATED_PARAMETERS := chi2_estimated_parameters
-CANDIDATE_MODELS := candidate_models
-CANDIDATE_LIGHTCURVES := candidate_lightcurves
-CANDIDATE_BINNED_LIGHTCURVES := candidate_binned_lightcurves
-MODEL_LIGHTCURVES := model_lightcurves
-MODEL_PARAMETER_TABLE := model_parameter_table
-SYNCHROTRON_FUNCTION_NUMERICAL_TABLE := synchrotron_function_numerical_table
-THERMAL_PEAK_TABLE := thermal_peak_table
-PEAK_GRID := peak_grid
-CHI_SQUARED := chi_squared
-MINIMUM_CHI_SQUARED := minimum_$(CHI_SQUARED)
-MINIMUM_CHI2_LIGHTCURVE := minimum_chi2_lightcurve
 
-RUN_ID ?=
 ifndef RUN_ID
 $(error RUN_IDを指定してください. 例 make RUN_ID=1)
 endif
 RUN_DIR := $(shell printf 'run_%06d' '$(RUN_ID)')
+RUN_DATADIR := $(DATADIR)/$(RUN_DIR)
+RUN_FIGDIR := $(FIGDIR)/$(RUN_DIR)
 
-OUTDATADIR := $(DATADIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)
-OUTDIR := $(FIGDIR)/$(RESO)/$(OBS_TIMEWINDOW_TAG)
-FIGOUTDIR := $(FIGDIR)/$(SCENARIO_TAG)/$(SAMPLING_TAG)
-PATH_PHYSICAL_PARAMETERS := $(DATADIR)/$(PARAMETER_DIR)/$(PHYSICAL_PARAMETERS)
-FILEPATH_INPUT := $(DATADIR)/$(RUN_DIR)/input.$(EXTENTION_YAML)
-FILEPATH_PEAK_TABLE := $(DATADIR)/peak_table.$(EXTENTION_CSV)
-FILEPATH_PARAMETER_TABLE := $(DATADIR)/$(RUN_DIR)/.$(EXTENTION_YAML)
-FILEPATH_CHI2TEST := $(PARAMETER_DIR)/$(CHI2TEST_SUMMARY).$(EXTENTION_CSV)
-FILEPATH_LIST_CHI2ESTIMATED_PARAMETERS ?=
-FILEPATH_OBSLC := $(DATADIR)/$(OBSDIR)/obslc.$(EXTENTION_CSV)
-FILEPATH_OBSLC_TMP := $(DATADIR)/$(OBSDIR)/$(OBSERVATION_LIGHTCURVE)$(SUFFIX_TMP).$(EXTENTION_CSV)
-FILEPATH_OBSBG := $(DATADIR)/$(OBSDIR)/bg.$(EXTENTION_CSV)
-FILEPATH_LC_EST := $(DATADIR)/$(RUN_DIR)/lc_est.$(EXTENTION_CSV)
-FILEPATH_LC_PDF := $(FIGDIR)/$(RUN_DIR)/lc.$(EXTENTION_PDF)
-FILEPATH_CHEVALIER_PDF := $(FIGDIR)/$(RUN_DIR)/chevalier_diagram.$(EXTENTION_PDF)
-FILEPATH_CHEVALIER_COLORMAP_PDF := $(FIGDIR)/$(RUN_DIR)/chevalier_colormap.$(EXTENTION_PDF)
-FILEPATH_PEAK_GRID := $(DATADIR)/$(RUN_DIR)/$(PEAK_GRID).$(EXTENTION_CSV)
-FILEPATH_CHI_SQUARED := $(DATADIR)/$(RUN_DIR)/$(CHI_SQUARED).$(EXTENTION_CSV)
-FILEPATH_MINIMUM_CHI_SQUARED := $(DATADIR)/$(RUN_DIR)/$(MINIMUM_CHI_SQUARED).$(EXTENTION_CSV)
-FILEPATH_MINIMUM_CHI2_LC := $(DATADIR)/$(RUN_DIR)/$(MINIMUM_CHI2_LIGHTCURVE).$(EXTENTION_CSV)
-FILEPATH_MINIMUM_CHI2_LC_PDF := $(DATADIR)/$(RUN_DIR)/$(MINIMUM_CHI2_LIGHTCURVE).$(EXTENTION_PDF)
+# パス生成関数: $(1) は拡張子を含むファイル名
+run_data = $(RUN_DATADIR)/$(1)
+run_fig = $(RUN_FIGDIR)/$(1)
+data_file = $(DATADIR)/$(1)
+obs_file = $(DATADIR)/$(OBSDIR)/$(1)
 
-FILEPATH_MODEL_LIGHTCURVES := $(DATADIR)/$(RUN_DIR)/$(MODEL_LIGHTCURVES).$(EXTENTION_CSV)
-FILEPATH_CANDIDATE_MODELS := $(DATADIR)/$(RUN_DIR)/$(CANDIDATE_MODELS).$(EXTENTION_CSV)
-FILEPATH_CANDIDATE_LIGHTCURVES := $(DATADIR)/$(RUN_DIR)/$(CANDIDATE_LIGHTCURVES).$(EXTENTION_CSV)
-FILEPATH_CANDIDATE_BINNED_LIGHTCURVES := $(DATADIR)/$(RUN_DIR)/$(CANDIDATE_BINNED_LIGHTCURVES).$(EXTENTION_CSV)
-FILEPATH_MODEL_PARAMETER_TABLE := $(DATADIR)/$(RUN_DIR)/$(MODEL_PARAMETER_TABLE).$(EXTENTION_CSV)
+# 入力・共通テーブル・観測データ
+FILEPATH_INPUT := $(call run_data,input.yaml)
+FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE := $(call data_file,synchrotron_function_numerical_table.csv)
+FILEPATH_THERMAL_PEAK_TABLE := $(call data_file,thermal_peak_table.csv)
+FILEPATH_OBSLC := $(call obs_file,obslc.csv)
+FILEPATH_OBSLC_TMP := $(call obs_file,obslc_tmp.csv)
+FILEPATH_OBSBG := $(call obs_file,bg.csv)
 
-FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE := $(DATADIR)/$(SYNCHROTRON_FUNCTION_NUMERICAL_TABLE).$(EXTENTION_CSV)
-FILEPATH_THERMAL_PEAK_TABLE := $(DATADIR)/$(THERMAL_PEAK_TABLE).$(EXTENTION_CSV)
+# RUN ごとの計算結果
+FILEPATH_MODEL_PARAMETER_TABLE := $(call run_data,model_parameter_table.csv)
+FILEPATH_PEAK_GRID := $(call run_data,peak_grid.csv)
+FILEPATH_MODEL_LIGHTCURVES := $(call run_data,model_lightcurves.csv)
+FILEPATH_CANDIDATE_MODELS := $(call run_data,candidate_models.csv)
+FILEPATH_CANDIDATE_LIGHTCURVES := $(call run_data,candidate_lightcurves.csv)
+FILEPATH_CANDIDATE_BINNED_LIGHTCURVES := $(call run_data,candidate_binned_lightcurves.csv)
+FILEPATH_CHI_SQUARED := $(call run_data,chi_squared.csv)
+FILEPATH_MINIMUM_CHI_SQUARED := $(call run_data,minimum_chi_squared.csv)
 
-FILEPATH_CANDIDATE_LIGHTCURVES_PDF := $(FIGDIR)/$(RUN_DIR)/$(CANDIDATE_LIGHTCURVES).$(EXTENTION_PDF)
+# 図の出力先（minimum_chi2_lightcurve.pdf は従来どおり data 配下）
+FILEPATH_MINIMUM_CHI2_LC_PDF := $(call run_data,minimum_chi2_lightcurve.pdf)
+FILEPATH_CHEVALIER_PDF := $(call run_fig,chevalier_diagram.pdf)
+FILEPATH_CHEVALIER_COLORMAP_PDF := $(call run_fig,chevalier_colormap.pdf)
+
+# 共通CLI引数（$<・$@はレシピ実行時に展開するため = を使う）
+ARGS_INPUT = --input $<
+ARGS_OUTPUT = --output $@
+ARGS_OBSLC = --obslc $(FILEPATH_OBSLC)
+ARGS_INTEGRAL_TABLE = --integral_table $(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE)
+ARGS_MODEL_PARAMETER_TABLE = --model_parameter_table $(FILEPATH_MODEL_PARAMETER_TABLE)
+ARGS_PEAK_GRID = --peak_grid $(FILEPATH_PEAK_GRID)
+ARGS_CANDIDATE_LIGHTCURVES = --candidate_lightcurves $(FILEPATH_CANDIDATE_LIGHTCURVES)
+ARGS_CANDIDATE_BINNED_LIGHTCURVES = --candidate_binned_lightcurves $(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES)
+
+.PHONY: all view-best-lc view-chevalier view-chevalier_cmp \
+    chevaliercm chevalier min_chi2 chi2 lc_bin lc candidates \
+    peak_grid lc_all modeltable peak_table
 
 all: view-best-lc view-chevalier
 
 view-best-lc: $(FILEPATH_MINIMUM_CHI2_LC_PDF)
-	evince $< >/dev/null 2>&1 &
+	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
 
 $(FILEPATH_MINIMUM_CHI2_LC_PDF): \
 	$(FILEPATH_INPUT) \
@@ -78,36 +72,36 @@ $(FILEPATH_MINIMUM_CHI2_LC_PDF): \
 	$(FILEPATH_CANDIDATE_LIGHTCURVES) \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
 	$(FILEPATH_OBSLC) \
-	plotconfigs/estimated_lightcurve.yaml \
-	scripts/plot_$(MINIMUM_CHI2_LIGHTCURVE).py
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--input $< \
-		--$(MINIMUM_CHI_SQUARED) $(FILEPATH_MINIMUM_CHI_SQUARED) \
-		--$(CANDIDATE_BINNED_LIGHTCURVES) $(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES) \
-		--$(MODEL_PARAMETER_TABLE) $(FILEPATH_MODEL_PARAMETER_TABLE) \
-		--$(CANDIDATE_LIGHTCURVES) $(FILEPATH_CANDIDATE_LIGHTCURVES) \
-		--obslc $(FILEPATH_OBSLC) \
-		--plotconfig plotconfigs/estimated_lightcurve.yaml \
-		--output $@
+	$(PLOTCONFIGDIR)/estimated_lightcurve.yaml \
+	scripts/plot_minimum_chi2_lightcurve.py
+	$(PYTHON) -m scripts.plot_minimum_chi2_lightcurve \
+		$(ARGS_INPUT) \
+		--minimum_chi_squared $(FILEPATH_MINIMUM_CHI_SQUARED) \
+		$(ARGS_CANDIDATE_BINNED_LIGHTCURVES) \
+		$(ARGS_MODEL_PARAMETER_TABLE) \
+		$(ARGS_CANDIDATE_LIGHTCURVES) \
+		$(ARGS_OBSLC) \
+		--plotconfig $(PLOTCONFIGDIR)/estimated_lightcurve.yaml \
+		$(ARGS_OUTPUT)
 
-view-chevalier_cmp: $(FILEPATH_CHEVALIER_PDF)
-	evince $< >/dev/null 2>&1 &
+# 既存のターゲット名を互換用に残す
+view-chevalier_cmp: view-chevalier
 
 chevaliercm: $(FILEPATH_CHEVALIER_COLORMAP_PDF)
 $(FILEPATH_CHEVALIER_COLORMAP_PDF): \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
 	$(FILEPATH_OBSLC) \
-	plotconfigs/chevalier_colormaps.yaml \
+	$(PLOTCONFIGDIR)/chevalier_colormaps.yaml \
 	module/chevalier.py \
 	scripts/chevalier_colormaps.py
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+	$(PYTHON) -m scripts.chevalier_colormaps \
 		--model_table $< \
-		--plotconfig plotconfigs/chevalier_colormaps.yaml \
-		--obslc $(FILEPATH_OBSLC) \
-		--output $@
+		--plotconfig $(PLOTCONFIGDIR)/chevalier_colormaps.yaml \
+		$(ARGS_OBSLC) \
+		$(ARGS_OUTPUT)
 
 view-chevalier: $(FILEPATH_CHEVALIER_PDF)
-	evince $< >/dev/null 2>&1 &
+	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
 
 chevalier: $(FILEPATH_CHEVALIER_PDF)
 
@@ -116,158 +110,161 @@ $(FILEPATH_CHEVALIER_PDF): \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
 	$(FILEPATH_OBSLC) \
 	module/chevalier.py \
-	plotconfigs/chevalier_diagram.yaml \
+	$(PLOTCONFIGDIR)/chevalier_diagram.yaml \
 	scripts/chevalier.py
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--$(PEAK_GRID) $< \
-		--$(MODEL_PARAMETER_TABLE) $(FILEPATH_MODEL_PARAMETER_TABLE) \
-		--plotconfig plotconfigs/chevalier_diagram.yaml \
-		--obslc $(FILEPATH_OBSLC) \
-		--output $@
+	$(PYTHON) -m scripts.chevalier \
+		$(ARGS_PEAK_GRID) \
+		$(ARGS_MODEL_PARAMETER_TABLE) \
+		--plotconfig $(PLOTCONFIGDIR)/chevalier_diagram.yaml \
+		$(ARGS_OBSLC) \
+		$(ARGS_OUTPUT)
 
 #=== datafiles ===#
 min_chi2: $(FILEPATH_MINIMUM_CHI_SQUARED)
 $(FILEPATH_MINIMUM_CHI_SQUARED): \
 	$(FILEPATH_INPUT) \
 	$(FILEPATH_CHI_SQUARED) \
-	scripts/find_$(MINIMUM_CHI_SQUARED).$(EXTENTION_PY)
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--input $< \
-		--$(CHI_SQUARED) $(FILEPATH_CHI_SQUARED) \
-		--output $@
+	scripts/find_minimum_chi_squared.py
+	$(PYTHON) -m scripts.find_minimum_chi_squared \
+		$(ARGS_INPUT) \
+		--chi_squared $(FILEPATH_CHI_SQUARED) \
+		$(ARGS_OUTPUT)
 
 chi2: $(FILEPATH_CHI_SQUARED)
 $(FILEPATH_CHI_SQUARED): \
 	$(FILEPATH_INPUT) \
 	$(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES) \
 	$(FILEPATH_OBSLC) \
-	scripts/calculate_$(CHI_SQUARED).$(EXTENTION_PY)
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--input $< \
-		--$(CANDIDATE_BINNED_LIGHTCURVES) $(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES) \
-		--obslc $(FILEPATH_OBSLC) \
-		--output $@
+	scripts/calculate_chi_squared.py
+	$(PYTHON) -m scripts.calculate_chi_squared \
+		$(ARGS_INPUT) \
+		$(ARGS_CANDIDATE_BINNED_LIGHTCURVES) \
+		$(ARGS_OBSLC) \
+		$(ARGS_OUTPUT)
 
 lc_bin: $(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES)
 $(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES): \
 	$(FILEPATH_INPUT) \
 	$(FILEPATH_CANDIDATE_LIGHTCURVES) \
 	$(FILEPATH_OBSLC) \
-	scripts/compute_$(CANDIDATE_BINNED_LIGHTCURVES).$(EXTENTION_PY)
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--input $< \
-		--$(CANDIDATE_LIGHTCURVES) $(FILEPATH_CANDIDATE_LIGHTCURVES) \
-		--obslc $(FILEPATH_OBSLC) \
-		--output $@
+	scripts/compute_candidate_binned_lightcurves.py
+	$(PYTHON) -m scripts.compute_candidate_binned_lightcurves \
+		$(ARGS_INPUT) \
+		$(ARGS_CANDIDATE_LIGHTCURVES) \
+		$(ARGS_OBSLC) \
+		$(ARGS_OUTPUT)
 
 lc: $(FILEPATH_CANDIDATE_LIGHTCURVES)
 $(FILEPATH_CANDIDATE_LIGHTCURVES): \
 	$(FILEPATH_INPUT) \
-	$(FILEPATH_INTEGRAL_TABLE) \
+	$(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE) \
 	$(FILEPATH_CANDIDATE_MODELS) \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
-	scripts/compute_lightcurve_$(CANDIDATE_MODELS).$(EXTENTION_PY)
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--input $< \
-		--integral_table $(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE) \
-		--$(CANDIDATE_MODELS) $(FILEPATH_CANDIDATE_MODELS) \
-		--$(MODEL_PARAMETER_TABLE) $(FILEPATH_MODEL_PARAMETER_TABLE) \
-		--output $@
+	scripts/compute_lightcurve_candidate_models.py
+	$(PYTHON) -m scripts.compute_lightcurve_candidate_models \
+		$(ARGS_INPUT) \
+		$(ARGS_INTEGRAL_TABLE) \
+		--candidate_models $(FILEPATH_CANDIDATE_MODELS) \
+		$(ARGS_MODEL_PARAMETER_TABLE) \
+		$(ARGS_OUTPUT)
 
 candidates: $(FILEPATH_CANDIDATE_MODELS)
 $(FILEPATH_CANDIDATE_MODELS): \
 	$(FILEPATH_INPUT) \
 	$(FILEPATH_PEAK_GRID) \
 	$(FILEPATH_OBSLC) \
-	scripts/select_$(CANDIDATE_MODELS).py
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--input $< \
-		--$(PEAK_GRID) $(FILEPATH_PEAK_GRID)\
-		--obslc $(FILEPATH_OBSLC) \
-		--output $@
+	scripts/select_candidate_models.py
+	$(PYTHON) -m scripts.select_candidate_models \
+		$(ARGS_INPUT) \
+		$(ARGS_PEAK_GRID) \
+		$(ARGS_OBSLC) \
+		$(ARGS_OUTPUT)
 
 #=== tabulating ===#
 peak_grid: $(FILEPATH_PEAK_GRID)
 $(FILEPATH_PEAK_GRID): \
 	$(FILEPATH_INPUT) \
-	$(FILEPATH_INTEGRAL_TABLE) \
+	$(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE) \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
-	scripts/compute_$(PEAK_GRID).$(EXTENTION_PY)
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--input $< \
-		--integral_table $(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE) \
-		--$(MODEL_PARAMETER_TABLE) $(FILEPATH_MODEL_PARAMETER_TABLE) \
-		--output $@
+	scripts/compute_peak_grid.py
+	$(PYTHON) -m scripts.compute_peak_grid \
+		$(ARGS_INPUT) \
+		$(ARGS_INTEGRAL_TABLE) \
+		$(ARGS_MODEL_PARAMETER_TABLE) \
+		$(ARGS_OUTPUT)
 
 lc_all: $(FILEPATH_MODEL_LIGHTCURVES)
 $(FILEPATH_MODEL_LIGHTCURVES): \
 	$(FILEPATH_INPUT) \
-	$(FILEPATH_INTEGRAL_TABLE) \
-	scripts/compute_lightcurve_$(CANDIDATE_MODELS).$(EXTENTION_PY)
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--input $< \
-		--integral_table $(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE) \
-		--output $@
+	$(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE) \
+	scripts/compute_lightcurve_candidate_models.py
+	$(PYTHON) -m scripts.compute_lightcurve_candidate_models \
+		$(ARGS_INPUT) \
+		$(ARGS_INTEGRAL_TABLE) \
+		$(ARGS_OUTPUT)
 
 modeltable: $(FILEPATH_MODEL_PARAMETER_TABLE)
 $(FILEPATH_MODEL_PARAMETER_TABLE): \
 	$(FILEPATH_INPUT) \
-	scripts/build_$(MODEL_PARAMETER_TABLE).py
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+	scripts/build_model_parameter_table.py
+	$(PYTHON) -m scripts.build_model_parameter_table \
 		$< \
-		--output $@ \
+		$(ARGS_OUTPUT)
 
 peak_table: $(FILEPATH_THERMAL_PEAK_TABLE)
 $(FILEPATH_THERMAL_PEAK_TABLE): \
-	$(INPUTDIR)/$(THERMAL_PEAK_TABLE).$(EXTENTION_YAML) \
+	$(INPUTDIR)/thermal_peak_table.yaml \
 	$(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE) \
-	scripts/build_$(THERMAL_PEAK_TABLE).$(EXTENTION_PY)
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--input $< \
-		--$(SYNCHROTRON_FUNCTION_NUMERICAL_TABLE) $(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE) \
-		--output $@
+	scripts/build_thermal_peak_table.py
+	$(PYTHON) -m scripts.build_thermal_peak_table \
+		$(ARGS_INPUT) \
+		--synchrotron_function_numerical_table $(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE) \
+		$(ARGS_OUTPUT)
 
 $(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE): \
-	$(INPUTDIR)/$(SYNCHROTRON_FUNCTION_NUMERICAL_TABLE).$(EXTENTION_YAML) \
-	scripts/build_$(SYNCHROTRON_FUNCTION_NUMERICAL_TABLE).$(EXTENTION_PY)
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
-		--input $< \
-		--output $@
+	$(INPUTDIR)/synchrotron_function_numerical_table.yaml \
+	scripts/build_synchrotron_function_numerical_table.py
+	$(PYTHON) -m scripts.build_synchrotron_function_numerical_table \
+		$(ARGS_INPUT) \
+		$(ARGS_OUTPUT)
 
 #=== arrange observation data ===#
+# OBSERVATION_PEAK_DATA は必要な場合のみ外部から指定する
+ifdef OBSERVATION_PEAK_DATA
 $(DATADIR)/$(OBSERVATION_PEAK_DATA).csv: \
-	$(DATADIR)/$(OBSERVATION_LIGHTCURVE).csv \
-		$(OBSERVATION_PEAK_DATA).py
-	python3 $(lastword $^) \
+	$(DATADIR)/obslc.csv \
+	$(OBSERVATION_PEAK_DATA).py
+	$(PYTHON) $(OBSERVATION_PEAK_DATA).py \
 		$< \
-		--output $@
+		$(ARGS_OUTPUT)
+endif
 
 $(FILEPATH_OBSLC): \
 	$(FILEPATH_OBSLC_TMP) \
 	$(FILEPATH_OBSBG) \
-	scripts/combine_obslc_background.$(EXTENTION_PY)
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+	scripts/combine_obslc_background.py
+	$(PYTHON) -m scripts.combine_obslc_background \
 		--lc_tmp $< \
 		--bg $(FILEPATH_OBSBG) \
-		--output $@
+		$(ARGS_OUTPUT)
 
 $(FILEPATH_OBSBG): \
 	$(FILEPATH_OBSLC_TMP) \
-		scripts/estimate_background.$(EXTENTION_PY)
-	python3 -m $(subst /,.,$(basename $(lastword $^))) \
+	scripts/estimate_background.py
+	$(PYTHON) -m scripts.estimate_background \
 		--data $< \
-		--output $@
+		$(ARGS_OUTPUT)
 
 $(FILEPATH_OBSLC_TMP): \
 	$(DATADIR)/observation_raw/4U1728_stacked_1min.dat \
-		$(INPUTDIR)/$(OBSERVATION_LIGHTCURVE).$(EXTENTION_YAML) \
-		preprocess_$(OBSERVATION_LIGHTCURVE).$(EXTENTION_PY)
-	python3 $(lastword $^) \
+	$(INPUTDIR)/obslc.yaml \
+	preprocess_obslc.py
+	$(PYTHON) preprocess_obslc.py \
 		--data $< \
-		--config $(INPUTDIR)/$(OBSERVATION_LIGHTCURVE).$(EXTENTION_YAML) \
-		--output $@
+		--config $(INPUTDIR)/obslc.yaml \
+		$(ARGS_OUTPUT)
 
 #=== config files ===#
-plotconfigs/%.yaml:
+$(PLOTCONFIGDIR)/%.yaml:
 	@echo "エラー: プロットコンフィグがありません $@"
 	@false
