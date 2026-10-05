@@ -70,6 +70,9 @@ burster_property:
     value: 6.75e+18
     unit: "erg g-1"
 
+swiches:
+  distribuion_factors: false  # f_factor and g_factor
+
 workflows:
   powerlaw_sensitivity:
     p_indices:

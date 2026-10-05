@@ -20,12 +20,15 @@ from module.mydataclasses import (
     YAMLReadable,
     ValueArray
 )
+from enum import StrEnum, auto
+
+class SwichKeys(StrEnum):
+    DISTRIBUTION_FACTORS = auto()
 
 @dataclass(frozen=True,slots=True)
 class DistanceData(QuantityData):
     distance_value: float
     distance_unit: str
-
 
 @dataclass(frozen=True)
 class SamplingTimewindow:
@@ -125,6 +128,7 @@ class GeneralInputs(YAMLReadable):
     candidate_models_selection: CandidateModelsSelection
     model_lightcurves: ModelLightcurveConfig
     chi2: Chi2Configure
+    swiches: dict[str,bool]
     burster_property: ObservedBursterProperty
     workflows: WorkFlows
 
