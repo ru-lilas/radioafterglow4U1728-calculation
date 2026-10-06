@@ -2,26 +2,28 @@
 
 例:
     python plot_powerlaw_lightcurves.py \
-        --lightcurves data/lightcurves_powerlaw.csv \
+        --powerlaw_lightcurves data/lightcurves_powerlaw.csv \
         --model_parameter_table_powerlaw data/model_parameter_table_powerlaw.csv
 
-現在は読み込みとgroupingまで。各groupの概要を表示する。
+1行目はp_index、2行目はf_eを色で区別して描画する。
 """
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 from pathlib import Path
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize, LogNorm, to_hex
 
-from module.models import ColumnNames, MetadataNames
-from module.mydataclasses import QuantityData
+from module import plot_utils
+from module.models import ColumnNames, FluxName, MetadataNames
+from module.mydataclasses import QuantityArray1D, QuantityData
 from module.observation import LongformatLightcurve
 from module.utils import FileReader
-from module import plot_utils
-from matplotlib.backends.backend_pdf import PdfPages
-import matplotlib.pyplot as plt
-from module.models import FluxName
-from module.mydataclasses import QuantityArray1D
 
 # 比較時に固定する基準値。走査格子にない場合は最も近い値を使う。
 REFERENCE_P_INDEX = 3.0
@@ -31,11 +33,8 @@ REFERENCE_F_E = 1.0e-2
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     for name in (
-        "plotconfig",
-        "powerlaw_lightcurves",
-        "model_parameter_table_powerlaw",
-        "obslc",
-        "output",
+        "plotconfig", "powerlaw_lightcurves", "model_parameter_table_powerlaw",
+        "obslc", "output",
     ):
         parser.add_argument(f"--{name}", type=Path, required=True)
     return parser.parse_args()
@@ -71,10 +70,8 @@ def group_by_frequency(df: pd.DataFrame) -> dict[float, pd.DataFrame]:
     groups: dict[float, pd.DataFrame] = {}
     for nu, df_frequency in df.groupby(ColumnNames.NU, sort=True):
         df_frequency.attrs = df.attrs.copy()
-        if not isinstance(nu,float):
-            raise TypeError(
-                f"nuの型が不正です:{type(nu)}"
-            )
+        if not isinstance(nu, float):
+            raise TypeError(f"nuの型が不正です: {type(nu)}")
         groups[float(nu)] = df_frequency
     return groups
 
@@ -94,98 +91,139 @@ def select_fixed_parameter(
     return fixed_value, selected
 
 
+def require_numeric_scalar(value: object) -> float:
+    """Python・NumPyの数値スカラーであることを確認してfloatに変換する。"""
+    if not isinstance(value, (int, float, np.integer, np.floating)):
+        raise TypeError(f"数値スカラーが必要です: {type(value)}")
+    return float(value)
+
+
+def parameter_color(mappable: ScalarMappable, value: float) -> str:
+    """1要素の配列から色を求め、型が確定したRGBAタプルへ変換する。"""
+    colors = mappable.to_rgba(np.array([value], dtype=np.float64))
+    rgba: tuple[float, float, float, float] = (
+        require_numeric_scalar(colors[0, 0]),
+        require_numeric_scalar(colors[0, 1]),
+        require_numeric_scalar(colors[0, 2]),
+        require_numeric_scalar(colors[0, 3]),
+    )
+    return to_hex(rgba)
+
+
+def build_color_maps(df: pd.DataFrame) -> dict[str, ScalarMappable]:
+    """全周波数で共通の、パラメータ値と色の対応を作る。"""
+    if df.empty:
+        raise ValueError("描画する光度曲線がありません")
+    if (df[MetadataNames.F_E] <= 0).any():
+        raise ValueError("f_eの対数カラースケールには正の値が必要です")
+    return {
+        MetadataNames.P_INDEX: ScalarMappable(
+            norm=Normalize(
+                vmin=require_numeric_scalar(df[MetadataNames.P_INDEX].min()),
+                vmax=require_numeric_scalar(df[MetadataNames.P_INDEX].max()),
+            ),
+            cmap="viridis",
+        ),
+        MetadataNames.F_E: ScalarMappable(
+            norm=LogNorm(
+                vmin=require_numeric_scalar(df[MetadataNames.F_E].min()),
+                vmax=require_numeric_scalar(df[MetadataNames.F_E].max()),
+            ),
+            cmap="viridis",
+        ),
+    }
+
+
 def main() -> None:
     args = parse_args()
     outpath: Path = args.output
     outpath.parent.mkdir(parents=True, exist_ok=True)
+
     df_lc = FileReader.table_from_csv(args.powerlaw_lightcurves)
     df_powerlaw = FileReader.table_from_csv(args.model_parameter_table_powerlaw)
     df = attach_powerlaw_parameters(df_lc, df_powerlaw)
-    lcs_obs = LongformatLightcurve.from_csv(args.obslc)
     frequency_groups = group_by_frequency(df)
+    color_maps = build_color_maps(df)
+    lcs_obs = LongformatLightcurve.from_csv(args.obslc)
     comparisons = (
         (MetadataNames.P_INDEX, MetadataNames.F_E, REFERENCE_F_E),
         (MetadataNames.F_E, MetadataNames.P_INDEX, REFERENCE_P_INDEX),
     )
-
     plotconf = plot_utils.PlotConfig.from_yaml(args.plotconfig)
-    layout = plotconf.layout
     components = plotconf.components
-    metadata_config = plotconf.metadata
 
-    # 描画時は2行×len(frequency_groups)列のaxesを用意する。
     with PdfPages(outpath) as pdf:
-        fig, axes = layout.create()
-        for col, (nu_value, df_frequency) in enumerate(frequency_groups.items()):
-            for thermal_model_index, df_thermal in df_frequency.groupby(
-                MetadataNames.THERMAL_MODEL_INDEX, sort=True
-            ):
+        fig, axes = plotconf.layout.create()
+        try:
+            if axes.shape != (2, len(frequency_groups)):
+                raise ValueError(
+                    f"plotconfigのaxesは2行×{len(frequency_groups)}列にしてください: "
+                    f"現在のshape={axes.shape}"
+                )
+            for col, (nu_value, df_frequency) in enumerate(frequency_groups.items()):
+                nu = QuantityData(
+                    value=nu_value,
+                    unit=df_frequency.attrs[MetadataNames.NU_UNIT],
+                )
+                lc_obs = lcs_obs.select_frequency(nu, unit=nu.unit)
                 for row, (varied_parameter, fixed_parameter, reference) in enumerate(comparisons):
-                    fixed_value, df_group = select_fixed_parameter(
-                        df_thermal, fixed_parameter, reference
-                    )
-                    n_models = df_group[ColumnNames.POWELAW_SUBMODEL_INDEX].nunique()
-                    print(
-                        f"axes[{row}, {col}]: thermal_model_index={thermal_model_index}, "
-                        f"nu={nu_value:g}, {fixed_parameter}={fixed_value:g}, "
-                        f"vary {varied_parameter}: {n_models} models"
-                    )
-                    nu = QuantityData(
-                        value=nu_value,
-                        unit=df_group.attrs[MetadataNames.NU_UNIT]
-                    )
+                    axis_config = plotconf.layout.axes.for_subplot(row, col)
+                    plotter = plot_utils.Plotter(axes[row, col])
+                    x_unit: str = axis_config.x_unit
+                    y_unit: str = axis_config.y_unit
+                    background = lc_obs.fnu_background.index(0).value_in(y_unit)
+                    mappable = color_maps[varied_parameter]
+                    base_style = components["continuous"].resolve_line_style(0)
 
-                    axis_config = plotconf.layout.axes.for_subplot(row,col)
-                    plotter = plot_utils.Plotter(axes[row,col])
-                    x_unit:str = axis_config.x_unit
-                    y_unit:str = axis_config.y_unit
-                    lc_obs = lcs_obs.select_frequency(nu, unit=nu.unit)
-                    fnu_background = lc_obs.fnu_background.to_value_in(y_unit)
-
-                    # observed lightcurve
-                    t_obs = lc_obs.t.to_value_in(x_unit)
                     plotter.line(
-                        x=t_obs,
-                        y=fnu_background,
-                        style=components["background"].resolve_line_style(col)
+                        x=lc_obs.t.to_value_in(x_unit),
+                        y=lc_obs.fnu_background.to_value_in(y_unit),
+                        style=components["background"].resolve_line_style(col),
                     )
                     plotter.errorbar(
-                        x=t_obs,
+                        x=lc_obs.t.to_value_in(x_unit),
                         y=lc_obs.fnu_total.to_value_in(y_unit),
                         yerr=lc_obs.fnu_total_err.to_value_in(y_unit),
-                        style=components["observed"].resolve_errorbar_style(col)
+                        style=components["observed"].resolve_errorbar_style(col),
                     )
-                    dfs = df_group.groupby(ColumnNames.POWELAW_SUBMODEL_INDEX)
 
-                    for i, (submodel_index, df_model) in enumerate(
-                        df_group.groupby(ColumnNames.POWELAW_SUBMODEL_INDEX, sort=True)
+                    for thermal_model_index, df_thermal in df_frequency.groupby(
+                        MetadataNames.THERMAL_MODEL_INDEX, sort=True
                     ):
-                        df_model = df_model.sort_values(ColumnNames.T).copy()
-                        df_model.attrs = df_group.attrs.copy()
-
-                        parameter_value = float(df_model[varied_parameter].iloc[0])
-
-                        # このdf_modelが、axes[row, col]に描く1本の光度曲線
-                        t = QuantityArray1D.from_df(
-                            df_model,
-                            ColumnNames.T,
-                            unit_key=MetadataNames.T_UNIT,
+                        fixed_value, df_group = select_fixed_parameter(
+                            df_thermal, fixed_parameter, reference
                         )
-                        fnu = QuantityArray1D.from_df(
-                            df_model,
-                            FluxName.FNU_TOTAL,
-                            unit_key=MetadataNames.FNU_UNIT,
+                        print(
+                            f"axes[{row}, {col}]: thermal_model_index={thermal_model_index}, "
+                            f"nu={nu_value:g}, {fixed_parameter}={fixed_value:g}, "
+                            f"vary {varied_parameter}"
                         )
-
-                        background = lc_obs.fnu_background.index(0).value_in(y_unit)
-
-                        plotter.line(
-                            x=t.to_value_in(x_unit),
-                            y=fnu.to_value_in(y_unit) + background,
-                            style=components["continuous"].resolve_line_style(col),
-                        )
-        pdf.savefig(fig)
-        plt.close(fig)
+                        for submodel_index, df_model in df_group.groupby(
+                            ColumnNames.POWELAW_SUBMODEL_INDEX, sort=True
+                        ):
+                            df_model = df_model.sort_values(ColumnNames.T).copy()
+                            df_model.attrs = df_group.attrs.copy()
+                            parameter_value = float(df_model[varied_parameter].iloc[0])
+                            style = replace(
+                                base_style,
+                                color=parameter_color(mappable, parameter_value),
+                            )
+                            t = QuantityArray1D.from_df(
+                                df_model, ColumnNames.T,
+                                unit_key=MetadataNames.T_UNIT,
+                            )
+                            fnu = QuantityArray1D.from_df(
+                                df_model, FluxName.FNU_TOTAL,
+                                unit_key=MetadataNames.FNU_UNIT,
+                            )
+                            plotter.line(
+                                x=t.to_value_in(x_unit),
+                                y=fnu.to_value_in(y_unit) + background,
+                                style=style,
+                            )
+            pdf.savefig(fig)
+        finally:
+            plt.close(fig)
 
 
 if __name__ == "__main__":
