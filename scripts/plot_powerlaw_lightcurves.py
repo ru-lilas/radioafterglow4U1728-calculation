@@ -198,11 +198,6 @@ def main() -> None:
                         fixed_value, df_group = select_fixed_parameter(
                             df_thermal, fixed_parameter, reference
                         )
-                        print(
-                            f"axes[{row}, {col}]: thermal_model_index={thermal_model_index}, "
-                            f"nu={nu_value:g}, {fixed_parameter}={fixed_value:g}, "
-                            f"vary {varied_parameter}"
-                        )
                         df_binned_nu = dfs_binned_nu[nu_value]
                         df_binned_plot: pd.DataFrame = df_binned_nu.loc[
                             df_binned_nu[ColumnNames.MODEL_INDEX] == thermal_model_index

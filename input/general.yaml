@@ -32,6 +32,7 @@ model_parameters: &ModelParameters
   switches: &ModelSwitches
     thermal_only: false
     exact_dist_factors: false
+    powerlaw_hard_cutoff: true
 
 candidate_models_selection: &CandidateModelsSelection
   observation_frequencies:

@@ -37,6 +37,8 @@ log10_3 = np.log10(3.0)
 TWO_TO_FIVE:float = 2**5
 THREE_TO_SEVEN = 3**7
 SYNCHROTRON_MODEL = Literal["thermal","total"]
+POWERLAW_FLOOR:float = 1.0e-100
+XM_CUTOFF:float = 1.0
 
 class DefaultUnits(StrEnum):
     fnu = "mJy"
@@ -427,6 +429,7 @@ class ModelParameters:
             raise ValueError(
                 "model_indexに重複があってはなりません."
             )
+
         switch_keys: set[str] = {switch.value for switch in SwitchKeys}
 
         switches: dict[str, bool] = {
@@ -489,6 +492,9 @@ class ModelParameters:
 
     @property
     def gamma_min(self):
+        """
+            Margalit&Quataert(2021)
+        """
         return np.ones_like(self.theta0)
 
     @property
@@ -620,9 +626,12 @@ class EmissivityFequencyDependenceTerm:
         g_factor: NDArray,
         x: NDArray,
         p:float
-    )->NDArray:
-        return (
-            cj*eps_e*g_factor*x**(-0.5*(p-1.0))
+    )->NDArray[np.float64]:
+        jpl = cj*eps_e*g_factor*x**(-0.5*(p-1.0))
+        return np.where(
+            x < XM_CUTOFF,
+            POWERLAW_FLOOR,
+            jpl
         )
 
     @classmethod
@@ -667,9 +676,12 @@ class AbsorptionCoefficientFrequencyDependence:
         g_factor: NDArray,
         x: NDArray,
         p: float
-    )->NDArray:
-        return (
-            ca*eps_e*g_factor*x**(-0.5*(p+4.0))
+    )->NDArray[np.float64]:
+        apl = ca*eps_e*g_factor*x**(-0.5*(p+4.0))
+        return np.where(
+            x < XM_CUTOFF,
+            POWERLAW_FLOOR,
+            apl
         )
 
     @classmethod
@@ -1096,7 +1108,7 @@ class SynchrotronResults:
             FluxName.FNU_TOTAL: fnu.total.to_value(fnu_unit).ravel(),
             DimensionlessSynchrotronKeys.ZETA_THERMAL: jnu.zeta.thermal.ravel(),
             DimensionlessSynchrotronKeys.ZETA_POWERLAW: jnu.zeta.powerlaw.ravel(),
-            DimensionlessSynchrotronKeys.ZETA_POWERLAW: jnu.zeta.total.ravel(),
+            DimensionlessSynchrotronKeys.ZETA_TOTAL: jnu.zeta.total.ravel(),
         })
         df.attrs[MetadataNames.FNU_UNIT] = str(fnu_unit)
         df.attrs[MetadataNames.PHI_UNIT] = str(phi_unit)
