@@ -1,0 +1,169 @@
+layout:
+  figure:
+    figsize: [32,24]
+    dpi: 100
+    layout_engine: constrained
+  subplots:
+    nrows: 2
+    ncols: 2
+    sharex: col
+    sharey: row
+    hide_shared_labels: true
+  axes:
+    x:
+      - &time_axis
+        scale: "linear"
+        limits: [-10.0,34.0]
+        label:
+          prefix: 'Time Since the X-ray Burst'
+          unit: &x_unit "min"
+          fontsize: 32
+      - *time_axis
+    y:
+      - &flux_axis
+        scale: "linear"
+        limits: [0.5,1.5]
+        label:
+          prefix: 'Radio Flux Density'
+          unit: &y_unit "mJy"
+          fontsize: 32
+      - *flux_axis
+    ticks:
+      labelsize: 32
+      direction: "in"
+      major_length: 10.0
+      minor_length: 8.0
+      width: 1.0
+      pad: 10.0
+metadata:
+  fontsize: 18
+  items:
+    eps_b:
+      show: true
+      unit: ""
+      label_format: &LabelFormatTmp
+        prefix: '\varepsilon_{\mathrm{B}}'
+        fmt: '.1e'
+        unit: ""
+        suffix: ""
+        show_equals: true
+    eps_th:
+      show: true
+      unit: ""
+      label_format:
+        <<: *LabelFormatTmp
+        prefix: '\varepsilon_{\mathrm{th}}'
+        fmt: '.2f'
+        unit: ""
+    distance:
+      show: true
+      unit: "kpc"
+      label_format:
+        <<: *LabelFormatTmp
+        prefix: 'D'
+        fmt: '.1f'
+        unit: '\mathrm{kpc}'
+    mu_e_mu:
+      show: true
+      unit: ""
+      label_format:
+        <<: *LabelFormatTmp
+        prefix: '\mu_{\mathrm{e}}/\mu'
+        fmt: '.1f'
+        unit: ""
+    a_wind:
+      show: true
+      unit: "g cm-1"
+      label_format:
+        <<: *LabelFormatTmp
+        prefix: 'A_{\mathrm{w}}'
+        fmt: '.1e'
+        unit: '\mathrm{g/cm}'
+    beta_sh: 
+      show: true
+      unit: ""
+      label_format:
+        <<: *LabelFormatTmp
+        prefix: '\beta_{\mathrm{sh}}'
+        fmt: '.2f'
+        unit: ''
+    p_index: 
+      show: true
+      unit: ""
+      label_format:
+        <<: *LabelFormatTmp
+        prefix: 'p'
+        fmt: '.2f'
+        unit: ''
+    f_e: 
+      show: true
+      unit: ""
+      label_format:
+        <<: *LabelFormatTmp
+        prefix: 'f_{\mathrm{e}}'
+        fmt: '.1e'
+        unit: ''
+    chi_squared: 
+      show: true
+      unit: ""
+      label_format:
+        <<: *LabelFormatTmp
+        prefix: '\chi^2'
+        fmt: '.1f'
+        unit: ''
+    nu: 
+      show: true
+      unit: "GHz"
+      label_format:
+        prefix: '\nu'
+        fmt: '.1f'
+        unit: '\mathrm{GHz}'
+components:
+  binned:
+    type: step
+    style:
+      colors: &colors_tmp
+        - "#FF4B00"
+        - "#005AFF"
+      linewidth: 2.0
+      linestyle: "-"
+      alpha: null
+      zorder: 1.0
+  continuous:
+    type: line
+    style:
+      colors: *colors_tmp
+      linewidth: 2.0
+      linestyle: "--"
+      alpha: null
+      zorder: 1.0
+  observed:
+    type: errorbar
+    style:
+      colors: *colors_tmp
+      marker: "o"
+      markersize: 6.0
+      markeredgewidth: 1.0
+      elinewidth: 1.0
+      capsize: 1.0
+      capthick: 1.0
+      linestyle: "none"
+      alpha: null
+      zorder: 0.0
+  background: 
+    type: line
+    style:
+      colors:
+        - "#000000"
+      linewidth: 2.0
+      linestyle: "--"
+      alpha: null
+      zorder: 1.0
+  synchrotron_component:
+    type: text
+    legend: false
+    style:
+      color: "#000000"
+      fontsize: 36
+      ha: right
+      va: top

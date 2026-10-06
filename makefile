@@ -40,6 +40,7 @@ FILEPATH_CANDIDATE_MODELS := $(call run_data,candidate_models.csv)
 FILEPATH_CANDIDATE_LIGHTCURVES := $(call run_data,candidate_lightcurves.csv)
 FILEPATH_CANDIDATE_BINNED_LIGHTCURVES := $(call run_data,candidate_binned_lightcurves.csv)
 FILEPATH_POWERLAW_LIGHTUCURVES:= $(call run_data,powerlaw_lightcurves.csv)
+FILEPATH_POWERLAW_LIGHTUCURVES_PDF:= $(call run_fig,powerlaw_lightcurves.pdf)
 FILEPATH_CHI_SQUARED := $(call run_data,chi_squared.csv)
 FILEPATH_MINIMUM_CHI_SQUARED := $(call run_data,minimum_chi_squared.csv)
 
@@ -53,9 +54,11 @@ ARGS_OUTPUT = --output $@
 ARGS_OBSLC = --obslc $(FILEPATH_OBSLC)
 ARGS_INTEGRAL_TABLE = --integral_table $(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE)
 ARGS_MODEL_PARAMETER_TABLE = --model_parameter_table $(FILEPATH_MODEL_PARAMETER_TABLE)
+ARGS_MODEL_PARAMETER_TABLE_POWERLAW = --model_parameter_table_powerlaw $(FILEPATH_MODEL_PARAMETER_TABLE_POWERLAW)
 ARGS_PEAK_GRID = --peak_grid $(FILEPATH_PEAK_GRID)
 ARGS_CANDIDATE_LIGHTCURVES = --candidate_lightcurves $(FILEPATH_CANDIDATE_LIGHTCURVES)
 ARGS_CANDIDATE_BINNED_LIGHTCURVES = --candidate_binned_lightcurves $(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES)
+ARGS_POWERLAW_LIGHTCURVES = --powerlaw_lightcurves $(FILEPATH_POWERLAW_LIGHTUCURVES)
 
 .PHONY: all view-best-lc view-chevalier view-chevalier_cmp \
     chevaliercm chevalier min_chi2 chi2 lc_bin lc candidates \
@@ -65,6 +68,21 @@ all: view-best-lc view-chevalier
 
 view-best-lc: $(FILEPATH_MINIMUM_CHI2_LC_PDF)
 	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
+
+view-pl-lc: $(FILEPATH_POWERLAW_LIGHTUCURVES_PDF)
+	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
+
+$(FILEPATH_POWERLAW_LIGHTUCURVES_PDF): \
+	$(FILEPATH_POWERLAW_LIGHTUCURVES) \
+	$(PLOTCONFIGDIR)/lightcurves_powerlaw_sensitivity.yaml \
+	$(FILEPATH_OBSLC) \
+	scripts/plot_powerlaw_lightcurves.py
+	$(PYTHON) -m scripts.plot_powerlaw_lightcurves\
+		--plotconfig $(PLOTCONFIGDIR)/lightcurves_powerlaw_sensitivity.yaml \
+		$(ARGS_POWERLAW_LIGHTCURVES) \
+		$(ARGS_MODEL_PARAMETER_TABLE_POWERLAW) \
+		$(ARGS_OBSLC) \
+		$(ARGS_OUTPUT)
 
 $(FILEPATH_MINIMUM_CHI2_LC_PDF): \
 	$(FILEPATH_INPUT) \
