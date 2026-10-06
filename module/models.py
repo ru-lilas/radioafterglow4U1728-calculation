@@ -45,6 +45,11 @@ class DefaultUnits(StrEnum):
     nu = "GHz"
     phi = "GHz min"
 
+class DimensionlessSynchrotronKeys(StrEnum):
+    ZETA_THERMAL = auto()
+    ZETA_POWERLAW = auto()
+    ZETA_TOTAL = auto()
+
 class MetadataNames(StrEnum):
     PHI_TH = auto()
     THETA0 = auto()
@@ -121,6 +126,7 @@ class ColumnNames(StrEnum):
     FNU_FLARE = auto()
     FNU_TOTAL = auto()
     FNU_BG = auto()
+    JNU_THERMAL = auto()
 
 class ChiSquaredParameters(StrEnum):
     CHI_SQUARED = auto()
@@ -1072,6 +1078,7 @@ class SynchrotronResults:
     ) -> pd.DataFrame:
         _, n_xm = self.xm.shape
         fnu = self.fnu_obsframe
+        jnu = self.j_nu
 
         dataset = {
             ColumnNames.MODEL_INDEX: np.repeat(self.model_params.model_indices.ravel(), n_xm),
@@ -1087,6 +1094,9 @@ class SynchrotronResults:
             FluxName.FNU_THERMAL: fnu.thermal_only.to_value(fnu_unit).ravel(),
             FluxName.FNU_POWERLAW: fnu.powerlaw_only.to_value(fnu_unit).ravel(),
             FluxName.FNU_TOTAL: fnu.total.to_value(fnu_unit).ravel(),
+            DimensionlessSynchrotronKeys.ZETA_THERMAL: jnu.zeta.thermal.ravel(),
+            DimensionlessSynchrotronKeys.ZETA_POWERLAW: jnu.zeta.powerlaw.ravel(),
+            DimensionlessSynchrotronKeys.ZETA_POWERLAW: jnu.zeta.total.ravel(),
         })
         df.attrs[MetadataNames.FNU_UNIT] = str(fnu_unit)
         df.attrs[MetadataNames.PHI_UNIT] = str(phi_unit)

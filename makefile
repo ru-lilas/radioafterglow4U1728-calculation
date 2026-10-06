@@ -74,12 +74,14 @@ view-pl-lc: $(FILEPATH_POWERLAW_LIGHTUCURVES_PDF)
 
 $(FILEPATH_POWERLAW_LIGHTUCURVES_PDF): \
 	$(FILEPATH_POWERLAW_LIGHTUCURVES) \
+	$(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES) \
 	$(PLOTCONFIGDIR)/lightcurves_powerlaw_sensitivity.yaml \
 	$(FILEPATH_OBSLC) \
 	scripts/plot_powerlaw_lightcurves.py
 	$(PYTHON) -m scripts.plot_powerlaw_lightcurves\
 		--plotconfig $(PLOTCONFIGDIR)/lightcurves_powerlaw_sensitivity.yaml \
 		$(ARGS_POWERLAW_LIGHTCURVES) \
+		$(ARGS_CANDIDATE_BINNED_LIGHTCURVES) \
 		$(ARGS_MODEL_PARAMETER_TABLE_POWERLAW) \
 		$(ARGS_OBSLC) \
 		$(ARGS_OUTPUT)

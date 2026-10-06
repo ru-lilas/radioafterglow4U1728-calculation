@@ -34,6 +34,7 @@ ComponentType = Literal[
     "rectangle",
     "text",
     "legend",
+    "colorbar",
 ]
 
 StyleValue = TypeVar("StyleValue")
@@ -222,11 +223,11 @@ class AxesConfig:
         )
 
     @property
-    def x_unit(self)->str:
+    def x_unit(self):
         return self._single_axis(self.x).label.unit
 
     @property
-    def y_unit(self)->str:
+    def y_unit(self):
         return self._single_axis(self.y).label.unit
 
 
@@ -694,6 +695,34 @@ class ColorbarConfigure:
     label: LabelConfigure
 
 @dataclass(frozen=True, slots=True)
+class ColorbarComponent:
+    mappable: ScalarMappable
+    config: ColorbarConfigure
+
+    def draw(
+        self,
+        fig: Figure,
+        axes: Sequence[Axes],
+    ) -> Colorbar | None:
+        if not self.config.show:
+            return None
+
+        colorbar = fig.colorbar(
+            self.mappable,
+            ax=list(axes),
+            pad=self.config.pad,
+            fraction=self.config.fraction,
+        )
+        colorbar.ax.tick_params(
+            labelsize=self.config.tick_labelsize,
+        )
+        colorbar.set_label(
+            self.config.label.text,
+            fontsize=self.config.label.fontsize,
+        )
+        return colorbar
+
+@dataclass(frozen=True, slots=True)
 class NormConfig:
     type: str
 
@@ -737,6 +766,7 @@ class ComponentConfig:
         | RectangleStyleConfig
         | TextStyle
         | LegendStyle
+        | ColorbarConfigure
     )
     show_legend: bool = False
     label_format: QuantityLabel | None = None
@@ -797,6 +827,13 @@ class ComponentConfig:
             if not isinstance(self.style, LegendStyle):
                 raise TypeError(
                     "type='legend'にはLegendStyleが必要です: "
+                    f"{type(self.style).__name__}"
+                )
+
+        elif self.type == "colorbar":
+            if not isinstance(self.style, ColorbarConfigure):
+                raise TypeError(
+                    "type='colorbar'にはColorbarConfigureが必要です: "
                     f"{type(self.style).__name__}"
                 )
 
@@ -911,6 +948,15 @@ class ComponentConfig:
             )
         return self.style
 
+    @property
+    def colorbar_style_config(self) -> ColorbarConfigure:
+        if self.type != "colorbar" or not isinstance(self.style, ColorbarConfigure):
+            raise TypeError(
+                "colorbar_style_configへアクセスできるのは"
+                "type='colorbar'の場合だけです."
+            )
+        return self.style
+
     def legend_label(self, value: float | None = None) -> str:
         if self.label_format is None:
             raise ValueError("legend用label_formatが設定されていません.")
@@ -954,6 +1000,8 @@ def structure_component_config(
         style_type = TextStyle
     elif component_type == "legend":
         style_type = LegendStyle
+    elif component_type == "colorbar":
+        style_type = ColorbarConfigure
     else:
         raise ValueError(
             "未対応のcomponent typeです: "

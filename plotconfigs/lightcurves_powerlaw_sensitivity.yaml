@@ -167,3 +167,32 @@ components:
       fontsize: 36
       ha: right
       va: top
+  p_index_colorbar:
+    type: colorbar
+    style:
+      show: true
+      pad: 0.02
+      fraction: 0.05
+      tick_labelsize: 20
+      label: &ColorbarLabel
+        prefix: "$p$"
+        unit: ""
+        fontsize: 32
+  f_e_colorbar:
+    type: colorbar
+    style:
+      show: true
+      pad: 0.02
+      fraction: 0.05
+      tick_labelsize: 20
+      label:
+        <<: *ColorbarLabel
+        prefix: "$f_e$"
+  fiducial_parameter:
+    type: text
+    legend: false
+    style:
+      color: "#000000"
+      fontsize: 36
+      ha: right
+      va: top

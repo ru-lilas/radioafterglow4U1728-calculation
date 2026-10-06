@@ -20,14 +20,15 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize, LogNorm, to_hex
 
 from module import plot_utils
+from module.calculation_lightcurve import BinnedLightcurveWithBackground
 from module.models import ColumnNames, FluxName, MetadataNames
-from module.mydataclasses import QuantityArray1D, QuantityData
+from module.mydataclasses import QuantityArray1D, QuantityData,LongformatDataFrame
 from module.observation import LongformatLightcurve
 from module.utils import FileReader
 
 # 比較時に固定する基準値。走査格子にない場合は最も近い値を使う。
-REFERENCE_P_INDEX = 3.0
-REFERENCE_F_E = 1.0e-2
+REFERENCE_P_INDEX = 2.5
+REFERENCE_F_E = 1.0e-1
 
 
 def parse_args() -> argparse.Namespace:
@@ -35,6 +36,7 @@ def parse_args() -> argparse.Namespace:
     for name in (
         "plotconfig", "powerlaw_lightcurves", "model_parameter_table_powerlaw",
         "obslc", "output",
+        "candidate_binned_lightcurves",
     ):
         parser.add_argument(f"--{name}", type=Path, required=True)
     return parser.parse_args()
@@ -145,12 +147,15 @@ def main() -> None:
     frequency_groups = group_by_frequency(df)
     color_maps = build_color_maps(df)
     lcs_obs = LongformatLightcurve.from_csv(args.obslc)
+    longdf_binned = LongformatDataFrame.read_from(args.candidate_binned_lightcurves)
+    dfs_binned_nu = longdf_binned.parse(ColumnNames.NU)
     comparisons = (
         (MetadataNames.P_INDEX, MetadataNames.F_E, REFERENCE_F_E),
         (MetadataNames.F_E, MetadataNames.P_INDEX, REFERENCE_P_INDEX),
     )
     plotconf = plot_utils.PlotConfig.from_yaml(args.plotconfig)
     components = plotconf.components
+
 
     with PdfPages(outpath) as pdf:
         fig, axes = plotconf.layout.create()
@@ -198,6 +203,14 @@ def main() -> None:
                             f"nu={nu_value:g}, {fixed_parameter}={fixed_value:g}, "
                             f"vary {varied_parameter}"
                         )
+                        df_binned_nu = dfs_binned_nu[nu_value]
+                        df_binned_plot: pd.DataFrame = df_binned_nu.loc[
+                            df_binned_nu[ColumnNames.MODEL_INDEX] == thermal_model_index
+                        ]
+                        df_binned_plot.attrs[ColumnNames.NU] = nu_value
+                        df_binned_plot.attrs[ColumnNames.MODEL_INDEX] = thermal_model_index
+                        binned_lc = BinnedLightcurveWithBackground.from_df(df_binned_plot)
+
                         for submodel_index, df_model in df_group.groupby(
                             ColumnNames.POWELAW_SUBMODEL_INDEX, sort=True
                         ):
@@ -221,6 +234,30 @@ def main() -> None:
                                 y=fnu.to_value_in(y_unit) + background,
                                 style=style,
                             )
+                            # binned lightcurve
+                            plotter.step(
+                                edges=binned_lc.bin_edges.to_value_in(x_unit),
+                                values=binned_lc.fnu_with_bg.to_value_in(y_unit),
+                                style=components["binned"].resolve_line_style(col),
+                                baseline=background
+                            )
+                        #fiducial_parameter
+                        plotter.text(
+                            x=0.98,y=0.98,
+                            label=f"{fixed_parameter}={fixed_value:.1f}",
+                            style=components["fiducial_parameter"].text_style_config,
+                            coordinates="axes"
+                        )
+            colorbar_names = ("p_index_colorbar", "f_e_colorbar")
+            for row, (varied_parameter, _, _) in enumerate(comparisons):
+                colorbar = plot_utils.ColorbarComponent(
+                    mappable=color_maps[varied_parameter],
+                    config=components[colorbar_names[row]].colorbar_style_config,
+                )
+                colorbar.draw(
+                    fig=fig,
+                    axes=axes[row, :].tolist(),
+                )
             pdf.savefig(fig)
         finally:
             plt.close(fig)
