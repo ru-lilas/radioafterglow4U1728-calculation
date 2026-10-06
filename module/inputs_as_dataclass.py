@@ -22,7 +22,7 @@ from module.mydataclasses import (
 )
 from enum import StrEnum, auto
 
-class SwichKeys(StrEnum):
+class SwitchKeys(StrEnum):
     DISTRIBUTION_FACTORS = auto()
 
 @dataclass(frozen=True,slots=True)
