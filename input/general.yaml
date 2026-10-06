@@ -3,7 +3,7 @@ units:
   fnu_unit: &fnu_unit "mJy"
   nu_unit: &nu_unit "GHz"
 
-model_parameters:
+model_parameters: &ModelParameters
   phi_th:
     values:
       start: -2.0
@@ -29,16 +29,18 @@ model_parameters:
   distance:
     value: 5.0
     unit: "kpc"
-  synchrotron_model: total
+  switches: &ModelSwitches
+    thermal_only: false
+    exact_dist_factors: false
 
-candidate_models_selection:
+candidate_models_selection: &CandidateModelsSelection
   observation_frequencies:
     values:
       - 5.5
       - 9.0
     unit: *nu_unit
 
-model_lightcurves:
+model_lightcurves: &ModelLightcurves
   xm:
     start: 1.0e-02
     stop: 1.0e+04
@@ -52,7 +54,7 @@ model_lightcurves:
       scale: "log"
     unit: "s"
 
-chi2:
+chi_squared: &ChiSquared
   timewindow:
     min: 0.0
     max: 16.0
@@ -70,18 +72,14 @@ burster_property:
     value: 6.75e+18
     unit: "erg g-1"
 
-switches:
-  distribuion_factors: false  # f_factor and g_factor
-
-workflows:
-  powerlaw_sensitivity:
-    p_indices:
-      start: 2.01
-      stop: 3.01
-      num: 16
-      scale: linear
-    f_es:
-      start: 1.0e-03
-      stop: 1.0e+03
-      num: 16
-      scale: log
+powerlaw_sensitivity:
+  p_indices:
+    start: 2.01
+    stop: 3.01
+    num: 16
+    scale: linear
+  f_es:
+    start: 1.0e-03
+    stop: 1.0e+03
+    num: 16
+    scale: log

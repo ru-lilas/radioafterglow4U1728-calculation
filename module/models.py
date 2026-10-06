@@ -1,7 +1,7 @@
 # pyright: reportAttributeAccessIssue=false
 # pyright: reportUnknownMemberType=false
 
-from typing import Literal, Self
+from typing import Hashable, Literal, Self
 import astropy.units as u
 from matplotlib.axes import Axes
 from module import quantity_converter
@@ -77,6 +77,10 @@ class FluxName(StrEnum):
 class PhiName(StrEnum):
     PHI = auto()
 
+class SwitchKeys(StrEnum):
+    THERMAL_ONLY = auto()
+    EXACT_DIST_FACTORS = auto()
+
 class ColumnNames(StrEnum):
     CANDIDATE_MODEL_INDEX = auto()
     MODEL_INDEX = auto()
@@ -142,7 +146,7 @@ class MaxwellJuttnerFactor:
 
     @staticmethod
     def hot(
-        theta:ElectronTemperature
+        theta:NDArray[np.float64]
     )->FloatArray:
         theta_val = theta.values
         return np.ones_like(theta_val)
@@ -281,7 +285,7 @@ class InputParametersRaw:
     theta0: FloatVectorSpace
     distance: QuantityData
     shock: ShockParameters
-    synchrotron_model: SYNCHROTRON_MODEL
+    switches: dict[str,bool]
 
     @property
     def phi_arr(self)->FloatVector:
@@ -316,7 +320,7 @@ class ModelParameters:
     molecular_weight: MolecularWeight
     powerlaw:PowerlawParameters
     distance:QuantityData
-    synchrotron_model: SYNCHROTRON_MODEL
+    switches:dict[str,bool]
     model_index: NDArray[np.int64] | None = None
 
     def __post_init__(self) -> None:
@@ -352,8 +356,7 @@ class ModelParameters:
             molecular_weight=input.shock.common.molecular_weight,
             distance=input.distance,
             powerlaw=input.shock.powerlaw,
-            synchrotron_model=input.synchrotron_model
-
+            switches=input.switches
         )
 
     def to_df(self) -> pd.DataFrame:
@@ -374,9 +377,9 @@ class ModelParameters:
             MetadataNames.MU: float(self.molecular_weight.mu),
             MetadataNames.P_INDEX: float(self.powerlaw.p_index),
             MetadataNames.F_E: float(self.powerlaw.f_e),
-            MetadataNames.SYNCHROTRON_MODEL: self.synchrotron_model,
             MetadataNames.DISTANCE_VALUE: float(self.distance.value),
             MetadataNames.DISTANCE_UNIT: self.distance.unit,
+            **self.switches,
         }
         return df
 
@@ -399,7 +402,7 @@ class ModelParameters:
             molecular_weight=self.molecular_weight,
             powerlaw=self.powerlaw,
             distance=self.distance,
-            synchrotron_model=self.synchrotron_model,
+            switches=self.switches,
             model_index=self.model_indices.ravel()[positions].reshape(-1, 1),
         )
 
@@ -415,6 +418,13 @@ class ModelParameters:
             raise ValueError(
                 "model_indexに重複があってはなりません."
             )
+        switch_keys: set[str] = {switch.value for switch in SwitchKeys}
+
+        switches: dict[str, bool] = {
+            key: value
+            for key, value in df.attrs.items()
+            if isinstance(key, str) and key in switch_keys
+        }
 
         return cls(
             phi_th=ordered[ColumnNames.PHI_TH]
@@ -432,7 +442,7 @@ class ModelParameters:
                 p_index=float(df.attrs[MetadataNames.P_INDEX]),
                 f_e=float(df.attrs[MetadataNames.F_E]),
             ),
-            synchrotron_model=df.attrs[MetadataNames.SYNCHROTRON_MODEL],
+            switches=switches,
             distance=QuantityData.from_attrs(
                 df,
                 key=MetadataNames.DISTANCE_VALUE,
@@ -478,15 +488,23 @@ class ModelParameters:
 
     @property
     def f_factor(self):
-        return MaxwellJuttnerFactor.exact(self.theta)
+        if self.switches[SwitchKeys.EXACT_DIST_FACTORS]:
+            return MaxwellJuttnerFactor.exact(self.theta)
+        else:
+            return MaxwellJuttnerFactor.hot(self.theta)
 
     @property
     def g_factor(self):
-        return PowerlawDistributionFactor.exact(
-            p=self.powerlaw.p_index,
-            theta=self.theta,
-            gamma_min=self.gamma_min,
-        )
+        if self.switches[SwitchKeys.EXACT_DIST_FACTORS]:
+            return PowerlawDistributionFactor.exact(
+                p=self.powerlaw.p_index,
+                theta=self.theta,
+                gamma_min=self.gamma_min,
+            )
+        else:
+            return PowerlawDistributionFactor.hot(
+                theta=self.theta,
+            )
 
     @staticmethod
     def phi(
@@ -847,11 +865,8 @@ class SynchrotronPeak:
     fnu: u.Quantity
     lnu: u.Quantity
     model_index: NDArray[np.int64] | None = None
-    component: Literal["thermal", "total"] = "total"
 
     def __post_init__(self) -> None:
-        if self.component not in ("thermal", "total"):
-            raise ValueError(f"未対応のpeak成分です: {self.component}")
         model_index = (
             np.arange(self.xm.shape[0], dtype=np.int64).reshape(-1, 1)
             if self.model_index is None else np.asarray(self.model_index)
@@ -956,7 +971,6 @@ class SynchrotronPeak:
                     .to_numpy(dtype=np.float64).reshape(-1, 1),
                 unit=lnu_unit,
             ),
-            component=df.attrs.get(MetadataNames.PEAK_COMPONENT, "total"),
         )
 
     def to_df(
@@ -977,7 +991,6 @@ class SynchrotronPeak:
         df.attrs[MetadataNames.FNU_UNIT] = str(fnu_unit)
         df.attrs[MetadataNames.PHI_UNIT] = str(phi_unit)
         df.attrs[MetadataNames.LNU_UNIT] = str(lnu_unit)
-        df.attrs[MetadataNames.PEAK_COMPONENT] = self.component
         return df
 
 @dataclass(frozen=True,slots=True)
@@ -1009,22 +1022,16 @@ class SynchrotronResults:
             nu=nu,
         )
 
-    @property
-    def peak(self) -> SynchrotronPeak:
-        return self.peak_for("total")
-
-    def peak_for(
+    def peak(
         self,
-        component: Literal["thermal", "total"] = "total",
     ) -> SynchrotronPeak:
-        if component == "thermal":
+        thermal_only = self.model_params.switches[SwitchKeys.THERMAL_ONLY]
+        if thermal_only:
             fnu = self.fnu_obsframe.thermal_only
             lnu = self.lnu.thermal_quantity
-        elif component == "total":
+        else :
             fnu = self.fnu_obsframe.total
             lnu = self.lnu.total_quantity
-        else:
-            raise ValueError(f"未対応のpeak成分です: {component}")
 
         column_index = np.argmax(fnu.value, axis=1)[:, np.newaxis]
         row_index = np.arange(self.xm.shape[0])[:, np.newaxis]
@@ -1051,7 +1058,6 @@ class SynchrotronResults:
             fnu=fnu_peak,
             lnu=lnu_peak,
             model_index=self.model_params.model_indices.reshape(-1, 1),
-            component=component,
         )
 
     def to_df(
@@ -1062,6 +1068,13 @@ class SynchrotronResults:
     ) -> pd.DataFrame:
         _, n_xm = self.xm.shape
         fnu = self.fnu_obsframe
+
+        dataset = {
+            ColumnNames.MODEL_INDEX: np.repeat(self.model_params.model_indices.ravel(), n_xm),
+            ColumnNames.XM: self.xm.ravel(),
+            PhiName.PHI: self.phi.to_value(phi_unit).ravel(),
+            FluxName.FNU_THERMAL: fnu.thermal_only.to_value(fnu_unit).ravel(),
+        }
 
         df = pd.DataFrame({
             ColumnNames.MODEL_INDEX: np.repeat(self.model_params.model_indices.ravel(), n_xm),

@@ -33,11 +33,13 @@ FILEPATH_OBSBG := $(call obs_file,bg.csv)
 
 # RUN ごとの計算結果
 FILEPATH_MODEL_PARAMETER_TABLE := $(call run_data,model_parameter_table.csv)
+FILEPATH_MODEL_PARAMETER_TABLE_POWERLAW := $(call run_data,model_parameter_table_powerlaw.csv)
 FILEPATH_PEAK_GRID := $(call run_data,peak_grid.csv)
 FILEPATH_MODEL_LIGHTCURVES := $(call run_data,model_lightcurves.csv)
 FILEPATH_CANDIDATE_MODELS := $(call run_data,candidate_models.csv)
 FILEPATH_CANDIDATE_LIGHTCURVES := $(call run_data,candidate_lightcurves.csv)
 FILEPATH_CANDIDATE_BINNED_LIGHTCURVES := $(call run_data,candidate_binned_lightcurves.csv)
+FILEPATH_POWERLAW_LIGHTUCURVES:= $(call run_data,powerlaw_lightcurves.csv)
 FILEPATH_CHI_SQUARED := $(call run_data,chi_squared.csv)
 FILEPATH_MINIMUM_CHI_SQUARED := $(call run_data,minimum_chi_squared.csv)
 
@@ -119,6 +121,17 @@ $(FILEPATH_CHEVALIER_PDF): \
 		$(ARGS_OUTPUT)
 
 #=== datafiles ===#
+powerlaw_lightcurves: $(FILEPATH_MODEL_PARAMETER_TABLE_POWERLAW)
+powerlaw_table: $(FILEPATH_MODEL_PARAMETER_TABLE_POWERLAW)
+$(FILEPATH_MODEL_PARAMETER_TABLE_POWERLAW): \
+	$(FILEPATH_INPUT) \
+	$(FILEPATH_MINIMUM_CHI_SQUARED) \
+	scripts/model_parameter_table_powerlaw.py
+	$(PYTHON) -m scripts.model_parameter_table_powerlaw \
+		$(ARGS_INPUT) \
+		--minimum_chi_squared $(FILEPATH_CHI_SQUARED) \
+		$(ARGS_OUTPUT)
+
 min_chi2: $(FILEPATH_MINIMUM_CHI_SQUARED)
 $(FILEPATH_MINIMUM_CHI_SQUARED): \
 	$(FILEPATH_INPUT) \

@@ -22,9 +22,6 @@ from module.mydataclasses import (
 )
 from enum import StrEnum, auto
 
-class SwitchKeys(StrEnum):
-    DISTRIBUTION_FACTORS = auto()
-
 @dataclass(frozen=True,slots=True)
 class DistanceData(QuantityData):
     distance_value: float
@@ -118,17 +115,11 @@ class PowerlawSensitivity:
     f_es: FloatVectorSpace
 
 @dataclass(frozen=True)
-class WorkFlows:
-    powerlaw_sensitivity: PowerlawSensitivity
-
-@dataclass(frozen=True)
 class GeneralInputs(YAMLReadable):
     units: Units
     model_parameters: models.InputParametersRaw
     candidate_models_selection: CandidateModelsSelection
     model_lightcurves: ModelLightcurveConfig
-    chi2: Chi2Configure
-    swiches: dict[str,bool]
+    chi_squared: Chi2Configure
     burster_property: ObservedBursterProperty
-    workflows: WorkFlows
-
+    powerlaw_sensitivity: PowerlawSensitivity

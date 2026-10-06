@@ -18,7 +18,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    conf_chi2 = GeneralInputs.from_yaml(args.input).chi2
+    conf_chi2 = GeneralInputs.from_yaml(args.input).chi_squared
     longdf_binnedlc = LongformatDataFrame.read_from(args.candidate_binned_lightcurves)
     binned_lcs = longdf_binnedlc.parse(ColumnNames.NU)
     obslc_long = LongformatLightcurve.from_csv(args.obslc)

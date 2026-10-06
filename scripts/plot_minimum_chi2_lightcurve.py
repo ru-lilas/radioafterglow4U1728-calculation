@@ -10,7 +10,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 from module import calculation_lightcurve as clc
 from module import plot_utils
-from module.models import ColumnNames, FluxName, MetadataNames, ModelParameters
+from module.models import ColumnNames, FluxName, MetadataNames, ModelParameters, SwitchKeys
 from module.mydataclasses import LongformatDataFrame, QuantityArray1D, QuantityData
 from module.observation import LongformatLightcurve
 from module.utils import FileReader
@@ -132,20 +132,40 @@ def main() -> None:
             )
 
             # continuous lightcurve
-            continuous_lc = clc.ContinuousLightcurve(
-                model_index=model_index,
-                nu=nu,
-                t=QuantityArray1D.from_df(
-                    df_continuous_plot,
-                    ColumnNames.T,
-                    unit_key=MetadataNames.T_UNIT
-                ),
-                fnu_net=QuantityArray1D.from_df(
-                    df_continuous_plot,
-                    FluxName.FNU_TOTAL,
-                    unit_key=MetadataNames.FNU_UNIT
+            thermal_only = model_parameters.switches[SwitchKeys.THERMAL_ONLY]
+            if thermal_only:
+                syn_model_str = "thermal"
+                continuous_lc = clc.ContinuousLightcurve(
+                    model_index=model_index,
+                    nu=nu,
+                    t=QuantityArray1D.from_df(
+                        df_continuous_plot,
+                        ColumnNames.T,
+                        unit_key=MetadataNames.T_UNIT
+                    ),
+                    fnu_net=QuantityArray1D.from_df(
+                        df_continuous_plot,
+                        FluxName.FNU_THERMAL,
+                        unit_key=MetadataNames.FNU_UNIT
+                    )
                 )
-            )
+            else:
+                syn_model_str = "thermal+powerlaw"
+                continuous_lc = clc.ContinuousLightcurve(
+                    model_index=model_index,
+                    nu=nu,
+                    t=QuantityArray1D.from_df(
+                        df_continuous_plot,
+                        ColumnNames.T,
+                        unit_key=MetadataNames.T_UNIT
+                    ),
+                    fnu_net=QuantityArray1D.from_df(
+                        df_continuous_plot,
+                        FluxName.FNU_TOTAL,
+                        unit_key=MetadataNames.FNU_UNIT
+                    )
+                )
+            
             plotter.line(
                 x=continuous_lc.t.to_value_in(x_unit),
                 y=continuous_lc.fnu_with_bg(lc_obs.fnu_background.index(0)).to_value_in(y_unit),
@@ -168,12 +188,6 @@ def main() -> None:
             strings: list[str] = []
 
             # synchrotron components
-            if model_parameters.synchrotron_model == "total":
-                syn_model_str = "thermal+powerlaw"
-            elif model_parameters.synchrotron_model == "thermal":
-                syn_model_str = "thermal only"
-            else:
-                syn_model_str = model_parameters.synchrotron_model
             plotter.text(
                 x=0.98,y=0.98,
                 label=syn_model_str,
@@ -197,3 +211,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

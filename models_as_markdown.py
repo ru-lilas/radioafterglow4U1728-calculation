@@ -3,7 +3,7 @@
 例:
     python index_to_markdown.py
     python index_to_markdown.py --input data/index.csv --output reports/runs.md
-    python index_to_markdown.py --compare eps_e
+    python index_to_markdown.py --compare f_e
 
 端末表示にはrichが必要。--output指定時はMarkdownも保存する。
 端末ではページ送りで表示する（--no-pagerで無効化）。
@@ -41,7 +41,7 @@ GROUPS = {
         "distance": "距離",
         "distance_unit": "距離の単位",
         "p_index": "power-law指数 p_index",
-        "eps_e": "power-law電子のエネルギー比 eps_e",
+        "f_e": "power-law電子のエネルギー比 f_e",
     },
     "パラメータ格子": {
         "phi_th_start": "phi_th: start",
@@ -123,14 +123,14 @@ def frequencies(row: dict[str, str]) -> str:
     return f"{value} {row.get('nu_unit', '')}".strip()
 
 
-SUMMARY_HEADERS = ["run", "eps_th", "eps_b", "p_index", "eps_e", "観測周波数", "評価時間窓"]
+SUMMARY_HEADERS = ["run", "eps_th", "eps_b", "p_index", "f_e", "観測周波数", "評価時間窓"]
 
 
 def summary_rows(rows: list[dict[str, str]]) -> list[list[str]]:
     return [
         [row.get("run_name") or row.get("run_id", ""),
          row.get("eps_th", ""), row.get("eps_b", ""), row.get("p_index", ""),
-         row.get("eps_e", ""), frequencies(row), timewindow(row)]
+         row.get("f_e", ""), frequencies(row), timewindow(row)]
         for row in rows
     ]
 
@@ -144,7 +144,7 @@ def detail_rows(fields: list[str], row: dict[str, str]) -> list[list[str]]:
                     "theta0_num": "num", "theta0_scale": "scale"}, None),
         ("molecular_weight", {"mu": "mu", "mu_e": "mu_e"}, None),
         ("distance", {"distance": ""}, "distance_unit"),
-        ("powerlaw", {"p_index": "p_index", "eps_e": "eps_e"}, None),
+        ("powerlaw", {"p_index": "p_index", "f_e": "f_e"}, None),
         ("observation_frequencies", {"observation_frequencies": ""}, "nu_unit"),
         ("timewindow", {"time_min": "min", "time_max": "max"}, "time_unit"),
     ]
@@ -303,7 +303,7 @@ def main() -> None:
     parser.add_argument("--input", type=Path, default=Path("data/index.csv"))
     parser.add_argument("--output", type=Path, help="指定時は表の内容をMarkdownにも保存")
     parser.add_argument("--no-pager", action="store_true", help="ページ送りせず通常出力")
-    parser.add_argument("--compare", metavar="COLUMN", help="指定列だけが異なるrunを対照比較（例: eps_e）")
+    parser.add_argument("--compare", metavar="COLUMN", help="指定列だけが異なるrunを対照比較（例: f_e）")
     args = parser.parse_args()
     output = args.output
     try:

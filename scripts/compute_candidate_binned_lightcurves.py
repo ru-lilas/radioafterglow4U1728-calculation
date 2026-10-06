@@ -48,7 +48,7 @@ def parse_args()->argparse.Namespace:
 
 def main():
     args = parse_args()
-    conf_chi2 = GeneralInputs.from_yaml(args.input).chi2
+    conf_chi2 = GeneralInputs.from_yaml(args.input).chi_squared
     longdf_cand = LongformatDataFrame.read_from(args.candidate_lightcurves)
     dfs_cand_all = longdf_cand.parse(ColumnNames.NU)
     obslc_long = LongformatLightcurve.from_csv(args.obslc)

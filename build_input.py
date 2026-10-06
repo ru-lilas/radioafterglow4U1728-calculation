@@ -4,6 +4,7 @@ import argparse
 import csv
 import hashlib
 import json
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -30,7 +31,25 @@ def load_yaml(path: Path) -> CommentedMap:
             f"YAML root must be a mapping, got {type(config).__name__}"
         )
 
+    seen: set[int] = set()
+
+    def preserve_anchors(value: Any) -> None:
+        if id(value) in seen:
+            return
+        seen.add(id(value))
+        anchor = getattr(value, "anchor", None)
+        if anchor is not None and anchor.value:
+            value.yaml_set_anchor(anchor.value, always_dump=True)
+        if isinstance(value, dict):
+            for item in value.values():
+                preserve_anchors(item)
+        elif isinstance(value, list):
+            for item in value:
+                preserve_anchors(item)
+
+    preserve_anchors(config)
     return config
+
 
 @dataclass(frozen=True, slots=True)
 class ConfigRow:
@@ -38,6 +57,7 @@ class ConfigRow:
     name: str
     key_path: str
     value: Any
+
 
 def build_config_rows(config: CommentedMap) -> list[ConfigRow]:
     """格子設定・値と単位・関連するスカラーを1行にまとめる。"""
@@ -66,6 +86,7 @@ def build_config_rows(config: CommentedMap) -> list[ConfigRow]:
         else:
             add(str(group), str(group), str(group), values)
     return rows
+
 
 def format_table_value(value: Any) -> tuple[str, str]:
     unit = "—"
@@ -109,6 +130,7 @@ def print_config_table(config: CommentedMap) -> list[ConfigRow]:
     Console().print(table)
     return rows
 
+
 def editable_paths(value: Any, path: str) -> list[str]:
     """複合パラメータの編集先を列挙。周波数のリストはまとめて編集する。"""
     if isinstance(value, dict):
@@ -118,6 +140,7 @@ def editable_paths(value: Any, path: str) -> list[str]:
             for leaf in editable_paths(item, f"{path}.{key}")
         ]
     return [path]
+
 
 def get_nested_value(
     config: CommentedMap,
@@ -146,13 +169,18 @@ def set_nested_value(
     key_path: str,
     value: Any,
 ) -> None:
-    parent_path, separator, final_key = key_path.rpartition(".")
-    parent = get_nested_value(config, parent_path) if separator else config
-    if not isinstance(parent, dict):
-        raise KeyError(f"Cannot set {key_path!r}: parent is not a mapping")
-    if final_key not in parent:
-        raise KeyError(f"Key not found: {key_path}")
-    parent[final_key] = value
+    # 不正なパスでは、継承値のコピーも含めて設定を変更しない。
+    get_nested_value(config, key_path)
+    keys = key_path.split(".")
+    parent: Any = config
+    for key in keys[:-1]:
+        if isinstance(parent, CommentedMap):
+            explicit_keys = {name for name, _ in parent.non_merged_items()}
+            if key not in explicit_keys:
+                # <<で継承したマッピングを編集するときは局所的な上書きにする。
+                parent[key] = deepcopy(parent[key])
+        parent = parent[key]
+    parent[keys[-1]] = value
 
 
 def parse_value(text: str) -> Any:
@@ -342,12 +370,22 @@ def extract_index_values(
         "distance_unit": "model_parameters.distance.unit",
         "p_index": "model_parameters.shock.powerlaw.p_index",
         "f_e": "model_parameters.shock.powerlaw.f_e",
+        "thermal_only": "model_parameters.switches.thermal_only",
+        "exact_dist_factors": "model_parameters.switches.exact_dist_factors",
         "observation_frequencies": "candidate_models_selection.observation_frequencies.values",
         "nu_unit": "candidate_models_selection.observation_frequencies.unit",
-        "time_min": "chi2.timewindow.min",
-        "time_max": "chi2.timewindow.max",
-        "time_unit": "chi2.timewindow.unit",
+        "time_min": "chi_squared.timewindow.min",
+        "time_max": "chi_squared.timewindow.max",
+        "time_unit": "chi_squared.timewindow.unit",
         "burster_name": "burster_property.burster_name",
+        "p_indices_start": "powerlaw_sensitivity.p_indices.start",
+        "p_indices_stop": "powerlaw_sensitivity.p_indices.stop",
+        "p_indices_num": "powerlaw_sensitivity.p_indices.num",
+        "p_indices_scale": "powerlaw_sensitivity.p_indices.scale",
+        "f_es_start": "powerlaw_sensitivity.f_es.start",
+        "f_es_stop": "powerlaw_sensitivity.f_es.stop",
+        "f_es_num": "powerlaw_sensitivity.f_es.num",
+        "f_es_scale": "powerlaw_sensitivity.f_es.scale",
     }
     values = {
         name: get_nested_value(config, path)
@@ -542,6 +580,7 @@ def main() -> None:
         parser.exit(1, f"エラー: {error}\n")
 
     print(f"生成しました: {run_dir}")
+
 
 if __name__ == "__main__":
     main()
