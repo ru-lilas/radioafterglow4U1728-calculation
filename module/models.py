@@ -51,6 +51,9 @@ class DimensionlessSynchrotronKeys(StrEnum):
     ZETA_THERMAL = auto()
     ZETA_POWERLAW = auto()
     ZETA_TOTAL = auto()
+    ETA_THERMAL = auto()
+    ETA_POWERLAW = auto()
+    ETA_TOTAL = auto()
 
 class MetadataNames(StrEnum):
     PHI_TH = auto()
@@ -1109,6 +1112,9 @@ class SynchrotronResults:
             DimensionlessSynchrotronKeys.ZETA_THERMAL: jnu.zeta.thermal.ravel(),
             DimensionlessSynchrotronKeys.ZETA_POWERLAW: jnu.zeta.powerlaw.ravel(),
             DimensionlessSynchrotronKeys.ZETA_TOTAL: jnu.zeta.total.ravel(),
+            DimensionlessSynchrotronKeys.ETA_THERMAL: self.alpha_nu.eta.thermal.ravel(),
+            DimensionlessSynchrotronKeys.ETA_POWERLAW: self.alpha_nu.eta.powerlaw.ravel(),
+            DimensionlessSynchrotronKeys.ETA_TOTAL: self.alpha_nu.eta.total.ravel(),
         })
         df.attrs[MetadataNames.FNU_UNIT] = str(fnu_unit)
         df.attrs[MetadataNames.PHI_UNIT] = str(phi_unit)

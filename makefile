@@ -47,6 +47,7 @@ FILEPATH_MINIMUM_CHI_SQUARED := $(call run_data,minimum_chi_squared.csv)
 FILEPATH_MINIMUM_CHI2_LC_PDF := $(call run_fig,minimum_chi2_lightcurve.pdf)
 FILEPATH_CHEVALIER_PDF := $(call run_fig,chevalier_diagram.pdf)
 FILEPATH_CHEVALIER_COLORMAP_PDF := $(call run_fig,chevalier_colormap.pdf)
+FILEPATH_DIMENSIONLESS_SYNCHROTRONS_PDF:= $(call run_fig,dimensionless_synchrotrons.pdf)
 
 # 共通CLI引数（$<・$@はレシピ実行時に展開するため = を使う）
 ARGS_INPUT = --input $<
@@ -69,8 +70,21 @@ all: view-best-lc view-chevalier
 view-best-lc: $(FILEPATH_MINIMUM_CHI2_LC_PDF)
 	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
 
+view-dimless-syn: $(FILEPATH_DIMENSIONLESS_SYNCHROTRONS_PDF)
+	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
+
 view-pl-lc: $(FILEPATH_POWERLAW_LIGHTUCURVES_PDF)
 	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
+
+$(FILEPATH_DIMENSIONLESS_SYNCHROTRONS_PDF): \
+	$(FILEPATH_POWERLAW_LIGHTUCURVES) \
+	$(PLOTCONFIGDIR)/dimensionless_synchrotrons.yaml \
+	scripts/plot_dimensionless_synchrotrons.py
+	$(PYTHON) -m scripts.plot_dimensionless_synchrotrons\
+		--plotconfig $(PLOTCONFIGDIR)/dimensionless_synchrotrons.yaml \
+		$(ARGS_POWERLAW_LIGHTCURVES) \
+		$(ARGS_MODEL_PARAMETER_TABLE_POWERLAW) \
+		$(ARGS_OUTPUT)
 
 $(FILEPATH_POWERLAW_LIGHTUCURVES_PDF): \
 	$(FILEPATH_POWERLAW_LIGHTUCURVES) \
