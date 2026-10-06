@@ -121,7 +121,21 @@ $(FILEPATH_CHEVALIER_PDF): \
 		$(ARGS_OUTPUT)
 
 #=== datafiles ===#
-powerlaw_lightcurves: $(FILEPATH_MODEL_PARAMETER_TABLE_POWERLAW)
+powerlaw_lightcurves: $(FILEPATH_POWERLAW_LIGHTUCURVES)
+$(FILEPATH_POWERLAW_LIGHTUCURVES): \
+	$(FILEPATH_INPUT) \
+	$(FILEPATH_MODEL_PARAMETER_TABLE_POWERLAW) \
+	$(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE) \
+	$(FILEPATH_MODEL_PARAMETER_TABLE_POWERLAW) \
+	$(FILEPATH_MODEL_PARAMETER_TABLE) \
+	scripts/compute_lightcurves_powerlaw.py
+	$(PYTHON) -m scripts.compute_lightcurves_powerlaw \
+		$(ARGS_INPUT) \
+		--integral_table $(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE) \
+		--model_parameter_table_powerlaw $(FILEPATH_MODEL_PARAMETER_TABLE_POWERLAW) \
+		--model_parameter_table $(FILEPATH_MODEL_PARAMETER_TABLE) \
+		$(ARGS_OUTPUT)
+
 powerlaw_table: $(FILEPATH_MODEL_PARAMETER_TABLE_POWERLAW)
 $(FILEPATH_MODEL_PARAMETER_TABLE_POWERLAW): \
 	$(FILEPATH_INPUT) \
@@ -129,7 +143,7 @@ $(FILEPATH_MODEL_PARAMETER_TABLE_POWERLAW): \
 	scripts/model_parameter_table_powerlaw.py
 	$(PYTHON) -m scripts.model_parameter_table_powerlaw \
 		$(ARGS_INPUT) \
-		--minimum_chi_squared $(FILEPATH_CHI_SQUARED) \
+		--minimum_chi_squared $(FILEPATH_MINIMUM_CHI_SQUARED) \
 		$(ARGS_OUTPUT)
 
 min_chi2: $(FILEPATH_MINIMUM_CHI_SQUARED)

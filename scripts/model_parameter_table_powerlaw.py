@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 
 from module.inputs_as_dataclass import GeneralInputs
+from module.models import ColumnNames
 from module.utils import FileReader, FileWriter
 
 
@@ -48,7 +49,7 @@ def build_parameter_table(
         raise ValueError("thermal model_indexには整数値が必要です")
     minimum["model_index"] = indices.astype(np.int64)
     minimum = minimum.rename(columns={
-        "model_index": "thermal_model_index",
+        ColumnNames.MODEL_INDEX: ColumnNames.THERMAL_MODEL_INDEX,
         "chi_squared": "thermal_chi_squared",
         "ndof": "thermal_ndof",
     })
@@ -65,10 +66,12 @@ def build_parameter_table(
         raise ValueError("power-lawの探索格子が空です")
 
     df = minimum.merge(powerlaw, how="cross")
-    df.insert(0, "model_index", np.arange(len(df), dtype=np.int64))
+    df.insert(0, ColumnNames.POWELAW_SUBMODEL_INDEX, np.arange(len(df), dtype=np.int64))
 
     df = df.loc[:, [
-        "model_index", "thermal_model_index", "nu", "p_index", "f_e",
+        ColumnNames.POWELAW_SUBMODEL_INDEX,
+        ColumnNames.THERMAL_MODEL_INDEX,
+        "nu", "p_index", "f_e",
         "thermal_chi_squared", "thermal_ndof",
     ]]
     df.attrs = {"nu_unit": df_minimum.attrs["nu_unit"]}

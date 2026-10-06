@@ -67,6 +67,7 @@ class MetadataNames(StrEnum):
     NU_UNIT = auto()
     T_UNIT = auto()
     SYNCHROTRON_MODEL = auto()
+    THERMAL_MODEL_INDEX = auto()
 
 class FluxName(StrEnum):
     FNU_THERMAL = auto()
@@ -82,6 +83,8 @@ class SwitchKeys(StrEnum):
     EXACT_DIST_FACTORS = auto()
 
 class ColumnNames(StrEnum):
+    THERMAL_MODEL_INDEX = auto()
+    POWELAW_SUBMODEL_INDEX = auto()
     CANDIDATE_MODEL_INDEX = auto()
     MODEL_INDEX = auto()
     PEAK_COLUMN_INDEX = auto()
@@ -1065,6 +1068,7 @@ class SynchrotronResults:
         *,
         fnu_unit: str = DefaultUnits.fnu,
         phi_unit: str = DefaultUnits.phi,
+        index_column_name: str = ColumnNames.MODEL_INDEX
     ) -> pd.DataFrame:
         _, n_xm = self.xm.shape
         fnu = self.fnu_obsframe
@@ -1077,7 +1081,7 @@ class SynchrotronResults:
         }
 
         df = pd.DataFrame({
-            ColumnNames.MODEL_INDEX: np.repeat(self.model_params.model_indices.ravel(), n_xm),
+            index_column_name: np.repeat(self.model_params.model_indices.ravel(), n_xm),
             ColumnNames.XM: self.xm.ravel(),
             PhiName.PHI: self.phi.to_value(phi_unit).ravel(),
             FluxName.FNU_THERMAL: fnu.thermal_only.to_value(fnu_unit).ravel(),
@@ -1165,11 +1169,13 @@ class SynchrotronLightcurves(SynchrotronResults):
         phi_unit: str = DefaultUnits.phi,
         nu_unit: str = DefaultUnits.nu,
         t_unit: str = DefaultUnits.t,
+        index_column_name: str = ColumnNames.MODEL_INDEX,
     ) -> pd.DataFrame:
         df = SynchrotronResults.to_df(
             self,
             fnu_unit=fnu_unit,
             phi_unit=phi_unit,
+            index_column_name=index_column_name
         )
         df[ColumnNames.NU] = self.nu.value_in(nu_unit)
         df[ColumnNames.T] = self.t.to_value(t_unit).ravel()
