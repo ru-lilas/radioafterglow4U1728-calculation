@@ -22,7 +22,7 @@ layout:
     y:
       - &flux_axis
         scale: "linear"
-        limits: [0.5,1.5]
+        limits: [0.7,1.5]
         label:
           prefix: 'Radio Flux Density'
           unit: &y_unit "mJy"

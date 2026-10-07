@@ -54,6 +54,12 @@ class DimensionlessSynchrotronKeys(StrEnum):
     ETA_THERMAL = auto()
     ETA_POWERLAW = auto()
     ETA_TOTAL = auto()
+    SNU_THERMAL = auto()
+    SNU_POWERLAW = auto()
+    SNU_TOTAL = auto()
+    LAMBDA_THERMAL = auto()
+    LAMBDA_POWERLAW = auto()
+    LAMBDA_TOTAL = auto()
 
 class MetadataNames(StrEnum):
     PHI_TH = auto()
@@ -768,7 +774,28 @@ class SynchrotronQuantities:
     total: u.Quantity
 
 @dataclass(frozen=True,slots=True)
-class SourceFunction(SynchrotronComponents):
+class SourceFunctionFrequencyDependence:
+    """規格化係数を除いたsource functionの周波数依存項zeta/eta。"""
+    thermal: NDArray64
+    powerlaw: NDArray64
+    total: NDArray64
+
+    @classmethod
+    def compute_from(
+        cls,
+        zeta: EmissivityFequencyDependenceTerm,
+        eta: AbsorptionCoefficientFrequencyDependence,
+    )->Self:
+        return cls(
+            thermal=zeta.thermal/eta.thermal,
+            powerlaw=zeta.powerlaw/eta.powerlaw,
+            total=zeta.total/eta.total,
+        )
+
+@dataclass(frozen=True,slots=True)
+class SourceFunction:
+    norm: NDArray64
+    dependence: SourceFunctionFrequencyDependence
 
     @classmethod
     def compute_from(
@@ -776,14 +803,25 @@ class SourceFunction(SynchrotronComponents):
         jnu: Emissivity,
         anu: AbsorptionCoefficient
     )->Self:
-        norm_s = jnu.norm/anu.norm
-        zeta = jnu.zeta
-        eta = anu.eta
         return cls(
-            thermal_only = norm_s*zeta.thermal/eta.thermal,
-            powerlaw_only = norm_s*zeta.powerlaw/eta.powerlaw,
-            total = norm_s*(zeta.total)/(eta.total)
+            norm=jnu.norm/anu.norm,
+            dependence=SourceFunctionFrequencyDependence.compute_from(
+                zeta=jnu.zeta,
+                eta=anu.eta,
+            ),
         )
+
+    @property
+    def thermal_only(self)->NDArray64:
+        return self.norm*self.dependence.thermal
+
+    @property
+    def powerlaw_only(self)->NDArray64:
+        return self.norm*self.dependence.powerlaw
+
+    @property
+    def total(self)->NDArray64:
+        return self.norm*self.dependence.total
 
 @dataclass(frozen=True,slots=True)
 class OpticalDepth(SynchrotronComponents):
@@ -804,7 +842,27 @@ class OpticalDepth(SynchrotronComponents):
         )
 
 @dataclass(frozen=True,slots=True)
-class SpecificLuminosity(SynchrotronComponents):
+class SpecificLuminosityFrequencyDependence:
+    thermal: NDArray64
+    powerlaw: NDArray64
+    total: NDArray64
+
+    @classmethod
+    def compute_from(
+        cls,
+        sigma: SourceFunctionFrequencyDependence,
+        tau: OpticalDepth
+    )->Self:
+        return cls(
+            thermal=sigma.thermal*(-np.expm1(-tau.thermal_only)),
+            powerlaw=sigma.powerlaw*(-np.expm1(-tau.powerlaw_only)),
+            total=sigma.total*(-np.expm1(-tau.total)),
+        )
+
+@dataclass(frozen=True,slots=True)
+class SpecificLuminosity:
+    norm: NDArray64
+    dependence: SpecificLuminosityFrequencyDependence
 
     @classmethod
     def compute_from(
@@ -813,12 +871,25 @@ class SpecificLuminosity(SynchrotronComponents):
         snu: SourceFunction,
         tau: OpticalDepth
     )->Self:
-        norm_l = (2.0*np.pi*norm_r)**2
         return cls(
-            thermal_only = norm_l*snu.thermal_only*(-np.expm1(-tau.thermal_only)),
-            powerlaw_only = norm_l*snu.powerlaw_only*(-np.expm1(-tau.powerlaw_only)),
-            total = norm_l*snu.total*(-np.expm1(-tau.total)),
+            norm=(2.0*np.pi*norm_r)**2*snu.norm,
+            dependence=SpecificLuminosityFrequencyDependence.compute_from(
+                sigma=snu.dependence,
+                tau=tau,
+            ),
         )
+
+    @property
+    def thermal_only(self)->NDArray64:
+        return self.norm*self.dependence.thermal
+
+    @property
+    def powerlaw_only(self)->NDArray64:
+        return self.norm*self.dependence.powerlaw
+
+    @property
+    def total(self)->NDArray64:
+        return self.norm*self.dependence.total
 
     @staticmethod
     def as_quantity(lambda_syn:NDArray64)->u.Quantity:
@@ -1023,6 +1094,7 @@ class SynchrotronResults:
     xm: NDArray64
     j_nu: Emissivity
     alpha_nu: AbsorptionCoefficient
+    snu: SourceFunction
     tau: OpticalDepth
     lnu: SpecificLuminosity
     fnu_obsframe: ObserverframeSpecificFlux
@@ -1040,6 +1112,7 @@ class SynchrotronResults:
             xm=self.xm,
             j_nu=self.j_nu,
             alpha_nu=self.alpha_nu,
+            snu=self.snu,
             tau=self.tau,
             lnu=self.lnu,
             fnu_obsframe=self.fnu_obsframe,
@@ -1115,6 +1188,12 @@ class SynchrotronResults:
             DimensionlessSynchrotronKeys.ETA_THERMAL: self.alpha_nu.eta.thermal.ravel(),
             DimensionlessSynchrotronKeys.ETA_POWERLAW: self.alpha_nu.eta.powerlaw.ravel(),
             DimensionlessSynchrotronKeys.ETA_TOTAL: self.alpha_nu.eta.total.ravel(),
+            DimensionlessSynchrotronKeys.SNU_THERMAL: self.snu.dependence.thermal.ravel(),
+            DimensionlessSynchrotronKeys.SNU_POWERLAW: self.snu.dependence.powerlaw.ravel(),
+            DimensionlessSynchrotronKeys.SNU_TOTAL: self.snu.dependence.total.ravel(),
+            DimensionlessSynchrotronKeys.LAMBDA_THERMAL: self.lnu.dependence.thermal.ravel(),
+            DimensionlessSynchrotronKeys.LAMBDA_POWERLAW: self.lnu.dependence.powerlaw.ravel(),
+            DimensionlessSynchrotronKeys.LAMBDA_TOTAL: self.lnu.dependence.total.ravel(),
         })
         df.attrs[MetadataNames.FNU_UNIT] = str(fnu_unit)
         df.attrs[MetadataNames.PHI_UNIT] = str(phi_unit)
@@ -1177,6 +1256,7 @@ class SynchrotronResults:
             xm=xm_grid,
             j_nu=jnu,
             alpha_nu=alpha_nu,
+            snu=snu,
             tau=tau,
             lnu=lnu,
             fnu_obsframe=fnu_obsframe

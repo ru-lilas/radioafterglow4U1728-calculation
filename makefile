@@ -266,6 +266,7 @@ $(FILEPATH_MODEL_LIGHTCURVES): \
 modeltable: $(FILEPATH_MODEL_PARAMETER_TABLE)
 $(FILEPATH_MODEL_PARAMETER_TABLE): \
 	$(FILEPATH_INPUT) \
+	module/models.py \
 	scripts/build_model_parameter_table.py
 	$(PYTHON) -m scripts.build_model_parameter_table \
 		$< \

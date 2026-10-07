@@ -1,11 +1,11 @@
 layout:
   figure:
-    figsize: [32,24]
+    figsize: [48,24]
     dpi: 100
     layout_engine: constrained
   subplots:
-    nrows: 2
-    ncols: 2
+    nrows: 4
+    ncols: 6
     sharex: col
     sharey: row
     hide_shared_labels: true
@@ -13,11 +13,15 @@ layout:
     x:
       - &time_axis
         scale: log
-        limits: [1.0e-2,1.0e+03]
+        limits: [1.0e-1,1.0e+03]
         label:
           prefix: '$x_\mathrm{M}$'
           unit: &x_unit ""
           fontsize: 32
+      - *time_axis
+      - *time_axis
+      - *time_axis
+      - *time_axis
       - *time_axis
     y:
       - &flux_axis
@@ -32,6 +36,20 @@ layout:
         limits: [1.0e-3,1.0e+02]
         label:
           prefix: '$\eta$'
+          unit: *y_unit
+          fontsize: 32
+      - &source_function_axis
+        scale: log
+        limits: [1.0e-2,1.0e+06]
+        label:
+          prefix: '$\zeta/\eta$'
+          unit: *y_unit
+          fontsize: 32
+      - &lambda_axis
+        scale: log
+        limits: [1.0e-02,1.0e+06]
+        label:
+          prefix: '$\Lambda_\mathrm{syn}$'
           unit: *y_unit
           fontsize: 32
     ticks:
@@ -130,13 +148,13 @@ components:
     style:
       colors: ["#000000"]
       linewidth: 2.0
-      linestyle: ":"
+      linestyle: "-"
   powerlaw:
     type: line
     style:
       colors: ["#000000"]
       linewidth: 2.0
-      linestyle: "--"
+      linestyle: "-"
   total:
     type: line
     style:
@@ -164,11 +182,3 @@ components:
       label:
         <<: *ColorbarLabel
         prefix: "$f_e$"
-  fiducial_parameter:
-    type: text
-    legend: false
-    style:
-      color: "#000000"
-      fontsize: 36
-      ha: right
-      va: top
