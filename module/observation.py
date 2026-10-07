@@ -6,6 +6,7 @@ from matplotlib.lines import Line2D
 from matplotlib import patches as pltpatch
 from numpy.typing import NDArray
 from module import dataframe_processors, dataframe_utils, mystatistics
+from module.models import ColumnNames, MetadataNames
 from module.mydataclasses import GridRange, QuantityArray1D, QuantityData,QuantityArray
 from module.types import BoolGrid, FloatArray, FloatGrid
 import numpy as np
@@ -112,6 +113,32 @@ class Binning:
     t_left: FloatArray
     t_right: FloatArray
     t_unit: str
+
+    def to_df(
+        self
+    )->pd.DataFrame:
+        df = pd.DataFrame({
+            ColumnNames.T_LEFT: self.t_left,
+            ColumnNames.T_CENTER: self.t_center,
+            ColumnNames.T_RIGHT: self.t_right,
+        })
+        df.attrs[MetadataNames.T_UNIT] = self.t_unit
+        df.attrs[MetadataNames.BIN_WIDTH] = self.bin_width
+        return df
+
+    @classmethod
+    def from_df(
+        cls,
+        df:pd.DataFrame
+    )->Self:
+        attrs = df.attrs
+        return cls(
+            bin_width=attrs[MetadataNames.BIN_WIDTH],
+            t_unit = attrs[MetadataNames.T_UNIT],
+            t_center = df[ColumnNames.T_CENTER].to_numpy(),
+            t_right = df[ColumnNames.T_RIGHT].to_numpy(),
+            t_left = df[ColumnNames.T_LEFT].to_numpy(),
+        )
 
 @dataclass(frozen=True, slots=True)
 class ObservedLightcurve:

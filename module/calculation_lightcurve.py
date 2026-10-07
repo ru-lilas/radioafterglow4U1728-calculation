@@ -202,7 +202,6 @@ class BinnedLightcurve:
 
     def to_df(
         self,
-        fnu_bg: QuantityArray1D,
         *,
         nu_unit: str = DefaultUnits.nu,
         t_unit: str = DefaultUnits.t,
@@ -214,7 +213,6 @@ class BinnedLightcurve:
             models.ColumnNames.T_CENTER: self.t_center.to_value_in(t_unit),
             models.ColumnNames.T_RIGHT: self.t_right.to_value_in(t_unit),
             models.ColumnNames.T_LEFT: self.t_left.to_value_in(t_unit),
-            models.FluxName.FNU_WITH_BG: self.fnu_with_bg(fnu_bg).to_value_in(fnu_unit),
         })
         df.attrs[MetadataNames.NU_UNIT] = nu_unit
         df.attrs[MetadataNames.FNU_UNIT] = fnu_unit

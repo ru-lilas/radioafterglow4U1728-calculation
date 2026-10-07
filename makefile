@@ -32,6 +32,7 @@ FILEPATH_OBSLC_TMP := $(call obs_file,obslc_tmp.csv)
 FILEPATH_OBSBG := $(call obs_file,bg.csv)
 
 # RUN ごとの計算結果
+FILEPATH_BINNING := $(call run_data,binning.csv)
 FILEPATH_MODEL_PARAMETER_TABLE := $(call run_data,model_parameter_table.csv)
 FILEPATH_MODEL_PARAMETER_TABLE_POWERLAW := $(call run_data,model_parameter_table_powerlaw.csv)
 FILEPATH_PEAK_GRID := $(call run_data,peak_grid.csv)
@@ -60,6 +61,8 @@ ARGS_PEAK_GRID = --peak_grid $(FILEPATH_PEAK_GRID)
 ARGS_CANDIDATE_LIGHTCURVES = --candidate_lightcurves $(FILEPATH_CANDIDATE_LIGHTCURVES)
 ARGS_CANDIDATE_BINNED_LIGHTCURVES = --candidate_binned_lightcurves $(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES)
 ARGS_POWERLAW_LIGHTCURVES = --powerlaw_lightcurves $(FILEPATH_POWERLAW_LIGHTUCURVES)
+ARGS_BINNING = --binning $(FILEPATH_BINNING)
+# ARGS_CONTINUOUS_LIGHTCURVE = --continuous_lightcurves $(FILEPATH_CONTINUOUS_LIGHTCURVES)
 
 .PHONY: all view-best-lc view-chevalier view-chevalier_cmp \
     chevaliercm chevalier min_chi2 chi2 lc_bin lc candidates \
@@ -206,12 +209,12 @@ lc_bin: $(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES)
 $(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES): \
 	$(FILEPATH_INPUT) \
 	$(FILEPATH_CANDIDATE_LIGHTCURVES) \
-	$(FILEPATH_OBSLC) \
-	scripts/compute_candidate_binned_lightcurves.py
-	$(PYTHON) -m scripts.compute_candidate_binned_lightcurves \
+	$(FILEPATH_BINNING) \
+	scripts/compute_binned_lightcurves.py
+	$(PYTHON) -m scripts.compute_binned_lightcurves \
 		$(ARGS_INPUT) \
-		$(ARGS_CANDIDATE_LIGHTCURVES) \
-		$(ARGS_OBSLC) \
+		--continuous_lightcurves $(FILEPATH_CANDIDATE_LIGHTCURVES) \
+		$(ARGS_BINNING) \
 		$(ARGS_OUTPUT)
 
 lc: $(FILEPATH_CANDIDATE_LIGHTCURVES)
@@ -280,6 +283,16 @@ $(FILEPATH_THERMAL_PEAK_TABLE): \
 	$(PYTHON) -m scripts.build_thermal_peak_table \
 		$(ARGS_INPUT) \
 		--synchrotron_function_numerical_table $(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE) \
+		$(ARGS_OUTPUT)
+
+binning: $(FILEPATH_BINNING)
+$(FILEPATH_BINNING): \
+	$(FILEPATH_INPUT) \
+	$(FILEPATH_OBSLC) \
+	scripts/build_binning.py
+	$(PYTHON) -m scripts.build_binning \
+		$(ARGS_INPUT) \
+		$(ARGS_OBSLC) \
 		$(ARGS_OUTPUT)
 
 $(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE): \
