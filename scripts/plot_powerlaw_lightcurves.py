@@ -205,7 +205,7 @@ def main() -> None:
                         df_binned_plot.attrs[ColumnNames.NU] = nu_value
                         df_binned_plot.attrs[ColumnNames.MODEL_INDEX] = thermal_model_index
                         fnu_bg = QuantityArray1D.from_quantity(lc_obs.fnu_background.quantity[:len(df_binned_plot)])
-                        binned_lc = BinnedLightcurveWithBackground.from_df(df_binned_plot,fnu_bg)
+                        binned_lc = BinnedLightcurveWithBackground.from_df(df_binned_plot,fnu_bg.index(0))
 
                         for submodel_index, df_model in df_group.groupby(
                             ColumnNames.POWERLAW_SUBMODEL_INDEX, sort=True

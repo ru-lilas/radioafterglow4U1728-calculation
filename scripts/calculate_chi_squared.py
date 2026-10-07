@@ -12,14 +12,14 @@ from module.utils import FileWriter
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    for name in ("input", "candidate_binned_lightcurves", "obslc", "output"):
+    for name in ("input", "binned_lightcurves", "obslc", "output"):
         parser.add_argument(f"--{name}", type=Path, required=True)
     return parser.parse_args()
 
 def main() -> None:
     args = parse_args()
     conf_chi2 = GeneralInputs.from_yaml(args.input).chi_squared
-    longdf_binnedlc = LongformatDataFrame.read_from(args.candidate_binned_lightcurves)
+    longdf_binnedlc = LongformatDataFrame.read_from(args.binned_lightcurves)
     binned_lcs = longdf_binnedlc.parse(ColumnNames.NU)
     obslc_long = LongformatLightcurve.from_csv(args.obslc)
     results: list[pd.Series] = []

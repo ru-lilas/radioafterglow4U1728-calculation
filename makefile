@@ -39,11 +39,12 @@ FILEPATH_PEAK_GRID := $(call run_data,peak_grid.csv)
 FILEPATH_MODEL_LIGHTCURVES := $(call run_data,model_lightcurves.csv)
 FILEPATH_CANDIDATE_MODELS := $(call run_data,candidate_models.csv)
 FILEPATH_CANDIDATE_LIGHTCURVES := $(call run_data,candidate_lightcurves.csv)
-FILEPATH_CANDIDATE_BINNED_LIGHTCURVES := $(call run_data,candidate_binned_lightcurves.csv)
+FILEPATH_BINNED_LIGHTCURVES := $(call run_data,binned_lightcurves.csv)
 FILEPATH_POWERLAW_LIGHTUCURVES:= $(call run_data,powerlaw_lightcurves.csv)
 FILEPATH_POWERLAW_LIGHTUCURVES_PDF:= $(call run_fig,powerlaw_lightcurves.pdf)
 FILEPATH_CHI_SQUARED := $(call run_data,chi_squared.csv)
 FILEPATH_MINIMUM_CHI_SQUARED := $(call run_data,minimum_chi_squared.csv)
+FILEPATH_CHEVALIER_BESTFIT_POINTS := $(call run_data,chevalier_bestfit_points.csv)
 
 FILEPATH_MINIMUM_CHI2_LC_PDF := $(call run_fig,minimum_chi2_lightcurve.pdf)
 FILEPATH_CHEVALIER_PDF := $(call run_fig,chevalier_diagram.pdf)
@@ -59,7 +60,7 @@ ARGS_MODEL_PARAMETER_TABLE = --model_parameter_table $(FILEPATH_MODEL_PARAMETER_
 ARGS_MODEL_PARAMETER_TABLE_POWERLAW = --model_parameter_table_powerlaw $(FILEPATH_MODEL_PARAMETER_TABLE_POWERLAW)
 ARGS_PEAK_GRID = --peak_grid $(FILEPATH_PEAK_GRID)
 ARGS_CANDIDATE_LIGHTCURVES = --candidate_lightcurves $(FILEPATH_CANDIDATE_LIGHTCURVES)
-ARGS_CANDIDATE_BINNED_LIGHTCURVES = --candidate_binned_lightcurves $(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES)
+ARGS_BINNED_LIGHTCURVES = --binned_lightcurves $(FILEPATH_BINNED_LIGHTCURVES)
 ARGS_POWERLAW_LIGHTCURVES = --powerlaw_lightcurves $(FILEPATH_POWERLAW_LIGHTUCURVES)
 ARGS_BINNING = --binning $(FILEPATH_BINNING)
 # ARGS_CONTINUOUS_LIGHTCURVE = --continuous_lightcurves $(FILEPATH_CONTINUOUS_LIGHTCURVES)
@@ -91,14 +92,14 @@ $(FILEPATH_DIMENSIONLESS_SYNCHROTRONS_PDF): \
 
 $(FILEPATH_POWERLAW_LIGHTUCURVES_PDF): \
 	$(FILEPATH_POWERLAW_LIGHTUCURVES) \
-	$(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES) \
+	$(FILEPATH_BINNED_LIGHTCURVES) \
 	$(PLOTCONFIGDIR)/lightcurves_powerlaw_sensitivity.yaml \
 	$(FILEPATH_OBSLC) \
 	scripts/plot_powerlaw_lightcurves.py
 	$(PYTHON) -m scripts.plot_powerlaw_lightcurves\
 		--plotconfig $(PLOTCONFIGDIR)/lightcurves_powerlaw_sensitivity.yaml \
 		$(ARGS_POWERLAW_LIGHTCURVES) \
-		$(ARGS_CANDIDATE_BINNED_LIGHTCURVES) \
+		$(ARGS_BINNED_LIGHTCURVES) \
 		$(ARGS_MODEL_PARAMETER_TABLE_POWERLAW) \
 		$(ARGS_OBSLC) \
 		$(ARGS_OUTPUT)
@@ -106,7 +107,7 @@ $(FILEPATH_POWERLAW_LIGHTUCURVES_PDF): \
 $(FILEPATH_MINIMUM_CHI2_LC_PDF): \
 	$(FILEPATH_INPUT) \
 	$(FILEPATH_MINIMUM_CHI_SQUARED) \
-	$(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES) \
+	$(FILEPATH_BINNED_LIGHTCURVES) \
 	$(FILEPATH_CANDIDATE_LIGHTCURVES) \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
 	$(FILEPATH_OBSLC) \
@@ -115,7 +116,7 @@ $(FILEPATH_MINIMUM_CHI2_LC_PDF): \
 	$(PYTHON) -m scripts.plot_minimum_chi2_lightcurve \
 		$(ARGS_INPUT) \
 		--minimum_chi_squared $(FILEPATH_MINIMUM_CHI_SQUARED) \
-		$(ARGS_CANDIDATE_BINNED_LIGHTCURVES) \
+		$(ARGS_BINNED_LIGHTCURVES) \
 		$(ARGS_MODEL_PARAMETER_TABLE) \
 		$(ARGS_CANDIDATE_LIGHTCURVES) \
 		$(ARGS_OBSLC) \
@@ -146,15 +147,29 @@ chevalier: $(FILEPATH_CHEVALIER_PDF)
 $(FILEPATH_CHEVALIER_PDF): \
 	$(FILEPATH_PEAK_GRID) \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
+	$(FILEPATH_MINIMUM_CHI_SQUARED) \
 	$(FILEPATH_OBSLC) \
 	module/chevalier.py \
 	$(PLOTCONFIGDIR)/chevalier_diagram.yaml \
-	scripts/chevalier.py
-	$(PYTHON) -m scripts.chevalier \
+	scripts/plot_chevalier_diagram.py
+	$(PYTHON) -m scripts.plot_chevalier_diagram \
 		$(ARGS_PEAK_GRID) \
+		--minimum_chi_squared $(FILEPATH_MINIMUM_CHI_SQUARED) \
 		$(ARGS_MODEL_PARAMETER_TABLE) \
 		--plotconfig $(PLOTCONFIGDIR)/chevalier_diagram.yaml \
 		$(ARGS_OBSLC) \
+		$(ARGS_OUTPUT)
+
+chevalier-bestfit-points: $(FILEPATH_CHEVALIER_BESTFIT_POINTS)
+$(FILEPATH_CHEVALIER_BESTFIT_POINTS): \
+	$(FILEPATH_MINIMUM_CHI_SQUARED) \
+	$(FILEPATH_BINNED_LIGHTCURVES) \
+	$(FILEPATH_MODEL_PARAMETER_TABLE) \
+	scripts/build_chevalier_bestfit_points.py
+	$(PYTHON) -m scripts.build_chevalier_bestfit_points \
+		--minimum_chi_squared $(FILEPATH_MINIMUM_CHI_SQUARED) \
+		$(ARGS_BINNED_LIGHTCURVES) \
+		$(ARGS_MODEL_PARAMETER_TABLE) \
 		$(ARGS_OUTPUT)
 
 #=== datafiles ===#
@@ -196,17 +211,17 @@ $(FILEPATH_MINIMUM_CHI_SQUARED): \
 chi2: $(FILEPATH_CHI_SQUARED)
 $(FILEPATH_CHI_SQUARED): \
 	$(FILEPATH_INPUT) \
-	$(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES) \
+	$(FILEPATH_BINNED_LIGHTCURVES) \
 	$(FILEPATH_OBSLC) \
 	scripts/calculate_chi_squared.py
 	$(PYTHON) -m scripts.calculate_chi_squared \
 		$(ARGS_INPUT) \
-		$(ARGS_CANDIDATE_BINNED_LIGHTCURVES) \
+		$(ARGS_BINNED_LIGHTCURVES) \
 		$(ARGS_OBSLC) \
 		$(ARGS_OUTPUT)
 
-lc_bin: $(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES)
-$(FILEPATH_CANDIDATE_BINNED_LIGHTCURVES): \
+lc_bin: $(FILEPATH_BINNED_LIGHTCURVES)
+$(FILEPATH_BINNED_LIGHTCURVES): \
 	$(FILEPATH_INPUT) \
 	$(FILEPATH_CANDIDATE_LIGHTCURVES) \
 	$(FILEPATH_BINNING) \

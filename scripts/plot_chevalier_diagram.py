@@ -3,6 +3,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from module import plot_utils
+from module.calculation_lightcurve import ChiSquaredResult
 from module.chevalier import BoundaryLabel, ChevalierContours, ObservedRegion, PeakGrid, RelativisticBoundary
 from module.models import ModelParameters
 from module.mydataclasses import QuantityData
@@ -35,6 +36,10 @@ def parse_args() -> argparse.Namespace:
         "output",
     ):
         parser.add_argument(f"--{name}", type=Path, required=True)
+    parser.add_argument(
+        "minimum_chi_squared",
+        type=Path
+    )
     return parser.parse_args()
 
 def main():
@@ -46,6 +51,11 @@ def main():
 
     df_model_parameter = FileReader.table_from_csv(args.model_parameter_table)
     model_parameters = ModelParameters.from_df(df_model_parameter)
+
+    if args.minimum_chi_squared is not None:
+        df_minchi2 = FileReader.table_from_csv(args.minimum_chi_squared)
+    else:
+        df_minchi2 = None
 
     long_lcs_obs = LongformatLightcurve.from_csv(args.obslc)
     lcs_obs = long_lcs_obs.group_by_frequency()
@@ -121,6 +131,13 @@ def main():
 
         # observation
         for i,lc_obs in enumerate(lcs_obs.values()):
+            if df_minchi2 is not None:
+                row_minchi2 = ChiSquaredResult.from_series(
+                    df_minchi2.iloc[i]
+                )
+                bestfit_index = int(row_minchi2.model_index)
+            else:
+                pass
             obs_peak = lc_obs.peak
             obs_region = ObservedRegion.build(
                 x=obs_peak.phi_peak.value_in(axesconfig.x_unit),

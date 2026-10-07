@@ -31,7 +31,7 @@ model_parameters: &ModelParameters
     unit: "kpc"
   switches: &ModelSwitches
     thermal_only: false
-    exact_dist_factors: false
+    exact_dist_factors: true
     powerlaw_hard_cutoff: true
 
 candidate_models_selection: &CandidateModelsSelection

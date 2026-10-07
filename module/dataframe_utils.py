@@ -1,7 +1,7 @@
 from collections.abc import Sequence, Hashable
 import numpy as np
 import pandas as pd
-from typing import cast
+from typing import Any, cast
 from module.strenums import KeyNames
 
 def extract_column_as_ndarray(df:pd.DataFrame,column:str):
@@ -60,3 +60,10 @@ def groupby_to_dict(
         groups[key] = grouped
 
     return groups
+
+def select_maximum_row(
+    df: pd.DataFrame,
+    column: str,
+)-> dict[str,Any]:
+    idx = df[column].idxmax()
+    return df.loc[[idx]].to_dict(orient="records")[0]
