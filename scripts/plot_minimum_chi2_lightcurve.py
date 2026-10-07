@@ -90,7 +90,8 @@ def main() -> None:
                 unit=nu_unit
             )
             lc_obs = lcs_obs.select_frequency(nu, unit=nu.unit)
-            fnu_background = lc_obs.fnu_background.to_value_in(y_unit)
+            fnu_background_arr = lc_obs.fnu_background
+            fnu_background = lc_obs.fnu_background.index(0)
 
             # binned lightcurve
             df_binned_nu = dfs_binned_nu[nu_value]
@@ -99,7 +100,10 @@ def main() -> None:
             ]
             df_binned_plot.attrs[ColumnNames.NU] = nu_value
             df_binned_plot.attrs[ColumnNames.MODEL_INDEX] = model_index
-            binned_lc = clc.BinnedLightcurveWithBackground.from_df(df_binned_plot)
+            binned_lc = clc.BinnedLightcurveWithBackground.from_df(
+                df_binned_plot,
+                fnu_background
+            )
 
 
             # continuous
@@ -113,7 +117,7 @@ def main() -> None:
             t_obs = lc_obs.t.to_value_in(x_unit)
             plotter.line(
                 x=t_obs,
-                y=fnu_background,
+                y=fnu_background_arr.to_value_in(y_unit),
                 style=components["background"].resolve_line_style(col)
             )
             plotter.errorbar(
@@ -128,12 +132,13 @@ def main() -> None:
                 edges=binned_lc.bin_edges.to_value_in(x_unit),
                 values=binned_lc.fnu_with_bg.to_value_in(y_unit),
                 style=components["binned"].resolve_line_style(col),
-                baseline=fnu_background[0]
+                baseline=fnu_background.value_in(y_unit)
             )
 
             # continuous lightcurve
             thermal_only = model_parameters.switches[SwitchKeys.THERMAL_ONLY]
             if thermal_only:
+                print("thermal only")
                 syn_model_str = "thermal"
                 continuous_lc = clc.ContinuousLightcurve(
                     model_index=model_index,

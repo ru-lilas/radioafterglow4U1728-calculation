@@ -66,10 +66,10 @@ def build_parameter_table(
         raise ValueError("power-lawの探索格子が空です")
 
     df = minimum.merge(powerlaw, how="cross")
-    df.insert(0, ColumnNames.POWELAW_SUBMODEL_INDEX, np.arange(len(df), dtype=np.int64))
+    df.insert(0, ColumnNames.POWERLAW_SUBMODEL_INDEX, np.arange(len(df), dtype=np.int64))
 
     df = df.loc[:, [
-        ColumnNames.POWELAW_SUBMODEL_INDEX,
+        ColumnNames.POWERLAW_SUBMODEL_INDEX,
         ColumnNames.THERMAL_MODEL_INDEX,
         "nu", "p_index", "f_e",
         "thermal_chi_squared", "thermal_ndof",

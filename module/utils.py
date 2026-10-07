@@ -203,3 +203,14 @@ class Convert:
 DACITE_CONFIG = Config(
     cast=[tuple],
 )
+
+def str_to_bool(value: str) -> bool:
+    match value.strip().lower():
+        case "true":
+            return True
+        case "false":
+            return False
+        case _:
+            raise ValueError(
+                f"boolへ変換できない文字列です: {value!r}"
+            )

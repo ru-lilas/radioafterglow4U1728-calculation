@@ -4,7 +4,7 @@
 from typing import Hashable, Literal, Self
 import astropy.units as u
 from matplotlib.axes import Axes
-from module import quantity_converter
+from module import quantity_converter, utils
 import numpy as np
 import pandas as pd
 from enum import StrEnum, auto
@@ -82,6 +82,7 @@ class MetadataNames(StrEnum):
     PEAK_COMPONENT = auto()
     NU_UNIT = auto()
     T_UNIT = auto()
+    BIN_WIDTH = auto()
     SYNCHROTRON_MODEL = auto()
     THERMAL_MODEL_INDEX = auto()
 
@@ -90,6 +91,7 @@ class FluxName(StrEnum):
     FNU_POWERLAW = auto()
     FNU_TOTAL = auto()
     FNU_WITH_BG= auto()
+    FNU_NET = auto()
 
 class PhiName(StrEnum):
     PHI = auto()
@@ -100,7 +102,7 @@ class SwitchKeys(StrEnum):
 
 class ColumnNames(StrEnum):
     THERMAL_MODEL_INDEX = auto()
-    POWELAW_SUBMODEL_INDEX = auto()
+    POWERLAW_SUBMODEL_INDEX = auto()
     CANDIDATE_MODEL_INDEX = auto()
     MODEL_INDEX = auto()
     PEAK_COLUMN_INDEX = auto()
@@ -168,7 +170,7 @@ class MaxwellJuttnerFactor:
     def hot(
         theta:NDArray[np.float64]
     )->FloatArray:
-        theta_val = theta.values
+        theta_val = theta
         return np.ones_like(theta_val)
 
 class PowerlawDistributionFactor:
@@ -442,7 +444,7 @@ class ModelParameters:
         switch_keys: set[str] = {switch.value for switch in SwitchKeys}
 
         switches: dict[str, bool] = {
-            key: value
+            str(key): utils.str_to_bool(value)
             for key, value in df.attrs.items()
             if isinstance(key, str) and key in switch_keys
         }

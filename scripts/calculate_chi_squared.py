@@ -34,8 +34,13 @@ def main() -> None:
             value=nu_value,
             unit=nu_unit
         )
+        timewindow = conf_chi2.timewindow
         obs_lc = obslc_long.select_frequency(nu, unit=nu.unit)
-        obs_lc_sampled = obs_lc.select_timewindow(conf_chi2.timewindow)
+        t_unit = obs_lc.metadata.t_unit
+        obs_lc_sampled = obs_lc.select_timewindow(
+            t_min=timewindow.t_min.value_in(t_unit),
+            t_max=timewindow.t_max.value_in(t_unit)
+        )
         dfs_candidate = LongformatDataFrame(longdf_nu).parse(ColumnNames.MODEL_INDEX)
 
         for model_index, df_cand in dfs_candidate.items():
@@ -44,7 +49,10 @@ def main() -> None:
                 raise TypeError(
                     f"model_indexのtypeが不正です:{type(model_index)}"
                 )
-            binned_lc = BinnedLightcurveWithBackground.from_df(df_cand)
+            binned_lc = BinnedLightcurveWithBackground.from_df(
+                df_cand,
+                obs_lc_sampled.fnu_background.index(0)
+            )
             chi2 = ChiSquaredResult.calculate(
                 model_index=model_index,
                 nu_value=nu_value,

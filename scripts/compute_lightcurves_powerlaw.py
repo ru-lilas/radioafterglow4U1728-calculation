@@ -52,7 +52,7 @@ def main():
     dfs_lc:list = []
     for row_pl in df_powerlaw.to_dict(orient="records"):
         thermal_model_index= int(row_pl[MetadataNames.THERMAL_MODEL_INDEX])
-        model_index = int(row_pl[ColumnNames.POWELAW_SUBMODEL_INDEX])
+        model_index = int(row_pl[ColumnNames.POWERLAW_SUBMODEL_INDEX])
         p_index = row_pl[MetadataNames.P_INDEX]
         f_e = row_pl[MetadataNames.F_E]
 
@@ -86,7 +86,7 @@ def main():
         )
         results_lc = results.to_lightcurve(nu)
         df_lc = results_lc.to_df(
-            index_column_name=ColumnNames.POWELAW_SUBMODEL_INDEX
+            index_column_name=ColumnNames.POWERLAW_SUBMODEL_INDEX
         )
         df_lc[MetadataNames.THERMAL_MODEL_INDEX] = thermal_model_index
         dfs_lc.append(df_lc)
@@ -94,9 +94,16 @@ def main():
         dfs_lc,
         axis="index"
     )
+    # 同じIDの組には、時刻・周波数によらず同じmodel_indexを付ける
+    model_keys = pd.MultiIndex.from_frame(longdf_lc.loc[:, [
+        ColumnNames.POWERLAW_SUBMODEL_INDEX,
+        MetadataNames.THERMAL_MODEL_INDEX,
+    ]])
+    model_indices, _ = model_keys.factorize(sort=True)
+    longdf_lc.insert(0, ColumnNames.MODEL_INDEX, model_indices)
     FileWriter.df_to_csv(
-        args.output,
-        longdf_lc,
+        path=args.output,
+        df=longdf_lc,
         save_attrs=True
     )
     return

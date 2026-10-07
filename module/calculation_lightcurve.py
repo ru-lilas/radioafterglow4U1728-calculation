@@ -150,12 +150,17 @@ class BinnedLightcurveWithBackground:
     @classmethod
     def from_df(
         cls,
-        df: pd.DataFrame
+        df: pd.DataFrame,
+        fnu_bg:QuantityData
     )-> Self:
         attrs = df.attrs
         nu = QuantityData(
             value=attrs[ColumnNames.NU],
             unit=attrs[MetadataNames.NU_UNIT],
+        )
+        fnu_net = QuantityArray1D.from_df(df,FluxName.FNU_NET,MetadataNames.FNU_UNIT)
+        fnu_with_bg = QuantityArray1D.from_quantity(
+            fnu_net.quantity + fnu_bg.quantity
         )
         return cls(
             model_index = attrs[ColumnNames.MODEL_INDEX],
@@ -163,7 +168,7 @@ class BinnedLightcurveWithBackground:
             t_center = QuantityArray1D.from_df(df,ColumnNames.T_CENTER,MetadataNames.T_UNIT),
             t_right = QuantityArray1D.from_df(df,ColumnNames.T_RIGHT,MetadataNames.T_UNIT),
             t_left = QuantityArray1D.from_df(df,ColumnNames.T_LEFT,MetadataNames.T_UNIT),
-            fnu_with_bg = QuantityArray1D.from_df(df,FluxName.FNU_WITH_BG,MetadataNames.FNU_UNIT),
+            fnu_with_bg = fnu_with_bg 
         )
 
 @dataclass(frozen=True,slots=True)
@@ -213,6 +218,7 @@ class BinnedLightcurve:
             models.ColumnNames.T_CENTER: self.t_center.to_value_in(t_unit),
             models.ColumnNames.T_RIGHT: self.t_right.to_value_in(t_unit),
             models.ColumnNames.T_LEFT: self.t_left.to_value_in(t_unit),
+            FluxName.FNU_NET: self.fnu_no_bg.to_value_in(fnu_unit),
         })
         df.attrs[MetadataNames.NU_UNIT] = nu_unit
         df.attrs[MetadataNames.FNU_UNIT] = fnu_unit

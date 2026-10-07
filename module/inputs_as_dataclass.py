@@ -33,6 +33,13 @@ class SamplingTimewindow:
     max: float
     unit: str
 
+    def __post_init__(self)->None:
+        if self.max <= self.min:
+            raise ValueError(
+                "timewindow.maxはminより大きくしてください."
+            )
+        return
+
     @property
     def t_min(self):
         return QuantityData(

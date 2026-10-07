@@ -271,19 +271,21 @@ class ObservedLightcurve:
 
     def select_timewindow(
         self,
-        timewindow:SamplingTimewindow
+        *,
+        t_min:float,
+        t_max:float
     ) -> Self:
 
         t_unit = self.metadata.t_unit
 
         #=== ここから下はSamplingTimewindowクラスに記述するべきでは ===#
-        t_min = timewindow.t_min.value_in(t_unit)
-        t_max = timewindow.t_max.value_in(t_unit)
-
-        if t_max <= t_min:
-            raise ValueError(
-                "timewindow.maxはminより大きくしてください."
-            )
+        # t_min = t_min.value_in(t_unit)
+        # t_max = t_max.value_in(t_unit)
+        #
+        # if t_max <= t_min:
+        #     raise ValueError(
+        #         "timewindow.maxはminより大きくしてください."
+        #     )
         #=== ここまで ===#
 
         t = self.to_FloatArray(Columns.T)

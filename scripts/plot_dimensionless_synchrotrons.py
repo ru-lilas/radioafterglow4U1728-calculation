@@ -51,7 +51,7 @@ def attach_powerlaw_parameters(
 ) -> pd.DataFrame:
     """各光度曲線の行にp_indexとf_eを結合し、単位情報を引き継ぐ。"""
     keys = [
-        ColumnNames.POWELAW_SUBMODEL_INDEX,
+        ColumnNames.POWERLAW_SUBMODEL_INDEX,
         MetadataNames.THERMAL_MODEL_INDEX,
         ColumnNames.NU,
     ]
@@ -202,7 +202,7 @@ def main() -> None:
                             column = quantity_columns[quantity_name][component_col]
                             plotter = plot_utils.Plotter(axes[row, col])
                             for i, (submodel_index, df_model) in enumerate(
-                                df_group.groupby(ColumnNames.POWELAW_SUBMODEL_INDEX, sort=True)
+                                df_group.groupby(ColumnNames.POWERLAW_SUBMODEL_INDEX, sort=True)
                             ):
                                 # thermal成分は走査パラメータによらないので1本だけ描く。
                                 if component_name == "thermal" and i > 0:

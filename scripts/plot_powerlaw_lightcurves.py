@@ -48,7 +48,7 @@ def attach_powerlaw_parameters(
 ) -> pd.DataFrame:
     """各光度曲線の行にp_indexとf_eを結合し、単位情報を引き継ぐ。"""
     keys = [
-        ColumnNames.POWELAW_SUBMODEL_INDEX,
+        ColumnNames.POWERLAW_SUBMODEL_INDEX,
         MetadataNames.THERMAL_MODEL_INDEX,
         ColumnNames.NU,
     ]
@@ -204,10 +204,11 @@ def main() -> None:
                         ]
                         df_binned_plot.attrs[ColumnNames.NU] = nu_value
                         df_binned_plot.attrs[ColumnNames.MODEL_INDEX] = thermal_model_index
-                        binned_lc = BinnedLightcurveWithBackground.from_df(df_binned_plot)
+                        fnu_bg = QuantityArray1D.from_quantity(lc_obs.fnu_background.quantity[:len(df_binned_plot)])
+                        binned_lc = BinnedLightcurveWithBackground.from_df(df_binned_plot,fnu_bg)
 
                         for submodel_index, df_model in df_group.groupby(
-                            ColumnNames.POWELAW_SUBMODEL_INDEX, sort=True
+                            ColumnNames.POWERLAW_SUBMODEL_INDEX, sort=True
                         ):
                             df_model = df_model.sort_values(ColumnNames.T).copy()
                             df_model.attrs = df_group.attrs.copy()
