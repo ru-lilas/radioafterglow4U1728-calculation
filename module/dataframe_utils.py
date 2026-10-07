@@ -1,3 +1,4 @@
+from collections.abc import Sequence, Hashable
 import numpy as np
 import pandas as pd
 from typing import cast
@@ -43,3 +44,19 @@ def extract_Series_from_idx(
 )->pd.Series:
     return df.loc[idx]
 
+def groupby_to_dict(
+    df: pd.DataFrame,
+    by: str|Sequence[str],
+    *,
+    sort: bool = True,
+    dropna: bool = True,
+) -> dict[Hashable, pd.DataFrame]:
+    group_columns = by if isinstance(by, str) else list(by)
+    groups: dict[Hashable, pd.DataFrame] = {}
+
+    for key, group in df.groupby(by=by, sort=sort, dropna=dropna):
+        grouped = group.copy()
+        grouped.attrs = df.attrs.copy()
+        groups[key] = grouped
+
+    return groups

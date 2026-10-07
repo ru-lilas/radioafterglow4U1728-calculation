@@ -1,6 +1,6 @@
 """
-    take_bin_average_for_candidates.py
-    candidate models lightcurveのbin平均を計算する
+    compute_binned_lightcurve.py
+    continuous lightcurveに対してbin平均をとる
 """
 
 import argparse
@@ -20,6 +20,7 @@ from module.calculation_lightcurve import (
     ChiSquaredResult,
     ContinuousLightcurve,
     )
+from module.dataframe_utils import groupby_to_dict
 
 def parse_args()->argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -30,7 +31,7 @@ def parse_args()->argparse.Namespace:
         required=True
     )
     parser.add_argument(
-        "--candidate_lightcurves",
+        "--continuous_lightcurves",
         type=Path,
         required=True
     )
@@ -49,27 +50,32 @@ def parse_args()->argparse.Namespace:
 def main():
     args = parse_args()
     conf_chi2 = GeneralInputs.from_yaml(args.input).chi_squared
-    longdf_cand = LongformatDataFrame.read_from(args.candidate_lightcurves)
-    dfs_cand_all = longdf_cand.parse(ColumnNames.NU)
+
+    longdf_contiuous = FileReader.table_from_csv(args.continuous_lightcurves)
+    nu_column = ColumnNames.NU
+    dfgroup_nu = groupby_to_dict(
+        longdf_contiuous,ColumnNames.NU
+    )
+
     obslc_long = LongformatLightcurve.from_csv(args.obslc)
     results = []
     nu_unit = DefaultUnits.nu
-    for nu_value,df_nu in dfs_cand_all.items():
+    for nu_value,df_nu in dfgroup_nu.items():
         if not isinstance(nu_value,float):
             raise TypeError(
                 f"nu_valueのtypeが不正です:{type(nu_value)}"
             )
         nu = QuantityData(
-            value=nu_value,
+            value=df_nu.attrs[ColumnNames.NU],
             unit=df_nu.attrs[MetadataNames.NU_UNIT]
         )
         obs_lc = obslc_long.select_frequency(nu,unit=nu.unit)
         obs_lc_sampled = obs_lc.select_timewindow(conf_chi2.timewindow)
         binning = obs_lc_sampled.time_bin_bounds(conf_chi2.timewindow)
-        candidates = LongformatDataFrame(df_nu)
-        df_cands = candidates.parse(ColumnNames.MODEL_INDEX)
 
-        for model_index,df_cand in df_cands.items():
+        dfgroup_model = groupby_to_dict(df_nu,ColumnNames.MODEL_INDEX)
+
+        for model_index,df_cand in dfgroup_model.items():
             if not isinstance(model_index,int):
                 raise TypeError(
                     f"model_indexのtypeが不正です:{type(model_index)}"
@@ -87,17 +93,6 @@ def main():
             results.append(lc_binned.to_df(
                 fnu_bg=obs_lc_sampled.fnu_background
             ))
-            # fnu_with_bg = lc_binned.fnu_with_bg(obs_lc_sampled.fnu_background)
-            # chi2 = ChiSquaredResult.calculate(
-            #     model_index=model_index,
-            #     nu_value=nu_value,
-            #     fnu_model= fnu_with_bg,
-            #     fnu_data = obs_lc_sampled.fnu_total,
-            #     fnu_err  = obs_lc_sampled.fnu_total_err,
-            #     n_params = 2
-            # )
-            # row = chi2.to_series()
-            # results.append(row)
     longdf_result = pd.concat(
         results,
         axis="index"
