@@ -5,8 +5,8 @@ from matplotlib.backends.backend_pdf import PdfPages
 from module import plot_utils
 from module.calculation_lightcurve import ChiSquaredResult
 from module.chevalier import BoundaryLabel, ChevalierContours, ObservedRegion, PeakGrid, RelativisticBoundary
-from module.models import ModelParameters
-from module.mydataclasses import QuantityData
+from module.models import ColumnNames, FluxName, MetadataNames, ModelParameters
+from module.mydataclasses import QuantityArray1D, QuantityData
 from module.observation import LongformatLightcurve
 from module.utils import FileReader, FileWriter
 from dataclasses import fields, dataclass
@@ -37,7 +37,7 @@ def parse_args() -> argparse.Namespace:
     ):
         parser.add_argument(f"--{name}", type=Path, required=True)
     parser.add_argument(
-        "minimum_chi_squared",
+        "--chevalier_bestfit_points",
         type=Path
     )
     return parser.parse_args()
@@ -52,10 +52,10 @@ def main():
     df_model_parameter = FileReader.table_from_csv(args.model_parameter_table)
     model_parameters = ModelParameters.from_df(df_model_parameter)
 
-    if args.minimum_chi_squared is not None:
-        df_minchi2 = FileReader.table_from_csv(args.minimum_chi_squared)
+    if args.chevalier_bestfit_points is not None:
+        df_bestfits = FileReader.table_from_csv(args.chevalier_bestfit_points)
     else:
-        df_minchi2 = None
+        df_bestfits = None
 
     long_lcs_obs = LongformatLightcurve.from_csv(args.obslc)
     lcs_obs = long_lcs_obs.group_by_frequency()
@@ -65,6 +65,8 @@ def main():
 
     layout = plotconfig.layout
     axesconfig = layout.axes
+    x_unit = axesconfig.x_unit
+    y_unit = axesconfig.y_unit
     plotcomponents = plotconfig.components
     plotmetadataconfig = plotconfig.metadata
     plotrange = axesconfig.range()
@@ -129,15 +131,10 @@ def main():
         )
         beta_sh_contour.plot(plotter)
 
+
         # observation
         for i,lc_obs in enumerate(lcs_obs.values()):
-            if df_minchi2 is not None:
-                row_minchi2 = ChiSquaredResult.from_series(
-                    df_minchi2.iloc[i]
-                )
-                bestfit_index = int(row_minchi2.model_index)
-            else:
-                pass
+            pass
             obs_peak = lc_obs.peak
             obs_region = ObservedRegion.build(
                 x=obs_peak.phi_peak.value_in(axesconfig.x_unit),
@@ -154,6 +151,24 @@ def main():
                     value=obs_peak.nu.value
                 )
             )
+            # bestfit points
+            if df_bestfits is not None:
+                phi_peak = QuantityArray1D(
+                    df_bestfits[ColumnNames.PHI_PEAK].to_numpy(),
+                    df_bestfits.attrs[MetadataNames.PHI_UNIT]
+                ).index(i)
+                fnu_peak = QuantityArray1D(
+                    df_bestfits[ColumnNames.FNU_PEAK_NET].to_numpy(),
+                    df_bestfits.attrs[MetadataNames.FNU_UNIT]
+                ).index(i)
+                plotter.errorbar(
+                    x=phi_peak.value_in(x_unit),
+                    y=fnu_peak.value_in(y_unit),
+                    yerr=[0],
+                    style=plotcomponents["bestfits"].resolve_errorbar_style(i)
+                )
+            else:
+                pass
 
         # metadata
         metadata = PlotMetadata(

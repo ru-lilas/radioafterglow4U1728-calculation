@@ -502,6 +502,7 @@ class ErrorbarStyleConfig(YAMLReadable):
     linestyle: str = "none"
     alpha: float | None = None
     zorder: float | None = None
+    markeredgecolors: list[str] | None = None
 
     def resolve(
         self,
@@ -515,7 +516,10 @@ class ErrorbarStyleConfig(YAMLReadable):
             marker=self.marker,
             markersize=self.markersize,
             markerfacecolor=color,
-            markeredgecolor=color,
+            markeredgecolor=(
+                color if self.markeredgecolors is None
+                else select_style_value(self.markeredgecolors, index)
+            ),
             markeredgewidth=self.markeredgewidth,
             ecolor=color,
             elinewidth=self.elinewidth,

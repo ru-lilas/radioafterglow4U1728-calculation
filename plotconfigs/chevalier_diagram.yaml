@@ -149,6 +149,24 @@ components:
       fmt: '.1f'
       unit: '\mathrm{GHz}'
       suffix: '(\mathrm{Russell}+24)'
+  bestfits:
+    type: errorbar
+    legend: false
+    style:
+      colors:
+        - "#FF4B00"
+        - "#005AFF"
+      marker: "o"
+      markersize: 6.0
+      markeredgewidth: 1.0
+      markeredgecolors: 
+        - "#000000"
+      elinewidth: 1.0
+      capsize: 1.0
+      capthick: 1.0
+      linestyle: "none"
+      alpha: null
+      zorder: 2.0
   non_relativistic_boundary: &BoundaryComponent_tmp
     type: line
     legend: false

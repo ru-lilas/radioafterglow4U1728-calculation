@@ -38,7 +38,7 @@ def parse_args() -> argparse.Namespace:
     for name in (
         "input",
         "minimum_chi_squared",
-        "candidate_binned_lightcurves",
+        "binned_lightcurves",
         "candidate_lightcurves",
         "model_parameter_table",
         "obslc",
@@ -57,7 +57,7 @@ def main() -> None:
 
     df_minchi2 = FileReader.table_from_csv(args.minimum_chi_squared)
 
-    longdf_binned = LongformatDataFrame.read_from(args.candidate_binned_lightcurves)
+    longdf_binned = LongformatDataFrame.read_from(args.binned_lightcurves)
     dfs_binned_nu = longdf_binned.parse(ColumnNames.NU)
 
     longdf_continuous = LongformatDataFrame.read_from(args.candidate_lightcurves)
@@ -138,7 +138,6 @@ def main() -> None:
             # continuous lightcurve
             thermal_only = model_parameters.switches[SwitchKeys.THERMAL_ONLY]
             if thermal_only:
-                print("thermal only")
                 syn_model_str = "thermal"
                 continuous_lc = clc.ContinuousLightcurve(
                     model_index=model_index,

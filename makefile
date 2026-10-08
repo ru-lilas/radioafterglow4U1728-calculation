@@ -48,6 +48,7 @@ FILEPATH_CHEVALIER_BESTFIT_POINTS := $(call run_data,chevalier_bestfit_points.cs
 
 FILEPATH_MINIMUM_CHI2_LC_PDF := $(call run_fig,minimum_chi2_lightcurve.pdf)
 FILEPATH_CHEVALIER_PDF := $(call run_fig,chevalier_diagram.pdf)
+FILEPATH_CHEVALIER_WITH_BESTFITS_PDF := $(call run_fig,chevalier_diagram_with_bestfits.pdf)
 FILEPATH_CHEVALIER_COLORMAP_PDF := $(call run_fig,chevalier_colormap.pdf)
 FILEPATH_DIMENSIONLESS_SYNCHROTRONS_PDF:= $(call run_fig,dimensionless_synchrotrons.pdf)
 
@@ -63,6 +64,7 @@ ARGS_CANDIDATE_LIGHTCURVES = --candidate_lightcurves $(FILEPATH_CANDIDATE_LIGHTC
 ARGS_BINNED_LIGHTCURVES = --binned_lightcurves $(FILEPATH_BINNED_LIGHTCURVES)
 ARGS_POWERLAW_LIGHTCURVES = --powerlaw_lightcurves $(FILEPATH_POWERLAW_LIGHTUCURVES)
 ARGS_BINNING = --binning $(FILEPATH_BINNING)
+ARGS_CHEVALIER_BESTFIT_POINTS = --chevalier_bestfit_points $(FILEPATH_CHEVALIER_BESTFIT_POINTS)
 # ARGS_CONTINUOUS_LIGHTCURVE = --continuous_lightcurves $(FILEPATH_CONTINUOUS_LIGHTCURVES)
 
 .PHONY: all view-best-lc view-chevalier view-chevalier_cmp \
@@ -137,6 +139,24 @@ $(FILEPATH_CHEVALIER_COLORMAP_PDF): \
 		--model_table $< \
 		--plotconfig $(PLOTCONFIGDIR)/chevalier_colormaps.yaml \
 		$(ARGS_OBSLC) \
+		$(ARGS_OUTPUT)
+
+view-chevalierbest: $(FILEPATH_CHEVALIER_WITH_BESTFITS_PDF)
+	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
+$(FILEPATH_CHEVALIER_WITH_BESTFITS_PDF): \
+	$(FILEPATH_PEAK_GRID) \
+	$(FILEPATH_MODEL_PARAMETER_TABLE) \
+	$(FILEPATH_OBSLC) \
+	$(PLOTCONFIGDIR)/chevalier_diagram.yaml \
+	scripts/plot_chevalier_diagram.py \
+	$(FILEPATH_CHEVALIER_BESTFIT_POINTS) \
+	module/chevalier.py
+	$(PYTHON) -m scripts.plot_chevalier_diagram \
+		$(ARGS_PEAK_GRID) \
+		$(ARGS_MODEL_PARAMETER_TABLE) \
+		--plotconfig $(PLOTCONFIGDIR)/chevalier_diagram.yaml \
+		$(ARGS_OBSLC) \
+		$(ARGS_CHEVALIER_BESTFIT_POINTS) \
 		$(ARGS_OUTPUT)
 
 view-chevalier: $(FILEPATH_CHEVALIER_PDF)
