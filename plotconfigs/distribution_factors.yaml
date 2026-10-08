@@ -1,0 +1,66 @@
+layout:
+  figure:
+    figsize: [16,9]
+    dpi: 100
+    layout_engine: constrained
+  subplots:
+    nrows: 1
+    ncols: 1
+    sharex: col
+    sharey: col
+    hide_shared_labels: true
+  axes:
+    x:
+      - &theta_axis
+        scale: "log"
+        limits: [1.0e-01,1.0e+02]
+        label:
+          prefix: 'Thermal Lorentz Factor, $\Theta$'
+          unit: ""
+          fontsize: 32
+    y:
+      - scale: "log"
+        limits: [1.0e-01,1.0e+03]
+        label:
+          prefix: 'Distribution Factor'
+          unit: ""
+          fontsize: 32
+    ticks:
+      labelsize: 32
+      direction: "in"
+      major_length: 10.0
+      minor_length: 8.0
+      width: 1.0
+      pad: 10.0
+components:
+  f_factor: &factor_tmp
+    type: line
+    style: &linestyle_tmp
+      colors: 
+        - "#000000"
+      linewidth: 2.0
+      linestyle: "-"
+      alpha: null
+      zorder: 1.0
+  g_factor:
+    <<: *factor_tmp
+    style:
+      <<: *linestyle_tmp
+      linestyle: "--"
+  hot_limit:
+    <<: *factor_tmp
+    style:
+      <<: *linestyle_tmp
+      linestyle: ":"
+metadata:
+  fontsize: 18
+  items:
+    p_index:
+      show: true
+      unit: ""
+      label_format: &LabelFormatTmp
+        prefix: '\varepsilon_{\mathrm{B}}'
+        fmt: '.1e'
+        unit: ""
+        suffix: ""
+        show_equals: true

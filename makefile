@@ -376,6 +376,13 @@ $(FILEPATH_OBSLC_TMP): \
 		--config $(INPUTDIR)/obslc.yaml \
 		$(ARGS_OUTPUT)
 
+fig/distribution_factors.pdf: \
+	$(PLOTCONFIGDIR)/distribution_factors.yaml \
+	scripts/plot_distribution_factors.py
+	$(PYTHON) -m scripts.plot_distribution_factors \
+		--plotconfig $(PLOTCONFIGDIR)/distribution_factors.yaml \
+		$(ARGS_OUTPUT)
+
 #=== config files ===#
 $(PLOTCONFIGDIR)/%.yaml:
 	@echo "エラー: プロットコンフィグがありません $@"
