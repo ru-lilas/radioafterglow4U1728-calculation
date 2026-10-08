@@ -148,6 +148,8 @@ $(FILEPATH_CHEVALIER_WITH_BESTFITS_PDF): \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
 	$(FILEPATH_OBSLC) \
 	$(PLOTCONFIGDIR)/chevalier_diagram.yaml \
+	module/chevalier.py \
+	module/plot_utils.py \
 	scripts/plot_chevalier_diagram.py \
 	$(FILEPATH_CHEVALIER_BESTFIT_POINTS) \
 	module/chevalier.py
@@ -184,6 +186,7 @@ chevalier-bestfit-points: $(FILEPATH_CHEVALIER_BESTFIT_POINTS)
 $(FILEPATH_CHEVALIER_BESTFIT_POINTS): \
 	$(FILEPATH_MINIMUM_CHI_SQUARED) \
 	$(FILEPATH_BINNED_LIGHTCURVES) \
+	module/chevalier.py \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
 	scripts/build_chevalier_bestfit_points.py
 	$(PYTHON) -m scripts.build_chevalier_bestfit_points \

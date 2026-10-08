@@ -10,6 +10,7 @@ from module.mydataclasses import QuantityArray1D, QuantityData
 from module.observation import LongformatLightcurve
 from module.utils import FileReader, FileWriter
 from dataclasses import fields, dataclass
+from module import dataframe_accessors
 
 @dataclass(frozen=True,slots=True)
 class PlotMetadata:
@@ -153,8 +154,12 @@ def main():
             )
             # bestfit points
             if df_bestfits is not None:
-                phi_peak = QuantityArray1D(
-                    df_bestfits[ColumnNames.PHI_PEAK].to_numpy(),
+                phi_peak:QuantityData = df_bestfits.q.array1d(
+                    column=ColumnNames.PHI_PEAK,
+                    unit_key=MetadataNames.PHI_UNIT
+                ).index(i)
+                phi_peak_err = QuantityArray1D(
+                    df_bestfits[ColumnNames.PHI_PEAK_ERR].to_numpy(),
                     df_bestfits.attrs[MetadataNames.PHI_UNIT]
                 ).index(i)
                 fnu_peak = QuantityArray1D(
@@ -165,6 +170,7 @@ def main():
                     x=phi_peak.value_in(x_unit),
                     y=fnu_peak.value_in(y_unit),
                     yerr=[0],
+                    xerr=phi_peak_err.value_in(x_unit),
                     style=plotcomponents["bestfits"].resolve_errorbar_style(i)
                 )
             else:

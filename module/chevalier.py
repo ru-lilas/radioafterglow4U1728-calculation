@@ -28,6 +28,7 @@ from module.plot_utils import AxesConfig, AxesRange, AxisConfig, AxisRange, Colo
 from module.types import FloatArray, FloatPair
 from module import models
 from matplotlib.axes import Axes
+from module import dataframe_accessors
 
 @dataclass(frozen=True,slots=True)
 class ColormapConfigures:
@@ -478,22 +479,39 @@ def build_candidate_longdf(
 class BestfitModelPoint:
     model_index: int
     nu: QuantityData
-    t_peak: QuantityData
+    t_peak_center: QuantityData
+    t_peak_left: QuantityData
+    t_peak_right: QuantityData
     fnu_peak_net: QuantityData
 
     @property
-    def phi_peak(self)->QuantityData:
+    def phi_peak_center(self)->QuantityData:
         return QuantityData.from_Quantity(
-            self.nu.quantity*self.t_peak.quantity
+            self.nu.quantity*self.t_peak_center.quantity
         )
+    @property
+    def phi_peak_err(self)->QuantityData:
+        t_err = 0.5*(self.t_peak_right.quantity - self.t_peak_left.quantity)
+        return QuantityData.from_Quantity(
+            self.nu.quantity*t_err
+        )
+
     @classmethod
     def from_df(cls,df:pd.DataFrame):
         idx = df[models.FluxName.FNU_NET].idxmax()
         row = df.loc[idx]
         return cls(
             model_index=int(row[models.ColumnNames.MODEL_INDEX]),
-            t_peak = QuantityData(
+            t_peak_center = QuantityData(
                 row[models.ColumnNames.T_CENTER],
+                df.attrs[models.MetadataNames.T_UNIT],
+            ),
+            t_peak_left = QuantityData(
+                row[models.ColumnNames.T_LEFT],
+                df.attrs[models.MetadataNames.T_UNIT],
+            ),
+            t_peak_right = QuantityData(
+                row[models.ColumnNames.T_RIGHT],
                 df.attrs[models.MetadataNames.T_UNIT],
             ),
             nu= QuantityData(
@@ -516,10 +534,13 @@ class BestfitModelPoint:
     )->pd.DataFrame:
         df = pd.DataFrame([{
             models.ColumnNames.MODEL_INDEX: self.model_index,
-            models.ColumnNames.PHI_PEAK: self.phi_peak.value_in(phi_unit),
+            models.ColumnNames.PHI_PEAK: self.phi_peak_center.value_in(phi_unit),
+            models.ColumnNames.PHI_PEAK_ERR : self.phi_peak_err.value_in(phi_unit),
             models.ColumnNames.FNU_PEAK_NET: self.fnu_peak_net.value_in(fnu_unit),
             models.ColumnNames.NU: self.nu.value_in(nu_unit),
-            models.ColumnNames.T_PEAK: self.t_peak.value_in(t_unit)
+            models.ColumnNames.T_CENTER: self.t_peak_center.value_in(t_unit),
+            models.ColumnNames.T_LEFT: self.t_peak_left.value_in(t_unit),
+            models.ColumnNames.T_RIGHT: self.t_peak_right.value_in(t_unit),
         }])
         df.attrs[models.MetadataNames.FNU_UNIT] = fnu_unit
         df.attrs[models.MetadataNames.NU_UNIT] = nu_unit

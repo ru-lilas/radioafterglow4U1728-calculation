@@ -111,6 +111,7 @@ class ColumnNames(StrEnum):
     THETA0 = auto()
     PHI_TH_THIN = auto()
     PHI_PEAK = auto()
+    PHI_PEAK_ERR = auto()
     FNU_PEAK = auto()
     THETA = auto()
     THETA_THIN = auto()

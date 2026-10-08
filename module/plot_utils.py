@@ -1173,11 +1173,13 @@ class Plotter:
         x: ArrayLike,
         y: ArrayLike,
         yerr: ArrayLike,
-        style: ErrorbarStyle
+        style: ErrorbarStyle,
+        xerr: ArrayLike|None = None
     )->ErrorbarContainer:
         return self.ax.errorbar(
             x,y,
             yerr=yerr,
+            xerr=xerr,
             **style.to_kwargs(),
         )
 
