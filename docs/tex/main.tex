@@ -610,4 +610,45 @@ exact one is smaller than \qty{0.5}{\percent}.
     }
     \label{fig:lightcurve}
 \end{figure}
+\section*{}
+Let \(\ab<E_{\thermal}>\) and \(\ab<E_{\mathrm{nth}}>\)
+denote the mean kinetic energies per
+thermal and non-thermal electron, respectively.
+We define a fraction of kinetic energy density
+of thermal electrons to non-thermal electrons:
+\begin{equation}
+  \delta
+  \coloneq
+  \frac{
+    n_{\mathrm{nth}}\ab<E_{\mathrm{nth}}>
+  }{
+    n_{\thermal}\ab<E_{\thermal}>
+  }
+\end{equation}
+\begin{equation}
+  f_{\ele}
+  \coloneq
+  \frac{n_{\mathrm{nth}}}{n_{\mathrm{nth}}+n_{\thermal}}
+\end{equation}
+The mean Lorentz factor of electrons following
+a Maxwell-Jüttner distribution is given exactly by
+\begin{equation}
+  \ab<\gamma>_{\thermal}
+  =
+  \frac{K_3(1/\Theta)}{K_2(1/\Theta)} - \Theta .
+\end{equation}
+We assume
+\begin{equation}
+  \gamma_{\min}
+  =
+  \ab<\gamma>_{\thermal}
+\end{equation}
+So
+\begin{equation}
+  \delta =
+  \frac{f_{\ele}}{1-f_{\ele}}
+  \ab(
+    \frac{p-1}{p-2} + \frac{1}{(p-2)(\ab<\gamma>_{\thermal}-1)}
+  )
+\end{equation}
 \end{document}
