@@ -14,6 +14,10 @@ from module.mydataclasses import (
     QuantityArrayBase, QuantityData,
     QuantityGrid, IndexGrid,
 )
+from module.electron_distributions import(
+    MaxwellJuttnerFactor,
+    MaxwellJuttnerDistribution
+)
 from module.synchrotron_numerical_table import ThermalSynchrotronIntegrals
 from module.types import FloatArray
 from scipy import special
@@ -158,36 +162,6 @@ class ScenarioParameter:
 @dataclass(frozen=True,slots=True)
 class ElectronTemperature:
     values:FloatArray
-
-@dataclass(frozen=True,slots=True)
-class MaxwellJuttnerFactor:
-    exact: NDArray[np.float64]
-    hot: NDArray[np.float64]
-
-    @staticmethod
-    def __compute_exact(
-        theta:NDArray[np.float64]
-    )->NDArray[np.float64]:
-        return (
-            2.0*theta**2 / special.kv(2,1.0/theta)
-        )
-
-    @staticmethod
-    def __compute_hot(
-        theta:NDArray[np.float64]
-    )->FloatArray:
-        theta_val = theta
-        return np.ones_like(theta_val)
-
-    @classmethod
-    def compute(
-        cls,
-        theta:NDArray[np.float64],
-    )->Self:
-        return cls(
-            exact = cls.__compute_exact(theta),
-            hot   = cls.__compute_hot(theta)
-        )
 
 @dataclass(frozen=True,slots=True)
 class PowerlawDistributionFactor:
