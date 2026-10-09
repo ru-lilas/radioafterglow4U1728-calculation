@@ -167,53 +167,53 @@ the strength of magnetic field has the fllowing condition
   ~\ab(\frac{\phiA}{\qty{2.0}{\GHz \min}})
   ~\ab(\frac{\epsB}{\num{1.0e-02}})^{\frac{1}{2}}
 \end{equation}
-\begin{equation}
-  \label{eq:definition_of_j_nu}
-  j_{\nu}
-  =
-  \frac{
-    \sqrt{3} e^3 n_{\ele} B
-  }{
-    8\pi \melecc
-  }
-  f(\Theta)
-  =
-  \frac{\pi}{
-    8\sqrt{3}
-  }
-  \frac{
-    \epsth\sqrt{\epsB}
-  }{
-    \Theta^7
-  }
-  \melecc
-  \ab(\frac{\phiA}{ct})^3
-  f(\Theta)
-\end{equation}
-\begin{equation}
-  \label{eq:definition_of_alpha_nu}
-  \alpha_{\nu}
-  =
-  \frac{
-    \pi e n_{\ele}
-  }{
-    3^{3/2}\Theta^5 B
-  }
-  f(\Theta)
-  =
-  \frac{
-    \pi
-  }{
-    4\cdot 3^{5/2}
-  }
-  \frac{
-    \epsth
-  }{
-    \Theta^8\sqrt{\epsB}
-  }
-  \ab(\frac{\phiA}{ct})
-  f(\Theta)
-\end{equation}
+% \begin{equation}
+%   \label{eq:definition_of_j_nu}
+%   j_{\nu}
+%   =
+%   \frac{
+%     \sqrt{3} e^3 n_{\ele} B
+%   }{
+%     8\pi \melecc
+%   }
+%   f(\Theta)
+%   =
+%   \frac{\pi}{
+%     8\sqrt{3}
+%   }
+%   \frac{
+%     \epsth\sqrt{\epsB}
+%   }{
+%     \Theta^7
+%   }
+%   \melecc
+%   \ab(\frac{\phiA}{ct})^3
+%   f(\Theta)
+% \end{equation}
+% \begin{equation}
+%   \label{eq:definition_of_alpha_nu}
+%   \alpha_{\nu}
+%   =
+%   \frac{
+%     \pi e n_{\ele}
+%   }{
+%     3^{3/2}\Theta^5 B
+%   }
+%   f(\Theta)
+%   =
+%   \frac{
+%     \pi
+%   }{
+%     4\cdot 3^{5/2}
+%   }
+%   \frac{
+%     \epsth
+%   }{
+%     \Theta^8\sqrt{\epsB}
+%   }
+%   \ab(\frac{\phiA}{ct})
+%   f(\Theta)
+% \end{equation}
 \begin{empheq}{align}
   \label{eq:definition_of_tau_theta}
   \tauth
@@ -440,105 +440,137 @@ exact one is smaller than \qty{0.5}{\percent}.
   \Theta_0^2
   \melecc
 \end{empheq}
+%%=======================================================%%
+\section{Distribution of Electrons}
+Maxwell-J\"{u}ttner distribution
+\begin{equation}
+  \frac{1}{n_{\ele}}\ab(\pdv{n}{\gamma})_{\thermal}
+  =
+  (1-f_{\ele})
+  f(\Theta)
+  \sqrt{1-\gamma^{-2}}
+  \frac{\gamma^2}{2\Theta^3}
+  \exp\ab[-\frac{\gamma}{\Theta}]
+\end{equation}
+\begin{equation}
+  f(\Theta)
+  \coloneq
+  \frac{2\Theta^2}{K_2(1/\Theta)}
+\end{equation}
+The mean Lorentz factor of electrons following
+a Maxwell-Jüttner distribution is given exactly by
+\begin{equation}
+  \ab<\gamma>_{\thermal}
+  =
+  \frac{K_3(1/\Theta)}{K_2(1/\Theta)} - \Theta .
+\end{equation}
+
+Power-law distribution\((p>2)\)
+\begin{empheq}[
+    left={
+      \displaystyle
+      \frac{1}{n_{\ele}}\ab(\pdv{n}{\gamma})_{\powerlaw}
+      =\empheqlbrace
+    }
+  ]{equation}
+\begin{aligned}
+  &f_{\ele}
+    g_N(\Theta)
+    \frac{p-2}{3\Theta}
+    \ab(\frac{\gamma}{3\Theta})^{-p}
+    &(\gamma \geq \gamma_{\min})\\
+  &0
+    &(\gamma < \gamma_{\min})
+\end{aligned}
+\end{empheq}
+\begin{equation}
+\end{equation}
+\begin{equation}
+  g_N(\Theta)
+  \coloneq
+  \frac{p-1}{p-2}
+  \ab(\frac{\gamma_{\min}}{3\Theta})^{p-1}
+\end{equation}
+We assume
+\begin{equation}
+  \gamma_{\min}
+  =
+  \ab<\gamma>_{\thermal}
+\end{equation}
+
 \section{Synchrotron Model}
 \subsection{Emissivity}
 \begin{equation}
-  \jnuth
+  \jnu
   =
-  \mathscr{J}_{\thermal}
-  \ab(\frac{\melecc}{(ct)^3})
+  j_0
+  (
+    \mathscr{J}_{\thermal}
+    +
+    \mathscr{J}_{\powerlaw}
+  )
 \end{equation}
 \begin{equation}
-  \mathscr{J}_{\thermal}
+  j_0
   \coloneq
-  N_{j}
-  \zeta_{\powerlaw}(\xm)
-\end{equation}
-\begin{equation}
-  \jnupl
-  =
-  \mathscr{J}_{\powerlaw}
-  \ab(\frac{\melecc}{(ct)^3})
-\end{equation}
-\begin{equation}
-  \mathscr{J}_{\powerlaw}
-  \coloneq
-  N_{j}
-  \zeta_{\powerlaw}(\xm)
-\end{equation}
-\begin{equation}
-  \label{eq:definition_of_N_j}
-  N_{j}
-  = 
   \ab(\frac{4\pi}{3})^3
   \frac{\epsth}{8\pi\epsB\Theta_0}
   \ab(\frac{\phith}{\Theta^2})^3
+  \ab(\frac{\melecc}{(ct)^3})
 \end{equation}
 \begin{equation}
-  \label{eq:definition_of_zeta_th}
-  \zeta_{\thermal}(\xm)
-  \coloneq 
+  \mathscr{J}_{\thermal}(\xm)
+  \coloneq
+  (1-f_{\ele})
   \frac{\sqrt{3}}{8\pi}
   f(\Theta)
   \xm
   I'(\xm)
 \end{equation}
 \begin{equation}
-  \label{eq:definition_of_zeta_pl}
-  \zeta_{\powerlaw}(\xm)
-  \coloneq 
-  C_{j}\varepsilon_{\ele}
-  g(\Theta)\xm^{-(p-1)/2}
+  \mathscr{J}_{\powerlaw}(\xm)
+  \coloneq
+  f_{\ele}
+  C_{j}
+  g_N(\Theta)\xm^{-(p-1)/2}
 \end{equation}
 %%=======================================================%%
 \subsection{Absorption Coefficient}
 \begin{equation}
-  \anuth
+  \anu
   =
-  \mathscr{A}_{\thermal}\frac{1}{ct}
+  \alpha_0
+  (
+    \mathscr{A}_{\thermal}
+    +
+    \mathscr{A}_{\powerlaw}
+  )
 \end{equation}
 \begin{equation}
-  \mathscr{A}_{\thermal}
-  \coloneq
-  N_{\alpha}
-  \eta_{\thermal}(\xm)
-\end{equation}
-\begin{equation}
-  \anupl
+  \alpha_0
   =
-  \mathscr{A}_{\powerlaw}\frac{1}{ct}
-\end{equation}
-\begin{equation}
-  \mathscr{A}_{\powerlaw}
-  \coloneq
-  N_{\alpha}
-  \eta_{\powerlaw}(\xm)
-\end{equation}
-
-\begin{equation}
-  \label{eq:definition_of_N_alpha}
-  N_{\alpha}
-  = 
   \ab(\frac{4\pi}{3})
   \frac{\epsth}{8\pi\epsB\Theta_0}
   \ab(\frac{\phith}{\Theta^2})
   \Theta^{-5}
+  \frac{1}{ct}
 \end{equation}
 \begin{equation}
-  \label{eq:definition_of_eta_th}
-  \eta_{\thermal}(\xm)
+  \mathscr{A}_{\thermal}(\xm)
   \coloneq
+  (1-f_{\ele})
   \frac{\pi}{3^{3/2}}
   f(\Theta)
   \xm^{-1}
   I'(\xm)
 \end{equation}
 \begin{equation}
-  \label{eq:definition_of_eta_pl}
-  \eta_{\powerlaw}(\xm)
+  \mathscr{A}_{\powerlaw}(\xm)
   \coloneq
-  C_{\alpha}\varepsilon_{\ele}
-  g(\Theta)\xm^{-(p+4)/2}
+  f_{\ele}
+  C_{\alpha}
+  g_N(\Theta)
+  \xm^{-(p+4)/2}
 \end{equation}
 
 \subsection{Optical Depth}
@@ -546,6 +578,82 @@ exact one is smaller than \qty{0.5}{\percent}.
   \tau_{\nu}
   =
   \alpha_{\nu}R
+  =
+  \tau_0
+  (
+    \mathscr{A}_{\thermal}
+    +
+    \mathscr{A}_{\powerlaw}
+  )
+\end{equation}
+\begin{equation}
+  \tau_0
+  \coloneq
+  \alpha_0 R
+\end{equation}
+\begin{equation}
+  \log{\tau_0}
+  =
+  -7\log{\Theta}
+  -\frac{1}{2}\log\ab(\frac{\Theta_0}{\epsth})
+  +\frac{3}{2}\log{2}
+  -2\log{3}
+  -\log{\epsB}
+  +\log{\phith}
+  +\frac{1}{2}\log{\Mep}
+\end{equation}
+\subsection{Specific Luminosity}
+\begin{equation}
+  \log\frac{j_0}{\alpha_0}
+  =
+  2\log\frac{4\pi}{3}
+  + 2\log\frac{\phith}{\Theta^2}
+  + 5\log{\Theta}
+  +\log(\melecc)
+  -2\log(ct)
+\end{equation}
+\begin{equation}
+  L_{\nu}
+  =
+  4\pi^2 R^2
+  \frac{\jnu}{\anu}
+  (1-e^{-\tau_{\nu}})
+  =
+  L_0 \Lambda
+\end{equation}
+\begin{equation}
+  L_0
+  \coloneq
+  4\pi^2 R^2
+  \frac{j_0}{\alpha_0}
+\end{equation}
+\begin{equation}
+  \log\ab(\frac{L_0}{\melecc})
+  =
+  3\log{2} + 4\log\ab(\frac{4\pi}{3})
+  +2\log{\phith}
+  +\log\ab(\frac{\Theta_0}{\epsth})
+  +\log{\Mep}
+\end{equation}
+\begin{equation}
+  \Lambda(\xm)
+  \coloneq
+  \frac{
+    \mathscr{J}_{\thermal}
+    +
+    \mathscr{J}_{\powerlaw}
+  }{
+    \mathscr{A}_{\thermal}
+    +
+    \mathscr{A}_{\powerlaw}
+  }
+  \ab[1-\exp(
+    -\tau_0(
+    \mathscr{A}_{\thermal}
+    +
+    \mathscr{A}_{\powerlaw}
+    )
+  )]
 \end{equation}
 
 \section{Results}
@@ -629,19 +737,6 @@ of thermal electrons to non-thermal electrons:
   f_{\ele}
   \coloneq
   \frac{n_{\mathrm{nth}}}{n_{\mathrm{nth}}+n_{\thermal}}
-\end{equation}
-The mean Lorentz factor of electrons following
-a Maxwell-Jüttner distribution is given exactly by
-\begin{equation}
-  \ab<\gamma>_{\thermal}
-  =
-  \frac{K_3(1/\Theta)}{K_2(1/\Theta)} - \Theta .
-\end{equation}
-We assume
-\begin{equation}
-  \gamma_{\min}
-  =
-  \ab<\gamma>_{\thermal}
 \end{equation}
 So
 \begin{equation}
