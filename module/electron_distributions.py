@@ -52,3 +52,37 @@ class MaxwellJuttnerDistribution:
     @property
     def mean_kinetic_gamma(self) -> float:
         return self.mean_gamma - 1.0
+
+@dataclass(frozen=True,slots=True)
+class PowerlawNormalization:
+    exact: NDArray[np.float64]
+    hot: NDArray[np.float64]
+
+    @staticmethod
+    def _compute_hot(
+        theta:NDArray[np.float64]
+    )->NDArray[np.float64]:
+        return np.ones_like(theta)
+
+    @staticmethod
+    def _compute_exact(
+        p: float,
+        theta:NDArray[np.float64],
+        gamma_min: NDArray[np.float64]
+    )->NDArray[np.float64]:
+        pm1 = p-1.0
+        return (
+            pm1*gamma_min/(pm1*gamma_min-pm1+1.0)
+        )*(gamma_min/(3.0*theta))**pm1
+
+    @classmethod
+    def compute(
+        cls,
+        p:float,
+        theta:NDArray[np.float64],
+        gamma_min: NDArray[np.float64]
+    )->Self:
+        return cls(
+            exact = cls._compute_exact(p,theta,gamma_min),
+            hot   = cls._compute_hot(theta)
+        )

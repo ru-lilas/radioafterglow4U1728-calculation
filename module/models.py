@@ -16,6 +16,7 @@ from module.mydataclasses import (
 )
 from module.electron_distributions import(
     MaxwellJuttnerFactor,
+    PowerlawNormalization,
     MaxwellJuttnerDistribution
 )
 from module.synchrotron_numerical_table import ThermalSynchrotronIntegrals
@@ -162,41 +163,6 @@ class ScenarioParameter:
 @dataclass(frozen=True,slots=True)
 class ElectronTemperature:
     values:FloatArray
-
-@dataclass(frozen=True,slots=True)
-class PowerlawDistributionFactor:
-    exact: NDArray[np.float64]
-    hot: NDArray[np.float64]
-
-    @staticmethod
-    def _compute_hot(
-        theta:NDArray[np.float64]
-    )->FloatArray:
-        return np.ones_like(theta)
-
-    @staticmethod
-    def _compute_exact(
-        p: float,
-        theta:NDArray[np.float64],
-        gamma_min: NDArray[np.float64]
-    )->NDArray[np.float64]:
-        pm1 = p-1.0
-        return (
-            pm1*gamma_min/(pm1*gamma_min-pm1+1.0)
-        )*(gamma_min/(3.0*theta))**pm1
-
-    @classmethod
-    def compute(
-        cls,
-        p:float,
-        theta:NDArray[np.float64],
-        gamma_min: NDArray[np.float64]
-    )->Self:
-        return cls(
-            exact = cls._compute_exact(p,theta,gamma_min),
-            hot   = cls._compute_hot(theta)
-        )
-
 
 class DimensionlessElectronTemperature:
     @staticmethod
@@ -531,7 +497,7 @@ class ModelParameters:
     @property
     def g_factor(self)->NDArray[np.float64]:
         use_exact = self.switches[SwitchKeys.EXACT_DIST_FACTORS]
-        g_factor = PowerlawDistributionFactor.compute(
+        g_factor = PowerlawNormalization.compute(
             p=self.powerlaw.p_index,
             theta=self.theta,
             gamma_min=self.gamma_min
