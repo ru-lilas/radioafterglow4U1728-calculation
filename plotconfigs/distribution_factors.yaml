@@ -15,14 +15,15 @@ layout:
         scale: "log"
         limits: [1.0e+00,1.0e+02]
         label:
-          prefix: '$\gamma_e$'
+          prefix: 'Electron Lorentz factor,$\gamma$'
           unit: ""
           fontsize: 32
     y:
-      - scale: "log"
-        limits: [1.0e-05,1.0e+01]
+      - &occupation_axis
+        scale: "log"
+        limits: [1.0e-03,2.0e+00]
         label:
-          prefix: '$\frac{1}{n_e}n_{\gamma}$'
+          prefix: '$\frac{1}{n_e}\frac{\partial{n}}{\partial{\gamma}}$'
           unit: ""
           fontsize: 32
     ticks:
@@ -41,18 +42,43 @@ components:
         - "#000000"
         - "#FF4B00"
       linewidth: 2.0
-      linestyle: "-"
+      linestyle: "--"
       alpha: null
       zorder: 1.0
+  powerlaw:
+    type: line
+    style:
+      <<: *linestyle_tmp
+      linestyle: "-."
+  total:
+    type: line
+    style:
+      <<: *linestyle_tmp
+      linestyle: "-"
+    legend: true
+    label_format:
+      prefix: '\Theta'
+      fmt: '.1f'
+      unit: ''
+  legend:
+    fontsize: 24
+    loc: upper right
 metadata:
   fontsize: 18
   items:
-    p_index:
+    f_e:
       show: true
       unit: ""
       label_format: &LabelFormatTmp
-        prefix: '\varepsilon_{\mathrm{B}}'
+        prefix: 'f_e'
         fmt: '.1e'
         unit: ""
         suffix: ""
         show_equals: true
+    p_index:
+      show: true
+      unit: ""
+      label_format:
+        <<: *LabelFormatTmp
+        prefix: 'p'
+        fmt: '.2f'
