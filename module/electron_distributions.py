@@ -36,22 +36,54 @@ class MaxwellJuttnerFactor:
 
 @dataclass(frozen=True,slots=True)
 class MaxwellJuttnerDistribution:
-    theta: float
+    theta: NDArray[np.float64]
     gamma: NDArray[np.float64]
     gamma_pdf: NDArray[np.float64]
 
     @property
-    def mean_gamma(self)->float:
+    def mean_gamma(self)->NDArray[np.float64]:
         z = 1.0/self.theta
-        return float(special.kve(3,z)/special.kve(2,z) - self.theta)
+        return (special.kve(3,z)/special.kve(2,z) - self.theta)
 
     @property
-    def mean_gamma_hot(self)->float:
+    def mean_gamma_hot(self)->NDArray[np.float64]:
         return 3.0*self.theta
 
     @property
-    def mean_kinetic_gamma(self) -> float:
+    def mean_kinetic_gamma(self) -> NDArray[np.float64]:
         return self.mean_gamma - 1.0
+
+    @classmethod
+    def compute(
+        cls,
+        f_e: float,
+        theta: NDArray[np.float64],
+        gamma: NDArray[np.float64],
+    ) -> Self:
+        if theta.ndim != 1 or gamma.ndim != 1:
+            raise ValueError("thetaとgammaは1次元配列が必要です")
+        if np.any(theta <= 0):
+            raise ValueError("thetaは正の値が必要です")
+        if np.any(gamma < 1):
+            raise ValueError("gammaは1以上が必要です")
+
+        theta_column = theta[:, None]
+        gamma_row = gamma[None, :]
+        f_factor = MaxwellJuttnerFactor.compute(theta_column)
+
+        gamma_pdf = (
+            (1.0 - f_e)
+            * f_factor.exact
+            * np.sqrt(1.0 - gamma_row**(-2))
+            * gamma_row**2
+            / (2.0 * theta_column**3)
+            * np.exp(-gamma_row / theta_column)
+        )
+        return cls(
+            theta=theta,
+            gamma=gamma,
+            gamma_pdf=gamma_pdf,
+        )
 
 @dataclass(frozen=True,slots=True)
 class PowerlawNormalization:
