@@ -12,7 +12,7 @@ from module import plot_utils
 from module.models import ColumnNames, FluxName, MetadataNames, ModelParameters, SwitchKeys
 from module.mydataclasses import FloatVectorSpace, LongformatDataFrame, QuantityArray1D, QuantityData
 from module.observation import LongformatLightcurve
-from module import models
+from module.electron_distributions import MaxwellJuttnerDistribution
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -22,19 +22,6 @@ def parse_args() -> argparse.Namespace:
     ):
         parser.add_argument(f"--{name}", type=Path, required=True)
     return parser.parse_args()
-
-def compute_g_factor(
-    theta,
-    *,
-    p,
-    gamma_min,
-):
-    g_factor = models.PowerlawDistributionFactor.compute(
-        p=p,
-        theta=theta,
-        gamma_min=gamma_min
-    )
-    return g_factor
 
 def main() -> None:
     args = parse_args()
@@ -52,12 +39,25 @@ def main() -> None:
         num = 256,
         scale="log"
     )
+    gamma_space = FloatVectorSpace(
+        start=1.0e+00,
+        stop =1.0e+03,
+        num = 256,
+        scale="log"
+    )
+    f_e = 0.1
     theta = theta_space.geomspace()
-    f_factor = models.MaxwellJuttnerFactor.compute(theta)
-    g_factor = models.PowerlawDistributionFactor.compute(
-        p=2.5,
+    theta = np.array([
+        5.0e-01,
+        1.0e+00,
+        5.0e+00
+    ])
+    gamma_e = gamma_space.geomspace()
+
+    mjdist = MaxwellJuttnerDistribution.compute(
+        f_e=f_e,
         theta=theta,
-        gamma_min=3.0*theta
+        gamma=gamma_e
     )
 
     with PdfPages(outpath) as pdf:
@@ -66,21 +66,13 @@ def main() -> None:
             axis_config = plotconf.layout.axes.for_subplot(row,col)
             plotter = plot_utils.Plotter(ax)
 
-            plotter.line(
-                x=theta,
-                y=f_factor.exact,
-                style=components["f_factor"].resolve_line_style(col)
-            )
-            plotter.line(
-                x=theta,
-                y=g_factor.exact,
-                style=components["g_factor"].resolve_line_style(col)
-            )
-            plotter.line(
-                x=theta,
-                y=f_factor.hot,
-                style=components["hot_limit"].resolve_line_style(col)
-            )
+            gamma_e = mjdist.gamma
+            for i,gamma_pdf in enumerate(mjdist.gamma_pdf):
+                plotter.line(
+                    x=gamma_e,
+                    y=gamma_pdf,
+                    style=components["thermal"].resolve_line_style(i)
+                )
 
         pdf.savefig(fig)
         plt.close(fig)
