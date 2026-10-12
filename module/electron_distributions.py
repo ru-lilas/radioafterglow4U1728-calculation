@@ -118,3 +118,97 @@ class PowerlawNormalization:
             exact = cls._compute_exact(p,theta,gamma_min),
             hot   = cls._compute_hot(theta)
         )
+
+@dataclass(frozen=True, slots=True)
+class PowerlawDistribution:
+    p_index: float
+    f_e: float
+    gamma_min: NDArray[np.float64]
+    gamma: NDArray[np.float64]
+    gamma_pdf: NDArray[np.float64]
+
+    @classmethod
+    def compute(
+        cls,
+        p_index: float,
+        f_e: float,
+        gamma_min: NDArray[np.float64],
+        gamma: NDArray[np.float64],
+    ) -> Self:
+        if gamma_min.ndim != 1 or gamma.ndim != 1:
+            raise ValueError("gamma_minとgammaは1次元配列が必要です")
+        if p_index <= 1:
+            raise ValueError("p_indexは1より大きい値が必要です")
+        if not 0 <= f_e <= 1:
+            raise ValueError("f_eは0以上1以下が必要です")
+        if np.any(gamma_min < 1) or np.any(gamma < 1):
+            raise ValueError("gamma_minとgammaは1以上が必要です")
+
+        minimum = gamma_min[:, None]
+        gamma_row = gamma[None, :]
+
+        gamma_pdf = np.where(
+            gamma_row >= minimum,
+            f_e * (p_index - 1.0) / minimum
+            * (gamma_row / minimum)**(-p_index),
+            0.0,
+        )
+        return cls(
+            p_index=p_index,
+            f_e=f_e,
+            gamma_min=gamma_min,
+            gamma=gamma,
+            gamma_pdf=gamma_pdf,
+        )
+
+@dataclass(frozen=True, slots=True)
+class ElectronDistribution:
+    thermal: MaxwellJuttnerDistribution
+    powerlaw: PowerlawDistribution
+
+    def __post_init__(self) -> None:
+        if not np.array_equal(self.thermal.gamma, self.powerlaw.gamma):
+            raise ValueError("thermalとpowerlawのgammaが一致しません")
+        if self.thermal.gamma_pdf.shape != self.powerlaw.gamma_pdf.shape:
+            raise ValueError("thermalとpowerlawの分布形状が一致しません")
+
+    @property
+    def gamma(self) -> NDArray[np.float64]:
+        return self.thermal.gamma
+
+    @property
+    def gamma_pdf(self) -> NDArray[np.float64]:
+        return self.thermal.gamma_pdf + self.powerlaw.gamma_pdf
+
+    @classmethod
+    def compute(
+        cls,
+        theta: NDArray[np.float64],
+        gamma: NDArray[np.float64],
+        p_index: float,
+        f_e: float,
+        gamma_min: NDArray[np.float64] | None = None,
+    ) -> Self:
+        if not 0 <= f_e <= 1:
+            raise ValueError("f_eは0以上1以下が必要です")
+
+        thermal = MaxwellJuttnerDistribution.compute(
+            f_e=f_e,
+            theta=theta,
+            gamma=gamma,
+        )
+
+        minimum = thermal.mean_gamma if gamma_min is None else gamma_min
+        if minimum.shape != theta.shape:
+            raise ValueError("gamma_minとthetaは同じ形状が必要です")
+
+        powerlaw = PowerlawDistribution.compute(
+            p_index=p_index,
+            f_e=f_e,
+            gamma_min=minimum,
+            gamma=gamma,
+        )
+        return cls(
+            thermal=thermal,
+            powerlaw=powerlaw,
+        )
