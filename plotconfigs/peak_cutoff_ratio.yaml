@@ -36,16 +36,20 @@ metadata:
   items: {}
 components:
   ratio:
-    type: line
+    type: errorbar
     legend: true
     label_format:
       prefix: 'Peak / cutoff'
       fmt: '.2f'
       unit: ''
     style:
-      colors: ['#005AFF']
-      linewidth: 1.2
-      linestyle: '-'
+      colors: ['#000000']
+      markeredgecolors: ['#000000']
+      marker: 'o'
+      markersize: 1.0
+      markeredgewidth: 0.5
+      capsize: 0.0
+      linestyle: 'none'
   threshold:
     type: line
     legend: true

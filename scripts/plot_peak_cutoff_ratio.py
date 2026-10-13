@@ -98,11 +98,15 @@ def plot_ratios(df: pd.DataFrame, plotconf: plot_utils.PlotConfig, output: Path)
                 raise ValueError("plotconfigのlayoutは1行1列にしてください")
             plotter = plot_utils.Plotter(axes[0, 0])
             components = plotconf.components
-            ratio_line = plotter.line(
+            ratio_points = plotter.errorbar(
                 x=indices,
                 y=ratio,
-                style=components["ratio"].resolve_line_style(0),
+                yerr=np.zeros_like(ratio),
+                style=components["ratio"].resolve_errorbar_style(0),
             )
+            ratio_artist = ratio_points.lines[0]
+            if ratio_artist is None:
+                raise ValueError("ratioのマーカーが生成されませんでした")
             threshold_line = plotter.line(
                 x=np.array([left, right]),
                 y=np.ones(2),
@@ -110,7 +114,7 @@ def plot_ratios(df: pd.DataFrame, plotconf: plot_utils.PlotConfig, output: Path)
             )
             plotter.legend(
                 entries=[
-                    plot_utils.LegendEntry(components["ratio"], ratio_line[0]),
+                    plot_utils.LegendEntry(components["ratio"], ratio_artist),
                     plot_utils.LegendEntry(components["threshold"], threshold_line[0]),
                 ],
                 config=components["legend"],
