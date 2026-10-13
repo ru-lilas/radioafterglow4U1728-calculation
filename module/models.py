@@ -121,6 +121,7 @@ class ColumnNames(StrEnum):
     MODEL_INDEX = auto()
     PEAK_COLUMN_INDEX = auto()
     XM = auto()
+    XM_CUTOFF = auto()
     PHI_TH = auto()
     THETA0 = auto()
     PHI_TH_THIN = auto()
@@ -773,6 +774,7 @@ class SourceframeSpecificFlux(SynchrotronQuantities):
 class SynchrotronPeak:
     column_index: NDArray[np.intp]
     xm: NDArray64
+    xm_cutoff: NDArray[np.float64]
     phi: u.Quantity
     fnu: u.Quantity
     lnu: u.Quantity
@@ -869,6 +871,8 @@ class SynchrotronPeak:
                 .to_numpy(dtype=np.intp).reshape(-1, 1),
             xm=ordered[ColumnNames.XM]
                 .to_numpy(dtype=np.float64).reshape(-1, 1),
+            xm_cutoff=ordered[ColumnNames.XM_CUTOFF]
+                .to_numpy(dtype=np.float64).reshape(-1, 1),
             phi=u.Quantity(
                 ordered[PhiName.PHI].to_numpy(dtype=np.float64).reshape(-1, 1),
                 unit=phi_unit,
@@ -896,6 +900,7 @@ class SynchrotronPeak:
             ColumnNames.MODEL_INDEX: self.model_indices.ravel(),
             ColumnNames.PEAK_COLUMN_INDEX: self.column_index.ravel(),
             ColumnNames.XM: self.xm.ravel(),
+            ColumnNames.XM_CUTOFF: self.xm_cutoff.ravel(),
             PhiName.PHI: self.phi.to_value(phi_unit).ravel(),
             ColumnNames.FNU_PEAK: self.fnu.to_value(fnu_unit).ravel(),
             ColumnNames.LNU: self.lnu.to_value(lnu_unit).ravel(),
@@ -939,6 +944,7 @@ class SynchrotronResults:
     def peak(
         self,
     ) -> SynchrotronPeak:
+        xm_cutoff = self.model_params.xm_cutoff
         thermal_only = self.model_params.switches[SwitchKeys.THERMAL_ONLY]
         if thermal_only:
             fnu = self.fnu_obsframe.thermal_only
@@ -968,6 +974,7 @@ class SynchrotronResults:
         return SynchrotronPeak(
             column_index=column_index,
             xm=self.xm[row_index, column_index],
+            xm_cutoff = xm_cutoff,
             phi=phi_peak,
             fnu=fnu_peak,
             lnu=lnu_peak,
