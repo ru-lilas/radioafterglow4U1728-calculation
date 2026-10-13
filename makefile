@@ -155,19 +155,19 @@ $(FILEPATH_MINIMUM_CHI2_LC_PDF): \
 		--plotconfig $(PLOTCONFIGDIR)/minimum_chi_squared_lightcurves.yaml \
 		$(ARGS_OUTPUT)
 
-# 既存のターゲット名を互換用に残す
-view-chevalier_cmp: view-chevalier
-
+view-chevaliercm: $(FILEPATH_CHEVALIER_COLORMAP_PDF)
+	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
 chevaliercm: $(FILEPATH_CHEVALIER_COLORMAP_PDF)
 $(FILEPATH_CHEVALIER_COLORMAP_PDF): \
+	$(FILEPATH_PEAK_GRID) \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
 	$(FILEPATH_OBSLC) \
-	$(PLOTCONFIGDIR)/chevalier_colormaps.yaml \
-	module/chevalier.py \
-	scripts/chevalier_colormaps.py
-	$(PYTHON) -m scripts.chevalier_colormaps \
-		--model_table $< \
-		--plotconfig $(PLOTCONFIGDIR)/chevalier_colormaps.yaml \
+	$(PLOTCONFIGDIR)/chevalier_colormap.yaml \
+	scripts/plot_chevalier_colormap.py
+	$(PYTHON) -m scripts.plot_chevalier_colormap \
+		$(ARGS_PEAK_GRID) \
+		$(ARGS_MODEL_PARAMETER_TABLE) \
+		--plotconfig $(PLOTCONFIGDIR)/chevalier_colormap.yaml \
 		$(ARGS_OBSLC) \
 		$(ARGS_OUTPUT)
 

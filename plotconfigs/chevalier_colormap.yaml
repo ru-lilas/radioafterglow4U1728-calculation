@@ -1,0 +1,180 @@
+layout:
+  figure:
+    figsize:
+    - 18
+    - 8
+    dpi: 100
+    layout_engine: constrained
+  subplots:
+    nrows: 1
+    ncols: 2
+    sharex: false
+    sharey: true
+    hide_shared_labels: true
+  axes:
+    x:
+      scale: log
+      limits:
+      - 1.0
+      - 100.0
+      label:
+        prefix: $\nu t_{\mathrm{peak}}$
+        unit: GHz min
+        fontsize: 22
+    y:
+      scale: log
+      limits:
+      - 0.1
+      - 10.0
+      label:
+        prefix: $F_{\nu,\mathrm{net,peak}}$
+        unit: mJy
+        fontsize: 22
+    ticks:
+      labelsize: 18
+      direction: in
+      major_length: 10.0
+      minor_length: 8.0
+      width: 1.0
+      pad: 10.0
+metadata:
+  fontsize: 14
+  items:
+    eps_b:
+      show: true
+      unit: ''
+      label_format:
+        prefix: \varepsilon_{\mathrm{B}}
+        fmt: .1e
+        unit: ''
+    eps_th:
+      show: true
+      unit: ''
+      label_format:
+        prefix: \varepsilon_{\mathrm{th}}
+        fmt: .2f
+        unit: ''
+    distance:
+      show: true
+      unit: kpc
+      label_format:
+        prefix: D
+        fmt: .1f
+        unit: \mathrm{kpc}
+    mu_e_mu:
+      show: true
+      unit: ''
+      label_format:
+        prefix: \mu_{\mathrm{e}}/\mu
+        fmt: .1f
+        unit: ''
+    p_index:
+      show: true
+      unit: ''
+      label_format:
+        prefix: p
+        fmt: .1f
+        unit: ''
+    f_e:
+      show: true
+      unit: ''
+      label_format:
+        prefix: f_e
+        fmt: .1e
+        unit: ''
+components:
+  a_wind:
+    type: colormap
+    style:
+      cmap: cividis
+      shading: nearest
+      vmin: null
+      vmax: null
+      norm:
+        type: log
+      colorbar:
+        show: true
+        pad: 0.02
+        fraction: 0.05
+        tick_labelsize: 16
+        label:
+          prefix: $A_{\mathrm{w}}$
+          unit: g cm-1
+          fontsize: 22
+  beta_sh:
+    type: colormap
+    style:
+      cmap: cividis
+      shading: nearest
+      vmin: null
+      vmax: null
+      norm:
+        type: linear
+      colorbar:
+        show: true
+        pad: 0.02
+        fraction: 0.05
+        tick_labelsize: 16
+        label:
+          prefix: $\beta_{\mathrm{sh}}$
+          unit: ''
+          fontsize: 22
+  obs_ranges:
+    type: rectangle
+    legend: true
+    style:
+      facecolors:
+      - none
+      - none
+      edgecolor: '#000000'
+      linewidth: 1.0
+      alpha: 1.0
+      zorder: 4
+      hatches:
+      - /
+      - null
+    label_format:
+      prefix: Russell+24
+      fmt: .1f
+      unit: \mathrm{GHz}
+  non_relativistic_boundary:
+    type: line
+    legend: false
+    style: &id001
+      colors:
+      - '#000000'
+      linewidth: 4.0
+      linestyle: '-'
+      alpha: null
+      zorder: 2.0
+  ultra_relativistic_boundary:
+    type: line
+    legend: false
+    style: *id001
+  non_relativistic_boundary_label:
+    type: text
+    legend: false
+    style: &id002
+      color: '#000000'
+      fontsize: 20
+      ha: left
+      va: top
+  ultra_relativistic_boundary_label:
+    type: text
+    legend: false
+    style: 
+      <<: *id002
+      ha: right
+      va: bottom
+  legend:
+    fontsize: 14
+    loc: upper left
+  bestfits:
+    type: errorbar
+    style:
+      colors:
+      - '#000000'
+      marker: o
+      markersize: 5
+      linestyle: none
+      zorder: 5
