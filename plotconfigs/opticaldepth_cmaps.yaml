@@ -1,0 +1,60 @@
+layout:
+  figure:
+    figsize: [16,9]
+    dpi: 100
+    layout_engine: constrained
+  subplots:
+    nrows: 1
+    ncols: 1
+    sharex: col
+    sharey: col
+    hide_shared_labels: true
+  axes:
+    x:
+      - &theta_axis
+        scale: "log"
+        limits: [1.0e-01,1.0e+02]
+        label:
+          prefix: '$\phi_{\Theta}$'
+          unit: ""
+          fontsize: 32
+    y:
+      - &occupation_axis
+        scale: "log"
+        limits: [3.0e+00,6.0e+01]
+        label:
+          prefix: '$\Theta_0$'
+          unit: ""
+          fontsize: 32
+    ticks:
+      labelsize: 32
+      direction: "in"
+      major_length: 10.0
+      minor_length: 8.0
+      width: 1.0
+      pad: 10.0
+
+components:
+  dummy: &factor_tmp
+    type: line
+    style: &linestyle_tmp
+      colors: 
+        - "#005AFF"
+        - "#000000"
+        - "#FF4B00"
+      linewidth: 2.0
+      linestyle: "--"
+      alpha: null
+      zorder: 1.0
+metadata:
+  fontsize: 18
+  items:
+    dummy:
+      show: true
+      unit: ""
+      label_format: &LabelFormatTmp
+        prefix: 'f_e'
+        fmt: '.1e'
+        unit: ""
+        suffix: ""
+        show_equals: true
