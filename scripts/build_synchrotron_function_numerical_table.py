@@ -19,6 +19,7 @@ def parse_args()->argparse.Namespace:
     return parser.parse_args()
 
 def main()->None:
+    print("Build Synchrotron Function Table...")
     args=parse_args()
 
     conf = ValueArray.from_yaml(args.input)

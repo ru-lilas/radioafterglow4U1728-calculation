@@ -45,13 +45,13 @@ model_lightcurves: &ModelLightcurves
   xm:
     start: 1.0e-02
     stop: 1.0e+04
-    num: 256
+    num: 2048
     scale: log
   time:
     values:
       start:  1.0e-02
       stop:   1.0e+04 
-      num: 256
+      num: 1024
       scale: "log"
     unit: "s"
 

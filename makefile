@@ -53,6 +53,7 @@ FILEPATH_CHEVALIER_WITH_BESTFITS_PDF := $(call run_fig,chevalier_diagram_with_be
 FILEPATH_CHEVALIER_COLORMAP_PDF := $(call run_fig,chevalier_colormap.pdf)
 FILEPATH_DIMENSIONLESS_SYNCHROTRONS_PDF:= $(call run_fig,dimensionless_synchrotrons.pdf)
 FILEPATH_OPTICALDEPTH_CMAPS_PDF:=$(call run_fig,opticaldepth_cmaps.pdf)
+FILEPATH_THERMAL_PEAK_PDF:=$(call run_fig,thermal_peak.pdf)
 
 # 共通CLI引数（$<・$@はレシピ実行時に展開するため = を使う）
 ARGS_INPUT = --input $<
@@ -108,6 +109,18 @@ $(FILEPATH_POWERLAW_LIGHTUCURVES_PDF): \
 		$(ARGS_OBSLC) \
 		$(ARGS_OUTPUT)
 
+view-thermal-peak: $(FILEPATH_THERMAL_PEAK_PDF)
+	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
+$(FILEPATH_THERMAL_PEAK_PDF): \
+	$(FILEPATH_MODEL_PARAMETER_TABLE) \
+	$(PLOTCONFIGDIR)/thermal_peak.yaml \
+	scripts/plot_thermal_peak.py
+	$(PYTHON) -m scripts.plot_thermal_peak \
+		$(ARGS_MODEL_PARAMETER_TABLE) \
+		$(ARGS_INTEGRAL_TABLE) \
+		--plotconfig $(PLOTCONFIGDIR)/thermal_peak.yaml \
+		$(ARGS_OUTPUT)
+
 view-opt-cmap: $(FILEPATH_OPTICALDEPTH_CMAPS_PDF)
 	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
 opticaldepth_cmaps: $(FILEPATH_OPTICALDEPTH_CMAPS_PDF)
@@ -117,6 +130,7 @@ $(FILEPATH_OPTICALDEPTH_CMAPS_PDF): \
 	scripts/plot_opticaldepth_cmaps.py
 	$(PYTHON) -m scripts.plot_opticaldepth_cmaps \
 		$(ARGS_MODEL_PARAMETER_TABLE) \
+		$(ARGS_INTEGRAL_TABLE) \
 		--plotconfig $(PLOTCONFIGDIR)/opticaldepth_cmaps.yaml \
 		$(ARGS_OUTPUT)
 
@@ -347,6 +361,7 @@ $(FILEPATH_BINNING): \
 		$(ARGS_OBSLC) \
 		$(ARGS_OUTPUT)
 
+table: $(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE)
 $(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE): \
 	$(INPUTDIR)/synchrotron_function_numerical_table.yaml \
 	scripts/build_synchrotron_function_numerical_table.py

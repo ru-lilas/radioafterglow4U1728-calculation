@@ -882,9 +882,10 @@ class DimensionlessThermalLuminosity:
             raise ValueError("tau_thとxmは1次元配列が必要です")
         xm_column = xm[:, None]
         tau_row = tau_th[None, :]
+        ip_column = ip[:, None]
         return (
             9.0*xm_column**2/(8.0*np.pi**2)
-            *(-np.expm1(-tau_row*ip/xm_column))
+            *(-np.expm1(-tau_row*ip_column/xm_column))
         )
 
     @classmethod
