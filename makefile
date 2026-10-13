@@ -52,6 +52,7 @@ FILEPATH_CHEVALIER_PDF := $(call run_fig,chevalier_diagram.pdf)
 FILEPATH_CHEVALIER_WITH_BESTFITS_PDF := $(call run_fig,chevalier_diagram_with_bestfits.pdf)
 FILEPATH_CHEVALIER_COLORMAP_PDF := $(call run_fig,chevalier_colormap.pdf)
 FILEPATH_DIMENSIONLESS_SYNCHROTRONS_PDF:= $(call run_fig,dimensionless_synchrotrons.pdf)
+FILEPATH_OPTICALDEPTH_CMAPS_PDF:=$(call run_fig,opticaldepth_cmaps.pdf)
 
 # 共通CLI引数（$<・$@はレシピ実行時に展開するため = を使う）
 ARGS_INPUT = --input $<
@@ -105,6 +106,18 @@ $(FILEPATH_POWERLAW_LIGHTUCURVES_PDF): \
 		$(ARGS_BINNED_LIGHTCURVES) \
 		$(ARGS_MODEL_PARAMETER_TABLE_POWERLAW) \
 		$(ARGS_OBSLC) \
+		$(ARGS_OUTPUT)
+
+view-opt-cmap: $(FILEPATH_OPTICALDEPTH_CMAPS_PDF)
+	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
+opticaldepth_cmaps: $(FILEPATH_OPTICALDEPTH_CMAPS_PDF)
+$(FILEPATH_OPTICALDEPTH_CMAPS_PDF): \
+	$(FILEPATH_MODEL_PARAMETER_TABLE) \
+	$(PLOTCONFIGDIR)/opticaldepth_cmaps.yaml \
+	scripts/plot_opticaldepth_cmaps.py
+	$(PYTHON) -m scripts.plot_opticaldepth_cmaps \
+		$(ARGS_MODEL_PARAMETER_TABLE) \
+		--plotconfig $(PLOTCONFIGDIR)/opticaldepth_cmaps.yaml \
 		$(ARGS_OUTPUT)
 
 $(FILEPATH_MINIMUM_CHI2_LC_PDF): \

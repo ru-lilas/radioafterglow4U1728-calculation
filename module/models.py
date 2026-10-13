@@ -448,7 +448,7 @@ class ModelParameters:
 
     @property
     def theta(self):
-        return DimensionlessElectronTemperature.hot(self.theta0)
+        return DimensionlessElectronTemperature.gp98(self.theta0)
 
     @property
     def a_wind(self)->u.Quantity:
@@ -530,6 +530,36 @@ class ModelParameters:
         table: ThermalSynchrotronIntegrals
     )->NDArray64:
         return table.ip(xm)
+
+    @property
+    def log10_tau0(
+        self
+    )->NDArray[np.float64]:
+        log10_theta0    = np.log10(self.theta0)
+        log10_theta     = np.log10(self.theta)
+        log10_epsb      = np.log10(self.eps_b)
+        log10_epsth     = np.log10(self.eps_th)
+        log10_phith     = np.log10(self.phi_th)
+        log10_mep       = np.log10(self.molecular_weight.to_effective_mass_ratio())
+
+        return(
+            -7.0*log10_theta
+            -0.5*(log10_theta0-log10_epsth)
+            +1.5*np.log10(2.0)
+            -2.0*np.log10(3.0)
+            -log10_epsb
+            +log10_phith
+            +0.5*log10_mep
+        )
+
+    @property
+    def log10_tauth(self)->NDArray[np.float64]:
+        return (
+            np.log10(np.pi)
+            -1.5*np.log10(3.0)
+            +np.log10(self.f_factor)
+            +self.log10_tau0
+        )
 
 FOUR_PI_OVER_THREE = 4.0*np.pi/3.0
 
@@ -809,13 +839,13 @@ class OpticalDepth(SynchrotronComponents):
         anu: AbsorptionCoefficient,
         norm_r: NDArray64
     )->Self:
-        norm_a = anu.norm
+        alpha0 = anu.norm
         eta = anu.eta
-        norm_tau = norm_a*norm_r
+        tau0 = alpha0*norm_r
         return cls(
-            thermal_only = norm_tau*eta.thermal,
-            powerlaw_only = norm_tau*eta.powerlaw,
-            total = norm_tau*eta.total,
+            thermal_only = tau0*eta.thermal,
+            powerlaw_only = tau0*eta.powerlaw,
+            total = tau0*eta.total,
         )
 
 @dataclass(frozen=True,slots=True)
@@ -835,6 +865,51 @@ class SpecificLuminosityFrequencyDependence:
             powerlaw=sigma.powerlaw*(-np.expm1(-tau.powerlaw_only)),
             total=sigma.total*(-np.expm1(-tau.total)),
         )
+
+@dataclass(frozen=True)
+class DimensionlessThermalLuminosity:
+    tau_th: NDArray[np.float64]
+    xm: NDArray[np.float64]
+    lambda_th: NDArray[np.float64]
+
+    @staticmethod
+    def __compute_lambda_th(
+        tau_th: NDArray[np.float64],
+        xm:NDArray[np.float64],
+        ip:NDArray[np.float64]
+    )->NDArray[np.float64]:
+        if tau_th.ndim != 1 or xm.ndim != 1:
+            raise ValueError("tau_thとxmは1次元配列が必要です")
+        xm_column = xm[:, None]
+        tau_row = tau_th[None, :]
+        return (
+            9.0*xm_column**2/(8.0*np.pi**2)
+            *(-np.expm1(-tau_row*ip/xm_column))
+        )
+
+    @classmethod
+    def compute(
+        cls,
+        tau_th: NDArray[np.float64],
+        xm:NDArray[np.float64],
+        ip:NDArray[np.float64]
+    )->Self:
+        lambda_th = cls.__compute_lambda_th(
+            tau_th,xm,ip
+        )
+        return cls(
+            tau_th=tau_th,
+            xm=xm,
+            lambda_th=lambda_th
+        )
+
+    def peaks(self) -> NDArray[np.float64]:
+        """Return peak xm and luminosity for each row"""
+        indices = np.argmax(self.lambda_th, axis=1)
+        return np.column_stack((
+            self.xm[indices],
+            self.lambda_th[np.arange(len(indices)), indices]
+        ))
 
 @dataclass(frozen=True,slots=True)
 class SpecificLuminosity:
