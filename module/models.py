@@ -30,7 +30,6 @@ from module.synchrotron_coefficients import (
     AbsorptionCoefficient,
     FOUR_PI_OVER_THREE,
     POWERLAW_FLOOR,
-    XM_CUTOFF,
 )
 from module.thermal_synchrotron import DimensionlessThermalLuminosity
 from scipy import special
@@ -488,9 +487,15 @@ class ModelParameters:
     @property
     def gamma_min(self):
         """
+            minimum Lorentz factor for electrons to be acceralated
             Margalit&Quataert(2021)
         """
-        return np.ones_like(self.theta0)
+        return MaxwellJuttnerDistribution.calculate_mean_gamma(self.theta)
+
+    @property
+    def xm_cutoff(self) -> NDArray64:
+        """Return (gamma_min / theta)^2 with the model grid shape"""
+        return (self.gamma_min / self.theta)**2
 
     @property
     def doppler_delta(self):
@@ -1018,6 +1023,7 @@ class SynchrotronResults:
         xm:NDArray64,
         table: ThermalSynchrotronIntegrals,
     )->Self:
+        """Compute spectra using the cutoff derived from each model."""
         # 格子の各セルを一つのモデルとして扱う。
         n_models = model_params.phi_th.size
         if model_params.theta0.shape != model_params.phi_th.shape:
@@ -1046,6 +1052,7 @@ class SynchrotronResults:
             ip=model_params.ip(xm,table),
             f_factor=model_params.f_factor.reshape(-1,1),
             g_factor=model_params.g_factor.reshape(-1,1),
+            xm_cutoff=model_params.xm_cutoff.ravel(),
         )
         jnu = Emissivity(
             norm=norms.j0.reshape(-1, 1),

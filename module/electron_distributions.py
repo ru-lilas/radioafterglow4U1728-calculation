@@ -51,11 +51,16 @@ class MaxwellJuttnerDistribution:
     gamma: NDArray[np.float64]
     gamma_pdf: NDArray[np.float64]
 
+    @staticmethod
+    def calculate_mean_gamma(theta:NDArray[np.float64]) -> NDArray[np.float64]:
+        """Mean Lorentz factor within the thermal component; shape (N,)."""
+        z = 1.0 / theta
+        return special.kve(3, z) / special.kve(2, z) - theta
+
     @property
     def mean_gamma(self) -> NDArray[np.float64]:
         """Mean Lorentz factor within the thermal component; shape (N,)."""
-        z = 1.0 / self.theta
-        return special.kve(3, z) / special.kve(2, z) - self.theta
+        return self.calculate_mean_gamma(self.theta)
 
     @property
     def mean_gamma_hot(self) -> NDArray[np.float64]:
