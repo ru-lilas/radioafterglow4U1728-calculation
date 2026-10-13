@@ -1,0 +1,62 @@
+layout:
+  figure:
+    figsize: [12, 7]
+    dpi: 150
+    layout_engine: constrained
+  subplots:
+    nrows: 1
+    ncols: 1
+    sharex: false
+    sharey: false
+    hide_shared_labels: false
+  axes:
+    x:
+      scale: linear
+      limits: null
+      label:
+        prefix: 'Model index'
+        unit: ''
+        fontsize: 20
+    y:
+      scale: log
+      limits: null
+      label:
+        prefix: '$x_{\mathrm{M,peak}}/x_{\mathrm{M,cutoff}}$'
+        unit: ''
+        fontsize: 20
+    ticks:
+      labelsize: 16
+      direction: in
+      major_length: 8.0
+      minor_length: 4.0
+      width: 1.0
+      pad: 6.0
+metadata:
+  fontsize: 16
+  items: {}
+components:
+  ratio:
+    type: line
+    legend: true
+    label_format:
+      prefix: 'Peak / cutoff'
+      fmt: '.2f'
+      unit: ''
+    style:
+      colors: ['#005AFF']
+      linewidth: 1.2
+      linestyle: '-'
+  threshold:
+    type: line
+    legend: true
+    label_format:
+      prefix: 'Ratio = 1'
+      fmt: '.1f'
+      unit: ''
+    style:
+      colors: ['#000000']
+      linewidth: 1.5
+      linestyle: '--'
+  legend:
+    fontsize: 14
+    loc: best

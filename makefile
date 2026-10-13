@@ -54,6 +54,7 @@ FILEPATH_CHEVALIER_COLORMAP_PDF := $(call run_fig,chevalier_colormap.pdf)
 FILEPATH_DIMENSIONLESS_SYNCHROTRONS_PDF:= $(call run_fig,dimensionless_synchrotrons.pdf)
 FILEPATH_OPTICALDEPTH_CMAPS_PDF:=$(call run_fig,opticaldepth_cmaps.pdf)
 FILEPATH_THERMAL_PEAK_PDF:=$(call run_fig,thermal_peak.pdf)
+FILEPATH_PEAK_CUTOFF_RATIO_PDF:=$(call run_fig,peak_cutoff_ratio.pdf)
 
 # 共通CLI引数（$<・$@はレシピ実行時に展開するため = を使う）
 ARGS_INPUT = --input $<
@@ -74,7 +75,7 @@ ARGS_CHEVALIER_BESTFIT_POINTS = --chevalier_bestfit_points $(FILEPATH_CHEVALIER_
     chevaliercm chevalier min_chi2 chi2 lc_bin lc candidates \
     peak_grid lc_all modeltable peak_table
 
-all: view-best-lc view-chevalier
+all: view-best-lc view-chevalierbest
 
 view-best-lc: $(FILEPATH_MINIMUM_CHI2_LC_PDF)
 	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
@@ -84,6 +85,7 @@ view-dimless-syn: $(FILEPATH_DIMENSIONLESS_SYNCHROTRONS_PDF)
 
 view-pl-lc: $(FILEPATH_POWERLAW_LIGHTUCURVES_PDF)
 	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
+
 
 $(FILEPATH_DIMENSIONLESS_SYNCHROTRONS_PDF): \
 	$(FILEPATH_POWERLAW_LIGHTUCURVES) \
@@ -208,6 +210,19 @@ $(FILEPATH_CHEVALIER_PDF): \
 		$(ARGS_MODEL_PARAMETER_TABLE) \
 		--plotconfig $(PLOTCONFIGDIR)/chevalier_diagram.yaml \
 		$(ARGS_OBSLC) \
+		$(ARGS_OUTPUT)
+
+view-peak-cutoff-ratio: $(FILEPATH_PEAK_CUTOFF_RATIO_PDF)
+	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
+$(FILEPATH_PEAK_CUTOFF_RATIO_PDF): \
+	$(FILEPATH_PEAK_GRID) \
+	$(FILEPATH_MODEL_PARAMETER_TABLE) \
+	$(PLOTCONFIGDIR)/peak_cutoff_ratio.yaml \
+	scripts/plot_peak_cutoff_ratio.py
+	$(PYTHON) -m scripts.plot_peak_cutoff_ratio \
+		$(ARGS_PEAK_GRID) \
+		$(ARGS_MODEL_PARAMETER_TABLE) \
+		--plotconfig $(PLOTCONFIGDIR)/peak_cutoff_ratio.yaml \
 		$(ARGS_OUTPUT)
 
 chevalier-bestfit-points: $(FILEPATH_CHEVALIER_BESTFIT_POINTS)
