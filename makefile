@@ -75,7 +75,7 @@ ARGS_CHEVALIER_BESTFIT_POINTS = --chevalier_bestfit_points $(FILEPATH_CHEVALIER_
     chevaliercm chevalier min_chi2 chi2 lc_bin lc candidates \
     peak_grid lc_all modeltable peak_table
 
-all: view-best-lc view-chevalierbest
+all: view-best-lc view-chevalierbest view-chevaliercm
 
 view-best-lc: $(FILEPATH_MINIMUM_CHI2_LC_PDF)
 	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
@@ -163,6 +163,7 @@ $(FILEPATH_CHEVALIER_COLORMAP_PDF): \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
 	$(FILEPATH_OBSLC) \
 	$(PLOTCONFIGDIR)/chevalier_colormap.yaml \
+	module/chevalier_plotting.py \
 	scripts/plot_chevalier_colormap.py
 	$(PYTHON) -m scripts.plot_chevalier_colormap \
 		$(ARGS_PEAK_GRID) \
@@ -178,6 +179,7 @@ $(FILEPATH_CHEVALIER_WITH_BESTFITS_PDF): \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
 	$(FILEPATH_OBSLC) \
 	$(PLOTCONFIGDIR)/chevalier_diagram.yaml \
+	module/chevalier_plotting.py \
 	module/chevalier.py \
 	module/plot_utils.py \
 	scripts/plot_chevalier_diagram.py \

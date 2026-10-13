@@ -945,13 +945,8 @@ class SynchrotronResults:
         self,
     ) -> SynchrotronPeak:
         xm_cutoff = self.model_params.xm_cutoff
-        thermal_only = self.model_params.switches[SwitchKeys.THERMAL_ONLY]
-        if thermal_only:
-            fnu = self.fnu_obsframe.thermal_only
-            lnu = self.lnu.thermal_quantity
-        else :
-            fnu = self.fnu_obsframe.total
-            lnu = self.lnu.total_quantity
+        fnu = self.fnu_obsframe.total
+        lnu = self.lnu.total_quantity
 
         column_index = np.argmax(fnu.value, axis=1)[:, np.newaxis]
         row_index = np.arange(self.xm.shape[0])[:, np.newaxis]

@@ -143,7 +143,7 @@ components:
     style: &id001
       colors:
       - '#000000'
-      linewidth: 4.0
+      linewidth: 1.0
       linestyle: '-'
       alpha: null
       zorder: 2.0
@@ -156,7 +156,7 @@ components:
     legend: false
     style: &id002
       color: '#000000'
-      fontsize: 20
+      fontsize: 16
       ha: left
       va: top
   ultra_relativistic_boundary_label:
