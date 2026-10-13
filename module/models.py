@@ -5,6 +5,11 @@ from typing import Hashable, Literal, Self
 import astropy.units as u
 from matplotlib.axes import Axes
 from module import quantity_converter, utils
+from module.electron_distributions import(
+    MaxwellJuttnerFactor,
+    PowerlawNormalization,
+    MaxwellJuttnerDistribution
+)
 import numpy as np
 import pandas as pd
 from enum import StrEnum, auto
@@ -14,13 +19,9 @@ from module.mydataclasses import (
     QuantityArrayBase, QuantityData,
     QuantityGrid, IndexGrid,
 )
-from module.electron_distributions import(
-    MaxwellJuttnerFactor,
-    PowerlawNormalization,
-    MaxwellJuttnerDistribution
-)
 from module.synchrotron_numerical_table import ThermalSynchrotronIntegrals
 from module.types import FloatArray
+from module.thermal_synchrotron import DimensionlessThermalLuminosity
 from scipy import special
 from numpy.typing import NDArray
 from astropy.constants import e,c,m_e,m_p
@@ -163,6 +164,9 @@ class ScenarioParameter:
 @dataclass(frozen=True,slots=True)
 class ElectronTemperature:
     values:FloatArray
+
+
+
 
 class DimensionlessElectronTemperature:
     @staticmethod
@@ -866,51 +870,6 @@ class SpecificLuminosityFrequencyDependence:
             total=sigma.total*(-np.expm1(-tau.total)),
         )
 
-@dataclass(frozen=True)
-class DimensionlessThermalLuminosity:
-    tau_th: NDArray[np.float64]
-    xm: NDArray[np.float64]
-    lambda_th: NDArray[np.float64]
-
-    @staticmethod
-    def __compute_lambda_th(
-        tau_th: NDArray[np.float64],
-        xm:NDArray[np.float64],
-        ip:NDArray[np.float64]
-    )->NDArray[np.float64]:
-        if tau_th.ndim != 1 or xm.ndim != 1:
-            raise ValueError("tau_thとxmは1次元配列が必要です")
-        xm_column = xm[:, None]
-        tau_row = tau_th[None, :]
-        ip_column = ip[:, None]
-        return (
-            9.0*xm_column**2/(8.0*np.pi**2)
-            *(-np.expm1(-tau_row*ip_column/xm_column))
-        )
-
-    @classmethod
-    def compute(
-        cls,
-        tau_th: NDArray[np.float64],
-        xm:NDArray[np.float64],
-        ip:NDArray[np.float64]
-    )->Self:
-        lambda_th = cls.__compute_lambda_th(
-            tau_th,xm,ip
-        )
-        return cls(
-            tau_th=tau_th,
-            xm=xm,
-            lambda_th=lambda_th
-        )
-
-    def peaks(self) -> NDArray[np.float64]:
-        """Return peak xm and luminosity for each row"""
-        indices = np.argmax(self.lambda_th, axis=1)
-        return np.column_stack((
-            self.xm[indices],
-            self.lambda_th[np.arange(len(indices)), indices]
-        ))
 
 @dataclass(frozen=True,slots=True)
 class SpecificLuminosity:
