@@ -165,9 +165,6 @@ class ScenarioParameter:
 class ElectronTemperature:
     values:FloatArray
 
-
-
-
 class DimensionlessElectronTemperature:
     @staticmethod
     def gp98(
@@ -567,36 +564,44 @@ class ModelParameters:
 
 FOUR_PI_OVER_THREE = 4.0*np.pi/3.0
 
-def calculate_j0(
-    eps_th: float,
-    eps_b: float,
-    theta0: NDArray,
-    theta : NDArray,
-    phi_th: NDArray,
-)->NDArray[np.float64]:
-    return (
-        FOUR_PI_OVER_THREE**3
-        *(phi_th/theta**2)**3
-        *eps_th/(8.0*np.pi*eps_b*theta0)
-    )
-
-def calculate_alpha0(
-    eps_th: float,
-    eps_b: float,
-    theta0: NDArray,
-    theta : NDArray,
-    phi_th: NDArray,
-)->NDArray:
-    return (
-        FOUR_PI_OVER_THREE
-        *(phi_th/theta**2)
-        *eps_th/(8.0*np.pi*eps_b*theta0*theta**5)
-    )
-
 @dataclass(frozen=True,slots=True)
 class SynchrotronNormalizationFactor:
-    norm_j: NDArray64
-    norm_alpha: NDArray64
+    j0: NDArray64
+    alpha0: NDArray64
+
+    @staticmethod
+    def calculate_j0(
+        eps_th: float,
+        eps_b: float,
+        theta0: NDArray,
+        theta : NDArray,
+        phi_th: NDArray,
+    )->NDArray[np.float64]:
+        """
+            devided by m_e c^2 / (ct)^3
+        """
+        return (
+            FOUR_PI_OVER_THREE**3
+            *(phi_th/theta**2)**3
+            *eps_th/(8.0*np.pi*eps_b*theta0)
+        )
+
+    @staticmethod
+    def calculate_alpha0(
+        eps_th: float,
+        eps_b: float,
+        theta0: NDArray,
+        theta : NDArray,
+        phi_th: NDArray,
+    )->NDArray:
+        """
+            devided by 1 / (ct)
+        """
+        return (
+            FOUR_PI_OVER_THREE
+            *(phi_th/theta**2)
+            *eps_th/(8.0*np.pi*eps_b*theta0*theta**5)
+        )
 
     @classmethod
     def from_grid(
@@ -608,14 +613,14 @@ class SynchrotronNormalizationFactor:
         phi_th: NDArray64,
     )->Self:
         return cls(
-            norm_j = calculate_j0(
+            j0 = cls.calculate_j0(
                 eps_th= eps_th,
                 eps_b = eps_b,
                 theta0 = theta0,
                 theta = theta,
                 phi_th = phi_th
             ),
-            norm_alpha = calculate_alpha0(
+            alpha0 = cls.calculate_alpha0(
                 eps_th= eps_th,
                 eps_b = eps_b,
                 theta0 = theta0,
@@ -786,7 +791,6 @@ class SynchrotronQuantities:
 
 @dataclass(frozen=True,slots=True)
 class SourceFunctionFrequencyDependence:
-    """規格化係数を除いたsource functionの周波数依存項zeta/eta。"""
     thermal: NDArray64
     powerlaw: NDArray64
     total: NDArray64
@@ -794,13 +798,13 @@ class SourceFunctionFrequencyDependence:
     @classmethod
     def compute_from(
         cls,
-        zeta: EmissivityFequencyDependenceTerm,
-        eta: AbsorptionCoefficientFrequencyDependence,
+        j_scr: EmissivityFequencyDependenceTerm,
+        alpha_scr: AbsorptionCoefficientFrequencyDependence,
     )->Self:
         return cls(
-            thermal=zeta.thermal/eta.thermal,
-            powerlaw=zeta.powerlaw/eta.powerlaw,
-            total=zeta.total/eta.total,
+            thermal=j_scr.thermal/alpha_scr.thermal,
+            powerlaw=j_scr.powerlaw/alpha_scr.powerlaw,
+            total=j_scr.total/alpha_scr.total,
         )
 
 @dataclass(frozen=True,slots=True)
@@ -817,8 +821,8 @@ class SourceFunction:
         return cls(
             norm=jnu.norm/anu.norm,
             dependence=SourceFunctionFrequencyDependence.compute_from(
-                zeta=jnu.zeta,
-                eta=anu.eta,
+                j_scr=jnu.zeta,
+                alpha_scr=anu.eta,
             ),
         )
 
@@ -1248,11 +1252,11 @@ class SynchrotronResults:
             g_factor=model_params.g_factor.reshape(-1,1),
         )
         jnu = Emissivity(
-            norm=norms.norm_j.reshape(-1, 1),
+            norm=norms.j0.reshape(-1, 1),
             zeta=x_dependent_terms.j
         )
         alpha_nu = AbsorptionCoefficient(
-            norm=norms.norm_alpha.reshape(-1, 1),
+            norm=norms.alpha0.reshape(-1, 1),
             eta=x_dependent_terms.alpha
         )
         snu = SourceFunction.compute_from(jnu,alpha_nu)
