@@ -83,8 +83,8 @@ components:
     style: &ContourStyle_tmp
       unit: "g cm-1"
       lines:
-        colors: "#84919B"
-        linestyles: "-"
+        colors: "#000000"
+        linestyles: "-."
       levels:
         start: null
         stop: null
@@ -111,7 +111,7 @@ components:
     style:
       unit: ""
       lines:
-        colors: "#84919B"
+        colors: "#000000"
         linestyles: "--"
       levels:
         start: null
@@ -173,7 +173,7 @@ components:
     style: &BoundaryStyle_tmp
       colors:
         - "#000000"
-      linewidth: 4.0
+      linewidth: 1.0
       linestyle: "-"
       alpha: null
       zorder: 2.0

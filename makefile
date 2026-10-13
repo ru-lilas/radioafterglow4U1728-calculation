@@ -199,14 +199,12 @@ chevalier: $(FILEPATH_CHEVALIER_PDF)
 $(FILEPATH_CHEVALIER_PDF): \
 	$(FILEPATH_PEAK_GRID) \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
-	$(FILEPATH_MINIMUM_CHI_SQUARED) \
 	$(FILEPATH_OBSLC) \
 	module/chevalier.py \
 	$(PLOTCONFIGDIR)/chevalier_diagram.yaml \
 	scripts/plot_chevalier_diagram.py
 	$(PYTHON) -m scripts.plot_chevalier_diagram \
 		$(ARGS_PEAK_GRID) \
-		--minimum_chi_squared $(FILEPATH_MINIMUM_CHI_SQUARED) \
 		$(ARGS_MODEL_PARAMETER_TABLE) \
 		--plotconfig $(PLOTCONFIGDIR)/chevalier_diagram.yaml \
 		$(ARGS_OBSLC) \

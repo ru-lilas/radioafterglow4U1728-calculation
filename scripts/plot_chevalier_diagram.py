@@ -1,210 +1,36 @@
-import argparse
-from pathlib import Path
+"""Chevalier contours with shared preparation and overlays."""
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from module import plot_utils
-from module.calculation_lightcurve import ChiSquaredResult
-from module.chevalier import BoundaryLabel, ChevalierContours, ObservedRegion, PeakGrid, RelativisticBoundary
-from module.models import ColumnNames, FluxName, MetadataNames, ModelParameters
-from module.mydataclasses import QuantityArray1D, QuantityData
-from module.observation import LongformatLightcurve
-from module.utils import FileReader, FileWriter
-from dataclasses import fields, dataclass
-from module import dataframe_accessors
+from module.chevalier import ChevalierContours
+from module.chevalier_plotting import ChevalierPlotData, parse_args
 
-@dataclass(frozen=True,slots=True)
-class PlotMetadata:
-    eps_b: QuantityData
-    eps_th: QuantityData
-    mu_e_mu: QuantityData
-    distance: QuantityData
-    p_index: QuantityData
-    f_e: QuantityData
-
-    def to_dict(self) -> dict[str, QuantityData]:
-        return {
-            field.name: getattr(self, field.name)
-            for field in fields(self)
-        }
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser()
-    for name in (
-        "peak_grid",
-        "model_parameter_table",
-        "obslc",
-        "plotconfig",
-        "output",
-    ):
-        parser.add_argument(f"--{name}", type=Path, required=True)
-    parser.add_argument(
-        "--chevalier_bestfit_points",
-        type=Path
-    )
-    return parser.parse_args()
 
 def main():
     args = parse_args()
-    outpath:Path = args.output
-    outpath.parent.mkdir(parents=True,exist_ok=True)
+    data = ChevalierPlotData.from_args(args)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    with PdfPages(args.output) as pdf:
+        fig, axes = data.config.layout.create()
+        try:
+            plotter = plot_utils.Plotter(axes.flat[0])
+            for name, grid in (
+                ("a_wind", data.grids.a_wind_grid(data.model_parameters)),
+                ("beta_sh", data.grids.beta_sh_grid(data.model_parameters)),
+            ):
+                ChevalierContours.build(
+                    data.plotregion, grid,
+                    style=data.config.components[name].contour_style_config,
+                    mask=data.invisible,
+                ).plot(plotter)
+            data.draw_boundaries(plotter)
+            data.draw_observations(plotter)
+            plotter.title(strings=data.title_strings(), fontsize=data.config.metadata.fontsize)
+            pdf.savefig(fig)
+        finally:
+            plt.close(fig)
 
-    plotconfig = plot_utils.PlotConfig.from_yaml(args.plotconfig)
-
-    df_model_parameter = FileReader.table_from_csv(args.model_parameter_table)
-    model_parameters = ModelParameters.from_df(df_model_parameter)
-
-    if args.chevalier_bestfit_points is not None:
-        df_bestfits = FileReader.table_from_csv(args.chevalier_bestfit_points)
-    else:
-        df_bestfits = None
-
-    long_lcs_obs = LongformatLightcurve.from_csv(args.obslc)
-    lcs_obs = long_lcs_obs.group_by_frequency()
-
-    df_peak = FileReader.table_from_csv(args.peak_grid)
-    grids = PeakGrid.from_df(df_peak)
-
-    layout = plotconfig.layout
-    axesconfig = layout.axes
-    x_unit = axesconfig.x_unit
-    y_unit = axesconfig.y_unit
-    plotcomponents = plotconfig.components
-    plotmetadataconfig = plotconfig.metadata
-    plotrange = axesconfig.range()
-    plotregion = grids.reduce_to_plotregion(
-        plotrange,
-        phi_unit=axesconfig.x_unit,
-        fnu_unit=axesconfig.y_unit,
-    )
-    is_out_of_plotregion = plotregion.out_of_plotregion
-    with PdfPages(outpath) as pdf:
-        fig, axes = layout.create()
-        plotter=plot_utils.Plotter(axes.flat[0])
-        legends = []
-
-        theta = grids.theta_grid(model_parameters).to_FloatGrid("")
-        non_relativistic_boundary = RelativisticBoundary.build(
-            plotregion=plotregion,
-            theta=theta,
-            theta_crit=1.0,
-            style=plotcomponents["non_relativistic_boundary"].resolve_line_style(0)
-        )
-        non_relativistic_boundary_label = non_relativistic_boundary.build_label(
-            plotcomponents["non_relativistic_boundary_label"].text_style_config
-        )
-        non_relativistic_boundary.plot(plotter)
-        non_relativistic_boundary_label.plot(plotter)
-        is_non_relativistic = theta.less_than(1.0)
-
-        ultra_relativistic_boundary = RelativisticBoundary.build(
-            plotregion=plotregion,
-            theta=theta,
-            theta_crit=10.0,
-            style=plotcomponents["ultra_relativistic_boundary"].resolve_line_style(0)
-        )
-        ultra_relativistic_boundary_label = ultra_relativistic_boundary.build_label(
-            plotcomponents["ultra_relativistic_boundary_label"].text_style_config
-        )
-        ultra_relativistic_boundary.plot(plotter)
-        ultra_relativistic_boundary_label.plot(plotter)
-        is_ultra_relativistic = theta.greater_than(10.0)
-
-        invisible = is_out_of_plotregion.take_or([
-            is_non_relativistic,
-            is_ultra_relativistic
-        ])
-
-        # A_wind contour
-        a_wind_contour = ChevalierContours.build(
-            plotregion,
-            grids.a_wind_grid(model_parameters),
-            style=plotcomponents["a_wind"].contour_style_config,
-            mask=invisible
-        )
-        a_wind_contour.plot(plotter)
-
-        # beta_sh contour
-        beta_sh_contour = ChevalierContours.build(
-            plotregion,
-            grids.beta_sh_grid(model_parameters),
-            style=plotcomponents["beta_sh"].contour_style_config,
-            mask=invisible
-        )
-        beta_sh_contour.plot(plotter)
-
-
-        # observation
-        for i,lc_obs in enumerate(lcs_obs.values()):
-            pass
-            obs_peak = lc_obs.peak
-            obs_region = ObservedRegion.build(
-                x=obs_peak.phi_peak.value_in(axesconfig.x_unit),
-                y=obs_peak.fnu_peak.value_in(axesconfig.y_unit),
-                x_err=obs_peak.phi_peak_err.value_in(axesconfig.x_unit),
-                y_err=obs_peak.fnu_peak_err.value_in(axesconfig.y_unit),
-                style=plotcomponents["obs_ranges"].resolve_rectangle_style(i)
-            )
-            patch = obs_region.plot(plotter)
-            legends.append(
-                plot_utils.LegendEntry(
-                    plotcomponents["obs_ranges"],
-                    patch,
-                    value=obs_peak.nu.value
-                )
-            )
-            # bestfit points
-            if df_bestfits is not None:
-                phi_peak:QuantityData = df_bestfits.q.array1d(
-                    column=ColumnNames.PHI_PEAK,
-                    unit_key=MetadataNames.PHI_UNIT
-                ).index(i)
-                phi_peak_err = QuantityArray1D(
-                    df_bestfits[ColumnNames.PHI_PEAK_ERR].to_numpy(),
-                    df_bestfits.attrs[MetadataNames.PHI_UNIT]
-                ).index(i)
-                fnu_peak = QuantityArray1D(
-                    df_bestfits[ColumnNames.FNU_PEAK_NET].to_numpy(),
-                    df_bestfits.attrs[MetadataNames.FNU_UNIT]
-                ).index(i)
-                plotter.errorbar(
-                    x=phi_peak.value_in(x_unit),
-                    y=fnu_peak.value_in(y_unit),
-                    yerr=[0],
-                    xerr=phi_peak_err.value_in(x_unit),
-                    style=plotcomponents["bestfits"].resolve_errorbar_style(i)
-                )
-            else:
-                pass
-
-        # metadata
-        metadata = PlotMetadata(
-            eps_b=QuantityData(model_parameters.eps_b,""),
-            eps_th=QuantityData(model_parameters.eps_th,""),
-            f_e=QuantityData(model_parameters.powerlaw.f_e,""),
-            p_index=QuantityData(model_parameters.powerlaw.p_index,""),
-            mu_e_mu=QuantityData(model_parameters.molecular_weight.to_ratio(),""),
-            distance=model_parameters.distance,
-        )
-        strings: list[str] = []
-        for name, quantity in metadata.to_dict().items():
-            plot_utils.MetadataComponent(
-                quantity=quantity,
-                config=plotmetadataconfig.items[name],
-            ).add_strings(strings)
-
-        # legend
-        plotter.legend(
-            entries= legends,
-            config = plotcomponents["legend"]
-        )
-
-        plotter.title(
-            strings=strings,
-            fontsize=plotmetadataconfig.fontsize,
-        )
-
-        pdf.savefig(fig)
-        plt.close(fig)
 
 if __name__ == "__main__":
     main()
+
