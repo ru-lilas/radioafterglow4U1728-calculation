@@ -1,4 +1,4 @@
-"""Synchrotron emissivity and absorption coefficients and their normalization"""
+"""Synchrotron emissivity and absorption coefficients and their normalization."""
 
 from dataclasses import dataclass
 from typing import Self
@@ -9,8 +9,6 @@ from numpy.typing import NDArray
 type NDArray64 = NDArray[np.float64]
 
 POWERLAW_FLOOR:float = 1.0e-100
-
-XM_CUTOFF:float = 1.0
 
 FOUR_PI_OVER_THREE = 4.0*np.pi/3.0
 
@@ -100,11 +98,16 @@ class EmissivityFequencyDependenceTerm:
         eps_e: float,
         g_factor: NDArray,
         x: NDArray,
-        p:float
+        p:float,
+        xm_cutoff: NDArray64,
     )->NDArray[np.float64]:
+        if x.ndim != 2:
+            raise ValueError("xは2次元配列が必要です")
+        if xm_cutoff.ndim != 1 or xm_cutoff.size != x.shape[0]:
+            raise ValueError("xm_cutoffはxの行数と同じ長さの1次元配列が必要です")
         jpl = cj*eps_e*g_factor*x**(-0.5*(p-1.0))
         return np.where(
-            x < XM_CUTOFF,
+            x < xm_cutoff[:, None],
             POWERLAW_FLOOR,
             jpl
         )
@@ -119,10 +122,11 @@ class EmissivityFequencyDependenceTerm:
         ip: NDArray64,
         f_factor: NDArray64,
         g_factor: NDArray,
+        xm_cutoff: NDArray64,
     )->Self:
         return cls(
             thermal = cls.compute_thermal(x,f_factor,ip),
-            powerlaw = cls.compute_powerlaw(cj,eps_e,g_factor,x,p)
+            powerlaw = cls.compute_powerlaw(cj,eps_e,g_factor,x,p,xm_cutoff)
         )
 
     @property
@@ -150,11 +154,16 @@ class AbsorptionCoefficientFrequencyDependence:
         eps_e: float,
         g_factor: NDArray,
         x: NDArray,
-        p: float
+        p: float,
+        xm_cutoff: NDArray64,
     )->NDArray[np.float64]:
+        if x.ndim != 2:
+            raise ValueError("xは2次元配列が必要です")
+        if xm_cutoff.ndim != 1 or xm_cutoff.size != x.shape[0]:
+            raise ValueError("xm_cutoffはxの行数と同じ長さの1次元配列が必要です")
         apl = ca*eps_e*g_factor*x**(-0.5*(p+4.0))
         return np.where(
-            x < XM_CUTOFF,
+            x < xm_cutoff[:, None],
             POWERLAW_FLOOR,
             apl
         )
@@ -169,10 +178,11 @@ class AbsorptionCoefficientFrequencyDependence:
         ip: NDArray64,
         f_factor: NDArray64,
         g_factor: NDArray,
+        xm_cutoff: NDArray64,
     )->Self:
         return cls(
             thermal = cls.compute_thermal(x,f_factor,ip),
-            powerlaw = cls.compute_powerlaw(ca,eps_e,g_factor,x,p)
+            powerlaw = cls.compute_powerlaw(ca,eps_e,g_factor,x,p,xm_cutoff)
         )
 
     @property
@@ -195,6 +205,7 @@ class FrequencyDependence:
         ip: NDArray64,
         f_factor: NDArray64,
         g_factor: NDArray,
+        xm_cutoff: NDArray64,
     )->Self:
         return cls(
             j=EmissivityFequencyDependenceTerm.from_grid(
@@ -204,7 +215,8 @@ class FrequencyDependence:
                 x=x,
                 ip=ip,
                 f_factor=f_factor,
-                g_factor=g_factor
+                g_factor=g_factor,
+                xm_cutoff=xm_cutoff,
             ),
             alpha=AbsorptionCoefficientFrequencyDependence.from_grid(
                 ca=ca,
@@ -213,7 +225,8 @@ class FrequencyDependence:
                 x=x,
                 ip=ip,
                 f_factor=f_factor,
-                g_factor=g_factor
+                g_factor=g_factor,
+                xm_cutoff=xm_cutoff,
             )
         )
 
