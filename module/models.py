@@ -21,6 +21,17 @@ from module.mydataclasses import (
 )
 from module.synchrotron_numerical_table import ThermalSynchrotronIntegrals
 from module.types import FloatArray
+from module.synchrotron_coefficients import (
+    SynchrotronNormalizationFactor,
+    EmissivityFequencyDependenceTerm,
+    AbsorptionCoefficientFrequencyDependence,
+    FrequencyDependence,
+    Emissivity,
+    AbsorptionCoefficient,
+    FOUR_PI_OVER_THREE,
+    POWERLAW_FLOOR,
+    XM_CUTOFF,
+)
 from module.thermal_synchrotron import DimensionlessThermalLuminosity
 from scipy import special
 from numpy.typing import NDArray
@@ -43,8 +54,6 @@ log10_3 = np.log10(3.0)
 TWO_TO_FIVE:float = 2**5
 THREE_TO_SEVEN = 3**7
 SYNCHROTRON_MODEL = Literal["thermal","total"]
-POWERLAW_FLOOR:float = 1.0e-100
-XM_CUTOFF:float = 1.0
 
 class DefaultUnits(StrEnum):
     fnu = "mJy"
@@ -164,6 +173,7 @@ class ScenarioParameter:
 @dataclass(frozen=True,slots=True)
 class ElectronTemperature:
     values:FloatArray
+
 
 class DimensionlessElectronTemperature:
     @staticmethod
@@ -562,220 +572,6 @@ class ModelParameters:
             +self.log10_tau0
         )
 
-FOUR_PI_OVER_THREE = 4.0*np.pi/3.0
-
-@dataclass(frozen=True,slots=True)
-class SynchrotronNormalizationFactor:
-    j0: NDArray64
-    alpha0: NDArray64
-
-    @staticmethod
-    def calculate_j0(
-        eps_th: float,
-        eps_b: float,
-        theta0: NDArray,
-        theta : NDArray,
-        phi_th: NDArray,
-    )->NDArray[np.float64]:
-        """
-            devided by m_e c^2 / (ct)^3
-        """
-        return (
-            FOUR_PI_OVER_THREE**3
-            *(phi_th/theta**2)**3
-            *eps_th/(8.0*np.pi*eps_b*theta0)
-        )
-
-    @staticmethod
-    def calculate_alpha0(
-        eps_th: float,
-        eps_b: float,
-        theta0: NDArray,
-        theta : NDArray,
-        phi_th: NDArray,
-    )->NDArray:
-        """
-            devided by 1 / (ct)
-        """
-        return (
-            FOUR_PI_OVER_THREE
-            *(phi_th/theta**2)
-            *eps_th/(8.0*np.pi*eps_b*theta0*theta**5)
-        )
-
-    @classmethod
-    def from_grid(
-        cls,
-        eps_th: float,
-        eps_b: float,
-        theta0: NDArray64,
-        theta : NDArray64,
-        phi_th: NDArray64,
-    )->Self:
-        return cls(
-            j0 = cls.calculate_j0(
-                eps_th= eps_th,
-                eps_b = eps_b,
-                theta0 = theta0,
-                theta = theta,
-                phi_th = phi_th
-            ),
-            alpha0 = cls.calculate_alpha0(
-                eps_th= eps_th,
-                eps_b = eps_b,
-                theta0 = theta0,
-                theta = theta,
-                phi_th = phi_th
-            )
-        )
-
-@dataclass(frozen=True,slots=True)
-class EmissivityFequencyDependenceTerm:
-    thermal: NDArray64
-    powerlaw: NDArray64
-
-    @staticmethod
-    def compute_thermal(
-        x: NDArray,
-        f_factor: NDArray,
-        ip: NDArray
-    )->NDArray:
-        return (
-            np.sqrt(3.0)*f_factor*x*ip/(8.0*np.pi)
-        )
-
-    @staticmethod
-    def compute_powerlaw(
-        cj: float,
-        eps_e: float,
-        g_factor: NDArray,
-        x: NDArray,
-        p:float
-    )->NDArray[np.float64]:
-        jpl = cj*eps_e*g_factor*x**(-0.5*(p-1.0))
-        return np.where(
-            x < XM_CUTOFF,
-            POWERLAW_FLOOR,
-            jpl
-        )
-
-    @classmethod
-    def from_grid(
-        cls,
-        cj: float,
-        p:float,
-        eps_e: float,
-        x: NDArray64,
-        ip: NDArray64,
-        f_factor: NDArray64,
-        g_factor: NDArray,
-    )->Self:
-        return cls(
-            thermal = cls.compute_thermal(x,f_factor,ip),
-            powerlaw = cls.compute_powerlaw(cj,eps_e,g_factor,x,p)
-        )
-
-    @property
-    def total(self)->NDArray64:
-        return self.thermal+self.powerlaw
-
-@dataclass(frozen=True,slots=True)
-class AbsorptionCoefficientFrequencyDependence:
-    thermal: NDArray64
-    powerlaw: NDArray64
-
-    @staticmethod
-    def compute_thermal(
-        x: NDArray,
-        f_factor: NDArray,
-        ip: NDArray
-    )->NDArray[np.float64]:
-        return (
-            np.pi*f_factor*ip/(3.0**1.5*x)
-        )
-
-    @staticmethod
-    def compute_powerlaw(
-        ca: float,
-        eps_e: float,
-        g_factor: NDArray,
-        x: NDArray,
-        p: float
-    )->NDArray[np.float64]:
-        apl = ca*eps_e*g_factor*x**(-0.5*(p+4.0))
-        return np.where(
-            x < XM_CUTOFF,
-            POWERLAW_FLOOR,
-            apl
-        )
-
-    @classmethod
-    def from_grid(
-        cls,
-        ca: float,
-        p:float,
-        eps_e: float,
-        x: NDArray64,
-        ip: NDArray64,
-        f_factor: NDArray64,
-        g_factor: NDArray,
-    )->Self:
-        return cls(
-            thermal = cls.compute_thermal(x,f_factor,ip),
-            powerlaw = cls.compute_powerlaw(ca,eps_e,g_factor,x,p)
-        )
-
-    @property
-    def total(self)->NDArray64:
-        return self.thermal+self.powerlaw
-
-@dataclass(frozen=True,slots=True)
-class FrequencyDependence:
-    j:EmissivityFequencyDependenceTerm
-    alpha:AbsorptionCoefficientFrequencyDependence
-
-    @classmethod
-    def compute_from(
-        cls,
-        ca: float,
-        cj:float,
-        p:float,
-        eps_e: float,
-        x: NDArray64,
-        ip: NDArray64,
-        f_factor: NDArray64,
-        g_factor: NDArray,
-    )->Self:
-        return cls(
-            j=EmissivityFequencyDependenceTerm.from_grid(
-                cj=cj,
-                p=p,
-                eps_e=eps_e,
-                x=x,
-                ip=ip,
-                f_factor=f_factor,
-                g_factor=g_factor
-            ),
-            alpha=AbsorptionCoefficientFrequencyDependence.from_grid(
-                ca=ca,
-                p=p,
-                eps_e=eps_e,
-                x=x,
-                ip=ip,
-                f_factor=f_factor,
-                g_factor=g_factor
-            )
-        )
-
-@dataclass(frozen=True,slots=True)
-class Emissivity:
-    norm: NDArray[np.float64]
-    zeta: EmissivityFequencyDependenceTerm
-
-@dataclass(frozen=True,slots=True)
-class AbsorptionCoefficient:
-    norm: NDArray[np.float64]
-    eta: AbsorptionCoefficientFrequencyDependence
 
 @dataclass(frozen=True,slots=True)
 class SynchrotronComponents:
