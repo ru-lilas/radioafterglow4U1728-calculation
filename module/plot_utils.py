@@ -3,7 +3,8 @@ from functools import cached_property
 from typing import Any, Literal, Self, Sequence, TypeVar
 from cattrs import Converter
 from matplotlib.cm import ScalarMappable
-from matplotlib.colors import Normalize,ListedColormap
+from matplotlib.colors import Normalize, LogNorm, TwoSlopeNorm, ListedColormap
+from matplotlib.collections import QuadMesh
 from matplotlib.container import ErrorbarContainer
 from matplotlib.contour import QuadContourSet
 from matplotlib.artist import Artist
@@ -35,6 +36,7 @@ ComponentType = Literal[
     "text",
     "legend",
     "colorbar",
+    "colormap",
 ]
 
 StyleValue = TypeVar("StyleValue")
@@ -729,6 +731,7 @@ class ColorbarComponent:
 @dataclass(frozen=True, slots=True)
 class NormConfig:
     type: str
+    vcenter: float = 0.0
 
 @dataclass(frozen=True, slots=True)
 class ColormapConfigure(YAMLReadable):
@@ -738,6 +741,24 @@ class ColormapConfigure(YAMLReadable):
     vmax: float | None
     norm: NormConfig
     colorbar: ColorbarConfigure
+
+    def resolve_norm(self) -> Normalize:
+        """Build a color normalization with the configured limits."""
+        if self.norm.type == "linear":
+            return Normalize(vmin=self.vmin, vmax=self.vmax)
+        if self.norm.type == "log":
+            if self.vmin is not None and self.vmin <= 0:
+                raise ValueError("対数カラースケールのvminは正の値が必要です")
+            if self.vmax is not None and self.vmax <= 0:
+                raise ValueError("対数カラースケールのvmaxは正の値が必要です")
+            return LogNorm(vmin=self.vmin, vmax=self.vmax)
+        if self.norm.type == "centered":
+            return TwoSlopeNorm(
+                vcenter=self.norm.vcenter,
+                vmin=self.vmin,
+                vmax=self.vmax,
+            )
+        raise ValueError(f"未対応のカラースケールです: {self.norm.type}")
 
 @dataclass(frozen=True, slots=True)
 class ColormapPlot:
@@ -771,6 +792,7 @@ class ComponentConfig:
         | TextStyle
         | LegendStyle
         | ColorbarConfigure
+        | ColormapConfigure
     )
     show_legend: bool = False
     label_format: QuantityLabel | None = None
@@ -838,6 +860,13 @@ class ComponentConfig:
             if not isinstance(self.style, ColorbarConfigure):
                 raise TypeError(
                     "type='colorbar'にはColorbarConfigureが必要です: "
+                    f"{type(self.style).__name__}"
+                )
+
+        elif self.type == "colormap":
+            if not isinstance(self.style, ColormapConfigure):
+                raise TypeError(
+                    "type='colormap'にはColormapConfigureが必要です: "
                     f"{type(self.style).__name__}"
                 )
 
@@ -961,6 +990,13 @@ class ComponentConfig:
             )
         return self.style
 
+    @property
+    def colormap_style_config(self) -> ColormapConfigure:
+        """Return the checked configuration for a colormap component."""
+        if self.type != "colormap" or not isinstance(self.style, ColormapConfigure):
+            raise TypeError("colormap_style_configはtype='colormap'でのみ利用できます")
+        return self.style
+
     def legend_label(self, value: float | None = None) -> str:
         if self.label_format is None:
             raise ValueError("legend用label_formatが設定されていません.")
@@ -1006,6 +1042,8 @@ def structure_component_config(
         style_type = LegendStyle
     elif component_type == "colorbar":
         style_type = ColorbarConfigure
+    elif component_type == "colormap":
+        style_type = ColormapConfigure
     else:
         raise ValueError(
             "未対応のcomponent typeです: "
@@ -1154,6 +1192,27 @@ class Plotter:
             **style.to_kwargs()
         )
 
+    def colormap(
+        self,
+        x: ArrayLike,
+        y: ArrayLike,
+        z: NDArray[np.float64],
+        style: ColormapConfigure,
+    ) -> QuadMesh:
+        """Draw a grid; z rows correspond to y and columns to x.
+
+        Use the returned mesh as the mappable for ColorbarComponent.
+        Center or edge coordinates follow Matplotlib's shading convention.
+        """
+        if z.ndim != 2:
+            raise ValueError("colormapのzは2次元配列が必要です")
+        return self.ax.pcolormesh(
+            x, y, np.ma.masked_invalid(z),
+            cmap=style.cmap,
+            shading=style.shading,
+            norm=style.resolve_norm(),
+        )
+
     def step(
         self,
         values: ArrayLike,
@@ -1173,13 +1232,11 @@ class Plotter:
         x: ArrayLike,
         y: ArrayLike,
         yerr: ArrayLike,
-        style: ErrorbarStyle,
-        xerr: ArrayLike|None = None
+        style: ErrorbarStyle
     )->ErrorbarContainer:
         return self.ax.errorbar(
             x,y,
             yerr=yerr,
-            xerr=xerr,
             **style.to_kwargs(),
         )
 
