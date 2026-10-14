@@ -92,20 +92,6 @@ class ObservedBursterProperty:
     t_acc: QuantityData
     eps_nuc: QuantityData
 
-    @property
-    def m_acc(self)->QuantityData:
-        mdot_acc = self.mdot_acc.quantity
-        t_acc = self.t_acc.quantity
-        m_acc = mdot_acc*t_acc
-        return QuantityData.from_Quantity(m_acc)
-
-    @property
-    def e_nuc_max(self)->QuantityData:
-        m_acc = self.m_acc.quantity
-        eps_nuc = self.eps_nuc.quantity
-        e_nuc_max = m_acc*eps_nuc
-        return QuantityData.from_Quantity(e_nuc_max)
-
 @dataclass(frozen=True,slots=True)
 class Units:
     phi_unit: str

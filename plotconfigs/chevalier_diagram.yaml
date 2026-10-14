@@ -85,6 +85,7 @@ components:
       lines:
         colors: "#000000"
         linestyles: "-."
+        linewidths: 2.0
       levels:
         start: null
         stop: null
@@ -112,7 +113,8 @@ components:
       unit: ""
       lines:
         colors: "#000000"
-        linestyles: "--"
+        linestyles: "-"
+        linewidths: 2.0
       levels:
         start: null
         stop: null
@@ -174,7 +176,7 @@ components:
       colors:
         - "#000000"
       linewidth: 1.0
-      linestyle: "-"
+      linestyle: "--"
       alpha: null
       zorder: 2.0
   ultra_relativistic_boundary:

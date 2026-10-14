@@ -46,6 +46,7 @@ FILEPATH_POWERLAW_LIGHTUCURVES_PDF:= $(call run_fig,powerlaw_lightcurves.pdf)
 FILEPATH_CHI_SQUARED := $(call run_data,chi_squared.csv)
 FILEPATH_MINIMUM_CHI_SQUARED := $(call run_data,minimum_chi_squared.csv)
 FILEPATH_CHEVALIER_BESTFIT_POINTS := $(call run_data,chevalier_bestfit_points.csv)
+FILEPATH_ENERGETICS := $(call run_data,energetics.csv)
 
 FILEPATH_MINIMUM_CHI2_LC_PDF := $(call run_fig,minimum_chi2_lightcurve.pdf)
 FILEPATH_CHEVALIER_PDF := $(call run_fig,chevalier_diagram.pdf)
@@ -226,6 +227,18 @@ $(FILEPATH_PEAK_CUTOFF_RATIO_PDF): \
 		$(ARGS_OUTPUT)
 
 #=== datafiles ===#
+energetics: $(FILEPATH_ENERGETICS)
+$(FILEPATH_ENERGETICS): \
+	$(FILEPATH_INPUT) \
+	$(FILEPATH_CHEVALIER_BESTFIT_POINTS) \
+	$(FILEPATH_MODEL_PARAMETER_TABLE) \
+	scripts/calculate_energetics.py
+	$(PYTHON) -m scripts.calculate_energetics \
+		$(ARGS_INPUT) \
+		$(ARGS_CHEVALIER_BESTFIT_POINTS) \
+		$(ARGS_MODEL_PARAMETER_TABLE) \
+		$(ARGS_OUTPUT)
+
 chevalier-bestfit-points: $(FILEPATH_CHEVALIER_BESTFIT_POINTS)
 $(FILEPATH_CHEVALIER_BESTFIT_POINTS): \
 	$(FILEPATH_MINIMUM_CHI_SQUARED) \

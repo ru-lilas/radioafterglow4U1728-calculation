@@ -99,6 +99,7 @@ class MetadataNames(StrEnum):
     BIN_WIDTH = auto()
     SYNCHROTRON_MODEL = auto()
     THERMAL_MODEL_INDEX = auto()
+    BURNT_MASS_FRACTION = auto()
 
 class FluxName(StrEnum):
     FNU_THERMAL = auto()

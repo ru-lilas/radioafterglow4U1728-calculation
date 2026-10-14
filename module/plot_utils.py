@@ -677,6 +677,7 @@ class ContourLevelConfig:
 class ContourLineStyle(Style):
     colors: str = "#000000"
     linestyles: str = "-"
+    linewidths: float = 1.0
 
 @dataclass(frozen=True,slots=True)
 class ContourLabelStyle(Style):
@@ -1234,7 +1235,7 @@ class Plotter:
         yerr: ArrayLike,
         style: ErrorbarStyle,
         *,
-        xerr: ArrayLike|None = None
+        xerr: ArrayLike | None = None
     )->ErrorbarContainer:
         return self.ax.errorbar(
             x,y,

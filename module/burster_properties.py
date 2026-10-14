@@ -1,4 +1,3 @@
-from module.compute_lightcurve import ChevalierParameters
 from module.mydataclasses import QuantityData, YAMLReadable
 from dataclasses import dataclass,fields
 from typing import Self
