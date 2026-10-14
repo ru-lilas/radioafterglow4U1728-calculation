@@ -29,7 +29,7 @@ def main():
             pdf.savefig(fig)
         finally:
             plt.close(fig)
-
+    print(f"Saved Chevalier contours: {args.output}", flush=True)
 
 if __name__ == "__main__":
     main()

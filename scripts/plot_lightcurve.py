@@ -251,6 +251,7 @@ def main() -> None:
             pdf.savefig(fig)
         finally:
             plt.close(fig)
+    print(f"Saved lightcurves: {args.output}", flush=True)
 
 
 if __name__ == "__main__":

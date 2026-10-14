@@ -37,10 +37,11 @@ def main():
                 (axes[0, 1], "a_wind", data.grids.a_wind_grid(data.model_parameters)),
             ):
                 draw_parameter_map(fig, ax, data, name, grid)
-            fig.suptitle(" | ".join(data.title_strings()), fontsize=data.config.metadata.fontsize)
+            fig.suptitle(", ".join(data.title_strings()), fontsize=data.config.metadata.fontsize)
             pdf.savefig(fig)
         finally:
             plt.close(fig)
+    print(f"Saved Chevalier colormaps: {args.output}", flush=True)
 
 
 if __name__ == "__main__":
