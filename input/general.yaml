@@ -12,7 +12,7 @@ model_parameters: &ModelParameters
       scale: "log"
     unit: *phi_unit
   theta0:
-    start: 3.0
+    start: 1.0
     stop: 60.0
     num: 256
     scale: "linear"

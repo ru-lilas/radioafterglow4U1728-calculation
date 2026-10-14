@@ -4,6 +4,10 @@ import argparse
 import csv
 import hashlib
 import json
+import math
+import os
+from decimal import Decimal
+from tempfile import NamedTemporaryFile
 from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
@@ -60,7 +64,7 @@ class ConfigRow:
 
 
 def build_config_rows(config: CommentedMap) -> list[ConfigRow]:
-    """格子設定・値と単位・関連するスカラーを1行にまとめる。"""
+    """Group grid settings, values, units and related scalar parameters into rows"""
     rows: list[ConfigRow] = []
 
     def add(group: str, name: str, path: str, value: Any) -> None:
@@ -132,7 +136,7 @@ def print_config_table(config: CommentedMap) -> list[ConfigRow]:
 
 
 def editable_paths(value: Any, path: str) -> list[str]:
-    """複合パラメータの編集先を列挙。周波数のリストはまとめて編集する。"""
+    """List editable leaves while treating frequency lists as a single value"""
     if isinstance(value, dict):
         return [
             leaf
@@ -185,9 +189,9 @@ def set_nested_value(
 
 def parse_value(text: str) -> Any:
     """
-    入力文字列をYAMLとして解釈する。
+    Parse an input string as YAML
 
-    例:
+    Examples:
         0.4          -> float
         256          -> int
         true         -> bool
@@ -268,7 +272,7 @@ def edit_one_value(
 
 def normalize_for_hash(value: Any) -> Any:
     """
-    ruamel.yaml固有の型をJSONへ変換可能な通常型へ直す。
+    Convert YAML containers into plain JSON-compatible containers
     """
     if isinstance(value, dict):
         return {
@@ -351,7 +355,7 @@ def write_config(
 def extract_index_values(
     config: CommentedMap,
 ) -> dict[str, Any]:
-    """general.yamlの主要設定を索引へ記録する（logのstart/stopもそのまま）。"""
+    """Extract index settings while preserving logarithmic grid bounds"""
     paths = {
         "phi_th_start": "model_parameters.phi_th.values.start",
         "phi_th_stop": "model_parameters.phi_th.values.stop",
@@ -399,7 +403,7 @@ def extract_index_values(
 
 
 def validate_index_header(index_path: Path, fieldnames: list[str]) -> None:
-    """旧形式への追記で列がずれるのを防ぐ。"""
+    """Reject incompatible index headers before appending rows"""
     if not index_path.exists() or index_path.stat().st_size == 0:
         return
     with index_path.open("r", encoding="utf-8", newline="") as file:
@@ -441,20 +445,24 @@ def append_index(
     validate_index_header(index_path, fieldnames)
     file_exists = index_path.exists() and index_path.stat().st_size > 0
 
-    with index_path.open(
-        "a",
-        encoding="utf-8",
-        newline="",
-    ) as file:
-        writer = csv.DictWriter(
-            file,
-            fieldnames=fieldnames,
-        )
-
-        if not file_exists:
-            writer.writeheader()
-
-        writer.writerow(row)
+    temporary: Path | None = None
+    try:
+        with NamedTemporaryFile(mode="w", encoding="utf-8", newline="", dir=index_path.parent,
+                                prefix=".index_", suffix=".csv", delete=False) as file:
+            temporary = Path(file.name)
+            if file_exists:
+                with index_path.open(encoding="utf-8", newline="") as existing:
+                    file.write(existing.read())
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow(row)
+            file.flush()
+            os.fsync(file.fileno())
+        temporary.replace(index_path)
+    finally:
+        if temporary is not None and temporary.exists():
+            temporary.unlink()
 
 
 def find_duplicate_hash(
@@ -538,7 +546,7 @@ def create_run(
 
 
 def apply_overrides(config: CommentedMap, overrides: list[str]) -> None:
-    """--set KEY=VALUEを順に適用する。VALUEはYAMLとして解釈する。"""
+    """Apply KEY=VALUE overrides in order, parsing each value as YAML"""
     for override in overrides:
         key, separator, raw_value = override.partition("=")
         if not separator or not key.strip() or not raw_value.strip():
@@ -546,10 +554,252 @@ def apply_overrides(config: CommentedMap, overrides: list[str]) -> None:
         set_nested_value(config, key.strip(), parse_value(raw_value))
 
 
+
+EPS_B_PATH = "model_parameters.shock.common.eps_b"
+SWEEP_FIELDS = ["eps_b", "run_id", "run_name", "input_path", "config_hash", "status"]
+
+
+def validate_eps_b_values(values: list[float]) -> list[float]:
+    """Validate and deduplicate the sweep values in input order"""
+    if not values:
+        raise ValueError("eps_Bのリストが空です")
+    unique: list[float] = []
+    for value in values:
+        if isinstance(value, bool) or not math.isfinite(value) or not 0 < value <= 1:
+            raise ValueError(f"eps_Bには0より大きく1以下の有限値が必要です: {value}")
+        if value in unique:
+            print(f"Duplicate eps_B skipped: {value:g}")
+        else:
+            unique.append(value)
+    return unique
+
+
+def semantic_config(value: Any) -> Any:
+    """Compare effective settings independently of YAML formatting and numeric spelling"""
+    if isinstance(value, dict):
+        return {str(key): semantic_config(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return tuple(semantic_config(item) for item in value)
+    if isinstance(value, bool):
+        return ("bool", value)
+    if isinstance(value, (int, float)):
+        return ("number", str(Decimal(str(value)).normalize()))
+    return (type(value).__name__, value)
+
+
+def sweep_family(config: CommentedMap) -> Any:
+    """Compare all effective settings except eps_B"""
+    plain = normalize_for_hash(config)
+    parent = plain
+    keys = EPS_B_PATH.split(".")
+    for key in keys[:-1]:
+        parent = parent[key]
+    parent[keys[-1]] = None
+    return semantic_config(plain)
+
+
+
+def make_anchor_names_unique(config: CommentedMap) -> None:
+    """Keep detached aliases valid by assigning unique names to distinct anchors"""
+    seen: set[int] = set()
+    used: set[str] = set()
+
+    def visit(value: Any) -> None:
+        if id(value) in seen:
+            return
+        seen.add(id(value))
+        anchor = getattr(value, "anchor", None)
+        if anchor is not None and anchor.value:
+            name = anchor.value
+            if name in used:
+                suffix = 1
+                while f"{name}_sweep{suffix}" in used:
+                    suffix += 1
+                name = f"{name}_sweep{suffix}"
+                value.yaml_set_anchor(name, always_dump=True)
+            used.add(name)
+        if isinstance(value, dict):
+            for item in value.values():
+                visit(item)
+            for merged in getattr(value, "merge", ()):
+                visit(merged)
+        elif isinstance(value, list):
+            for item in value:
+                visit(item)
+
+    visit(config)
+
+def build_sweep_config(base: CommentedMap, eps_b: float) -> CommentedMap:
+    """Build an independent configuration changing only the designated eps_B field"""
+    config = deepcopy(base)
+    # Detach each parent mapping so aliases outside this path retain their values
+    parent = config
+    for key in EPS_B_PATH.split(".")[:-1]:
+        parent[key] = deepcopy(parent[key])
+        parent = parent[key]
+    set_nested_value(config, EPS_B_PATH, eps_b)
+    make_anchor_names_unique(config)
+    if sweep_family(config) != sweep_family(base):
+        raise ValueError("eps_B以外の設定が変わっています")
+    return config
+
+
+def indexed_input_path(row: dict[str, str], runs_dir: Path) -> Path:
+    """Resolve indexed inputs using the existing path convention"""
+    path = Path(row["input_path"])
+    if path.exists():
+        return path
+    # Allow an index tree to be relocated as a whole
+    relocated = runs_dir / row["run_name"] / "input.yaml"
+    if relocated.exists():
+        return relocated
+    raise FileNotFoundError(f"Indexed input is missing: {path}")
+
+
+def read_verified_runs(runs_dir: Path) -> list[tuple[dict[str, str], CommentedMap, Path]]:
+    """Read existing inputs and verify their recorded fingerprints"""
+    index_path = runs_dir / "index.csv"
+    if not index_path.exists() or index_path.stat().st_size == 0:
+        return []
+    with index_path.open(encoding="utf-8", newline="") as file:
+        rows = list(csv.DictReader(file))
+    verified = []
+    for row in rows:
+        path = indexed_input_path(row, runs_dir)
+        config = load_yaml(path)
+        if calculate_config_hash(config) != row["config_hash"]:
+            raise ValueError(f"Indexed configuration hash disagrees with input: {path}")
+        verified.append((row, config, path))
+    return verified
+
+
+def validate_sweep_manifest(path: Path, configs: list[CommentedMap], *,
+                            allow_partial: bool = False) -> None:
+    """Allow reruns of the same sweep without replacing another sweep"""
+    if not path.exists():
+        return
+    with path.open(encoding="utf-8", newline="") as file:
+        reader = csv.DictReader(file)
+        if reader.fieldnames != SWEEP_FIELDS:
+            raise ValueError(f"Sweep manifest columns differ: {path}")
+        rows = list(reader)
+    if len(rows) > len(configs) or (not allow_partial and len(rows) != len(configs)):
+        raise ValueError(f"Sweep manifest belongs to another sweep: {path}")
+    for row, config in zip(rows, configs):
+        existing_path = Path(row["input_path"])
+        if not existing_path.exists():
+            raise FileNotFoundError(f"Sweep input is missing: {existing_path}")
+        if (float(row["eps_b"]) != get_nested_value(config, EPS_B_PATH)
+                or semantic_config(load_yaml(existing_path)) != semantic_config(config)):
+            raise ValueError(f"Sweep manifest belongs to another sweep: {path}")
+
+
+def write_sweep_manifest(path: Path, records: list[dict[str, Any]]) -> None:
+    """Replace the manifest atomically with the completed sweep records"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary: Path | None = None
+    try:
+        with NamedTemporaryFile(mode="w", encoding="utf-8", newline="", dir=path.parent,
+                                prefix=".sweep_", suffix=".csv", delete=False) as file:
+            temporary = Path(file.name)
+            writer = csv.DictWriter(file, fieldnames=SWEEP_FIELDS)
+            writer.writeheader()
+            writer.writerows(records)
+            file.flush()
+            os.fsync(file.fileno())
+        temporary.replace(path)
+    finally:
+        if temporary is not None and temporary.exists():
+            temporary.unlink()
+
+
+
+def sweep_plan(base: CommentedMap, values: list[float]) -> dict[str, Any]:
+    """Record the full requested sweep independently of completion status"""
+    return {"eps_b_values": values,
+            "family": json.loads(json.dumps(sweep_family(base), sort_keys=True, default=str))}
+
+
+def write_sweep_plan(path: Path, plan: dict[str, Any]) -> None:
+    """Write sweep identity atomically before the first RUN is generated"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary: Path | None = None
+    try:
+        with NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent,
+                                prefix=".sweep_plan_", delete=False) as file:
+            temporary = Path(file.name)
+            json.dump(plan, file, sort_keys=True, ensure_ascii=False, indent=2)
+            file.write("\n")
+            file.flush()
+            os.fsync(file.fileno())
+        temporary.replace(path)
+    finally:
+        if temporary is not None and temporary.exists():
+            temporary.unlink()
+
+def generate_eps_b_sweep(base: CommentedMap, values: list[float], *,
+                         runs_dir: Path, sweep_index: Path) -> list[dict[str, Any]]:
+    """Generate or reuse RUNs and record completed candidates after each step"""
+    values = validate_eps_b_values(values)
+    configs = [build_sweep_config(base, value) for value in values]
+    index_path = runs_dir / "index.csv"
+    if sweep_index.resolve() == index_path.resolve():
+        raise ValueError("sweep-indexはRUNのindex.csvとは別のパスにしてください")
+    for config in configs:
+        extracted = extract_index_values(config)
+        validate_index_header(index_path, [
+            "run_id", "run_name", "config_hash", "created_at", "input_path", *extracted,
+        ])
+    verified = read_verified_runs(runs_dir)
+    plan_path = sweep_index.with_suffix(".plan.json")
+    plan = sweep_plan(base, values)
+    existing_plan = plan_path.exists()
+    if existing_plan:
+        with plan_path.open(encoding="utf-8") as file:
+            if json.load(file) != plan:
+                raise ValueError(f"Sweep plan belongs to another sweep: {plan_path}")
+    validate_sweep_manifest(sweep_index, configs, allow_partial=existing_plan)
+    # Report occupied unindexed directories before any writes
+    next_id = generate_next_run_id(index_path)
+    new_count = sum(not any(semantic_config(old) == semantic_config(config)
+                           for _, old, _ in verified) for config in configs)
+    for run_id in range(next_id, next_id + new_count):
+        if (runs_dir / f"run_{run_id:06d}").exists():
+            raise FileExistsError(f"RUN directory is already occupied: run_{run_id:06d}")
+    if not existing_plan:
+        write_sweep_plan(plan_path, plan)
+    records: list[dict[str, Any]] = []
+    for value, config in zip(values, configs):
+        try:
+            matches = [(row, path) for row, old, path in verified
+                       if semantic_config(old) == semantic_config(config)]
+            if matches:
+                matches.sort(key=lambda item: int(item[0]["run_id"]))
+                row, input_path = matches[0]
+                if len(matches) > 1:
+                    print("Equivalent RUNs: " + ", ".join(item[0]["run_name"] for item in matches))
+                record = dict(eps_b=value, run_id=int(row["run_id"]), run_name=row["run_name"],
+                              input_path=input_path.as_posix(), config_hash=row["config_hash"], status="reused")
+            else:
+                run_dir = create_run(config, runs_dir=runs_dir, interactive=False)
+                input_path = run_dir / "input.yaml"
+                record = dict(eps_b=value, run_id=int(run_dir.name.removeprefix("run_")),
+                              run_name=run_dir.name, input_path=input_path.as_posix(),
+                              config_hash=calculate_config_hash(config), status="created")
+            records.append(record)
+            write_sweep_manifest(sweep_index, records)
+            print(f"eps_B={value:g}: {record['status']} {record['run_name']}")
+        except (OSError, KeyError, TypeError, ValueError, RuntimeError, YAMLError) as error:
+            raise RuntimeError(f"eps_B={value:g}, RUN root={runs_dir}, manifest={sweep_index}: {error}") from error
+    return records
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="general.yamlを基にrunのinput.yamlとindex.csvを生成する。"
     )
+    parser.add_argument("--mode", choices=("single", "eps-b-sweep"), default="single")
+    parser.add_argument("--eps-b-values", type=float, nargs="+")
+    parser.add_argument("--sweep-index", type=Path)
     parser.add_argument("--template", type=Path, default=TEMPLATE_PATH)
     parser.add_argument("--runs-dir", type=Path, default=RUNS_DIR)
     parser.add_argument(
@@ -561,12 +811,24 @@ def main() -> None:
         "--allow-duplicate", action="store_true", help="同じ設定のrun生成を許可"
     )
     args = parser.parse_args()
+    if args.mode == "single" and (args.eps_b_values is not None or args.sweep_index is not None):
+        parser.error("走査専用引数には--mode eps-b-sweepが必要です")
+    if args.mode == "eps-b-sweep":
+        if args.eps_b_values is None or args.sweep_index is None:
+            parser.error("eps-b-sweepには--eps-b-valuesと--sweep-indexが必要です")
+        if args.allow_duplicate:
+            parser.error("eps-b-sweepでは--allow-duplicateを使用できません")
 
     try:
         config = load_yaml(args.template)
         apply_overrides(config, args.overrides)
         if not args.yes:
             edit_config(config)
+        if args.mode == "eps-b-sweep":
+            generate_eps_b_sweep(config, args.eps_b_values, runs_dir=args.runs_dir,
+                                 sweep_index=args.sweep_index)
+            print(f"Sweep manifest: {args.sweep_index}")
+            return
         run_dir = create_run(
             config,
             runs_dir=args.runs_dir,
