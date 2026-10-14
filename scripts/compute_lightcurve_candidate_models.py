@@ -12,6 +12,7 @@ from module.models import ColumnNames, MetadataNames, ModelParameters, Synchrotr
 from module.mydataclasses import QuantityData
 from module.utils import FileReader, FileWriter
 from module.synchrotron_numerical_table import ThermalSynchrotronIntegrals
+from module.timing_utils import timed
 
 def parse_args()->argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -43,6 +44,7 @@ def parse_args()->argparse.Namespace:
     )
     return parser.parse_args()
 
+@timed
 def main():
     args = parse_args()
 

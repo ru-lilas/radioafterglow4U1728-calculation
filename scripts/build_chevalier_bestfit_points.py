@@ -16,6 +16,7 @@ from module.mydataclasses import LongformatDataFrame, QuantityArray1D, QuantityD
 from module.observation import LongformatLightcurve
 from module.utils import FileReader, FileWriter
 from module.chevalier import BestfitModelPoint
+from module.timing_utils import timed
 
 @dataclass(frozen=True,slots=True)
 class PlotMetadata:
@@ -46,6 +47,7 @@ def parse_args() -> argparse.Namespace:
         parser.add_argument(f"--{name}", type=Path, required=True)
     return parser.parse_args()
 
+@timed
 def main() -> None:
     args = parse_args()
     df_minchi2 = FileReader.table_from_csv(args.minimum_chi_squared)

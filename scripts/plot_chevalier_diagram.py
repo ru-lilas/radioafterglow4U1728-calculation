@@ -4,8 +4,9 @@ from matplotlib.backends.backend_pdf import PdfPages
 from module import plot_utils
 from module.chevalier import ChevalierContours
 from module.chevalier_plotting import ChevalierPlotData, parse_args
+from module.timing_utils import timed
 
-
+@timed
 def main():
     args = parse_args()
     data = ChevalierPlotData.from_args(args)

@@ -21,6 +21,7 @@ from module.calculation_lightcurve import (
     ContinuousLightcurve,
     )
 from module.dataframe_utils import groupby_to_dict
+from module.timing_utils import timed
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -33,6 +34,7 @@ def parse_args() -> argparse.Namespace:
         parser.add_argument(f"--{name}", type=Path, required=True)
     return parser.parse_args()
 
+@timed
 def main():
     args = parse_args()
 

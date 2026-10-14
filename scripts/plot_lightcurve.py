@@ -16,7 +16,7 @@ from module.models import ColumnNames, FluxName, MetadataNames, ModelParameters,
 from module.mydataclasses import LongformatDataFrame, QuantityArray1D, QuantityData
 from module.observation import LongformatLightcurve, ObservedLightcurve
 from module.utils import FileReader
-
+from module.timing_utils import timed
 
 @dataclass(frozen=True, slots=True)
 class PlotMetadata:
@@ -208,6 +208,7 @@ def add_model_metadata(
     plotter.title(strings=strings, fontsize=plotconf.metadata.fontsize)
 
 
+@timed
 def main() -> None:
     args = parse_args()
     if args.mode == "candidates":

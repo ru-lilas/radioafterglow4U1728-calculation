@@ -9,6 +9,7 @@ from module.models import ColumnNames, DefaultUnits, MetadataNames
 from module.mydataclasses import LongformatDataFrame, QuantityData
 from module.observation import LongformatLightcurve
 from module.utils import FileWriter
+from module.timing_utils import timed
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -16,6 +17,7 @@ def parse_args() -> argparse.Namespace:
         parser.add_argument(f"--{name}", type=Path, required=True)
     return parser.parse_args()
 
+@timed
 def main() -> None:
     args = parse_args()
     conf_chi2 = GeneralInputs.from_yaml(args.input).chi_squared

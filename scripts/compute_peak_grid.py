@@ -11,6 +11,7 @@ from module.memory_utils import GIB, check_memory_budget, estimate_array_memory_
 from module.models import ModelParameters, SynchrotronResults
 from module.synchrotron_numerical_table import ThermalSynchrotronIntegrals
 from module.utils import FileReader, FileWriter
+from module.timing_utils import timed
 
 # Model-specific allowance for component arrays and temporary arrays.
 ESTIMATED_FLOAT64_ARRAYS = 32
@@ -74,6 +75,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+@timed
 def main() -> None:
     args = parse_args()
     print("Computing peak_grid...", flush=True)

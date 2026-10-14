@@ -7,6 +7,7 @@ from module.inputs_as_dataclass import GeneralInputs
 from module.mydataclasses import QuantityData
 from module.observation import LongformatLightcurve
 from module.utils import FileReader, FileWriter
+from module.timing_utils import timed
 
 def parse_args()->argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -33,6 +34,7 @@ def parse_args()->argparse.Namespace:
     )
     return parser.parse_args()
 
+@timed
 def main():
     args = parse_args()
     outpath:Path = args.output

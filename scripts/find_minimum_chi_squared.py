@@ -9,6 +9,7 @@ from module.dataframe_utils import extract_minimum_row
 from module.models import ChiSquaredParameters, ColumnNames, MetadataNames
 from module.mydataclasses import LongformatDataFrame
 from module.utils import FileReader, FileWriter
+from module.timing_utils import timed
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -16,6 +17,7 @@ def parse_args() -> argparse.Namespace:
         parser.add_argument(f"--{name}", type=Path, required=True)
     return parser.parse_args()
 
+@timed
 def main() -> None:
     args = parse_args()
 

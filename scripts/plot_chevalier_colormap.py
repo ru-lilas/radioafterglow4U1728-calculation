@@ -4,8 +4,9 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from module import plot_utils
 from module.chevalier_plotting import ChevalierPlotData, parse_args
+from module.timing_utils import timed
 
-
+@timed
 def draw_parameter_map(fig, ax, data, name, grid):
     style = data.config.components[name].colormap_style_config
     z = grid.to_FloatGrid(style.colorbar.label.unit).values.copy()
