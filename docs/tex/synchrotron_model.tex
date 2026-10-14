@@ -1,0 +1,214 @@
+\section{Synchrotron Model}
+\begin{equation}
+  \nu_{\Theta}
+  =
+  \frac{3\Theta^2 eB}{4\pi \mele c}
+\end{equation}
+\begin{equation}
+  \phith
+  \coloneq
+  \nu_{\Theta}t
+\end{equation}
+\(\xm \coloneq \nu/\nu_{\Theta} = \nu t/\phith\)
+\subsection{Emissivity}
+\begin{equation}
+  \jnu[\thermal]
+  =
+  (1-f_{\ele})
+  \frac{\sqrt{3}e^3 n_{\ele}B}{8\pi \melecc}
+  f(\Theta)
+  \xm
+  I'(\xm)
+\end{equation}
+\begin{equation}
+  \jnu[\powerlaw]
+  =
+  f_{\ele}
+  C_j
+  \frac{e^3 n_{\ele}B}{\melecc}
+  g_N(\Theta)
+  \xm^{-(p-1)/2}
+\end{equation}
+\begin{equation}
+  \jnu
+  =
+  j_0
+  (
+    \mathscr{J}_{\thermal}
+    +
+    \mathscr{J}_{\powerlaw}
+  )
+\end{equation}
+\begin{equation}
+  j_0
+  \coloneq
+  \ab(\frac{4\pi}{3})^3
+  \frac{\epsth}{8\pi\epsB\Theta_0}
+  \ab(\frac{\phith}{\Theta^2})^3
+  \ab(\frac{\melecc}{(ct)^3})
+\end{equation}
+\begin{equation}
+  \mathscr{J}_{\thermal}(\xm)
+  \coloneq
+  (1-f_{\ele})
+  \frac{\sqrt{3}}{8\pi}
+  f(\Theta)
+  \xm
+  I'(\xm)
+\end{equation}
+\begin{equation}
+  \mathscr{J}_{\powerlaw}(\xm)
+  \coloneq
+  f_{\ele}
+  C_{j}
+  g_N(\Theta)\xm^{-(p-1)/2}
+\end{equation}
+%%=======================================================%%
+\subsection{Absorption Coefficient}
+\begin{equation}
+  \anu[\thermal]
+  =
+  (1-f_{\ele})
+  \frac{\pi e n_{\ele}}{3^{3/2}\Theta^5 B}
+  f(\Theta)
+  \xm^{-1}
+  I'(\xm)
+\end{equation}
+\begin{equation}
+  \anu[\powerlaw]
+  =
+  f_{\ele}
+  C_{\alpha}
+  \frac{e n_{\ele}}{\Theta^5 B}
+  g_N(\Theta)
+  \xm^{-(p+4)/2}
+\end{equation}
+\begin{equation}
+  \anu
+  =
+  \alpha_0
+  (
+    \mathscr{A}_{\thermal}
+    +
+    \mathscr{A}_{\powerlaw}
+  )
+\end{equation}
+\begin{equation}
+  \alpha_0
+  =
+  \ab(\frac{4\pi}{3})
+  \frac{\epsth}{8\pi\epsB\Theta_0}
+  \ab(\frac{\phith}{\Theta^2})
+  \Theta^{-5}
+  \frac{1}{ct}
+\end{equation}
+\begin{equation}
+  \mathscr{A}_{\thermal}(\xm)
+  \coloneq
+  (1-f_{\ele})
+  \frac{\pi}{3^{3/2}}
+  f(\Theta)
+  \xm^{-1}
+  I'(\xm)
+\end{equation}
+\begin{equation}
+  \mathscr{A}_{\powerlaw}(\xm)
+  \coloneq
+  f_{\ele}
+  C_{\alpha}
+  g_N(\Theta)
+  \xm^{-(p+4)/2}
+\end{equation}
+%%=======================================================%%
+\subsection{Optical Depth}
+\begin{equation}
+  \tau_{\nu}
+  =
+  \alpha_{\nu}R
+  =
+  \tau_0
+  (
+    \mathscr{A}_{\thermal}
+    +
+    \mathscr{A}_{\powerlaw}
+  )
+\end{equation}
+\begin{equation}
+  \tau_0
+  \coloneq
+  \alpha_0 R
+\end{equation}
+\begin{equation}
+  \log{\tau_0}
+  =
+  -7\log{\Theta}
+  -\frac{1}{2}\log\ab(\frac{\Theta_0}{\epsth})
+  +\frac{3}{2}\log{2}
+  -2\log{3}
+  -\log{\epsB}
+  +\log{\phith}
+  +\frac{1}{2}\log{\Mep}
+\end{equation}
+\begin{equation}
+  \tau_0
+  =
+  \frac{2^{3/2}}{9}
+  \frac{\phith}{\epsB\Theta^7}
+  \ab(\frac{\Theta_0}{\epsth})^{1/2}
+  \ab(\frac{\mue \mele}{\mu\mpro})^{1/2}
+\end{equation}
+\subsection{Specific Luminosity}
+\begin{equation}
+  \log\frac{j_0}{\alpha_0}
+  =
+  2\log\frac{4\pi}{3}
+  + 2\log\frac{\phith}{\Theta^2}
+  + 5\log{\Theta}
+  +\log(\melecc)
+  -2\log(ct)
+\end{equation}
+\begin{equation}
+  L_{\nu}
+  =
+  4\pi^2 R^2
+  \frac{\jnu}{\anu}
+  (1-e^{-\tau_{\nu}})
+  =
+  L_0 \Lambda
+\end{equation}
+\begin{equation}
+  L_0
+  \coloneq
+  4\pi^2 R^2
+  \frac{j_0}{\alpha_0}
+\end{equation}
+\begin{equation}
+  \log\ab(\frac{L_0}{\melecc})
+  =
+  3\log{2} + 4\log\ab(\frac{4\pi}{3})
+  +2\log{\phith}
+  +\log\ab(\frac{\Theta_0}{\epsth})
+  +\log{\Mep}
+\end{equation}
+\begin{equation}
+  \Lambda(\xm)
+  \coloneq
+  \frac{
+    \mathscr{J}_{\thermal}
+    +
+    \mathscr{J}_{\powerlaw}
+  }{
+    \mathscr{A}_{\thermal}
+    +
+    \mathscr{A}_{\powerlaw}
+  }
+  \ab[1-\exp(
+    -\tau_0(
+    \mathscr{A}_{\thermal}
+    +
+    \mathscr{A}_{\powerlaw}
+    )
+  )]
+\end{equation}
+
+

@@ -4,6 +4,7 @@
 \author{KUMADA Ryota}
 \date{\today}
 %=========================================================%
+\addbibresource{references.bib}
 \begin{document}
 \maketitle
 \section{}
@@ -18,155 +19,142 @@ X-ray burster 4U 1728--34 is
 a NS-LMXB, which 
 
   
-\section{}
-\(\epsB = \num{1.0e-2},\epsth = \num{0.40} \) are set,
-and we assume ambient gas is composed of fully ionized hydrogen,
-that is, \( \mu = \num{0.5}, \mue = \num{1.0}\).
+\section{Ambient and Shock Interaction}
+% \(\epsB = \num{1.0e-2},\epsth = \num{0.40} \) are set,
+% and we assume ambient gas is composed of fully ionized hydrogen,
+% that is, \( \mu = \num{0.5}, \mue = \num{1.0}\).
+% \begin{equation}
+%   \muep
+%   =\coloneq
+%   \frac{\mue}{\mu}
+% \end{equation}
+% \begin{equation}
+%   \label{eq:definition_of_electron_proton_effective_mass_ratio}
+%   \Mep
+%   \coloneq
+%   \frac{\mue\mele}{\mu\mpro}
+%   =
+%   \num{1.1e-3}
+%   ~\ab(\frac{\mue}{1.0})
+%   ~\ab(\frac{\mu}{0.5})^{-1}
+% \end{equation}
+density of mass in unshocked medium
+% \begin{equation}
+%   \rho_{\wind} 
+%   \coloneq \frac{\phiA^2\Acyc}{4\pi R^2} 
+%   = \frac{\Acyc}{4\pi}\ab(\frac{\phi}{\betash c t})^2
+% \end{equation}
 \begin{equation}
-  \muep
-  =\coloneq
-  \frac{\mue}{\mu}
-\end{equation}
-\begin{equation}
-  \label{eq:definition_of_electron_proton_effective_mass_ratio}
-  \Mep
-  \coloneq
-  \frac{\mue\mele}{\mu\mpro}
-  =
-  \num{1.1e-3}
-  ~\ab(\frac{\mue}{1.0})
-  ~\ab(\frac{\mu}{0.5})^{-1}
+  \label{eq:def-rhowind}
+  \rho_{\wind}(R)
+  = \frac{\Awind}{4\pi R^2}
+  ,\:
+  \Awind \coloneq \frac{\dot{M}_{\wind}}{v_{\wind}}
 \end{equation}
 Shock radius
 \begin{equation}
   R = \betash c t
-\end{equation}
-density of mass in unshocked medium
-\begin{equation}
-  \rho_{\wind} 
-  \coloneq \frac{\phiA^2\Acyc}{4\pi R^2} 
-  = \frac{\Acyc}{4\pi}\ab(\frac{\phi}{\betash c t})^2
-\end{equation}
-, where
-\begin{equation}
-  \phiA
-  \coloneq 
-  \sqrt{\frac{\Awind}{\Asyn}}
   =
-  \qty{2.00}{\GHz\min}
-  \thetanorm[-4]{\num{3.0}}
-  ~\ab(\frac{\Awind}{\qty{1.0e+07}{\g\per\cm}})^{\frac{1}{2}}
-\end{equation}
-and
-\begin{equation}
-  \Acyc
-  \coloneq 
-  \ab(\frac{4\pi\melecc}{3ec})^2
-  =
-  \qty{5.672e-14}{\g\per\cm}
-\end{equation}
-\begin{equation}
-  \Asyn
-  \coloneq 
-  \ab(\frac{4\pi\melecc}{3\Theta^2 ec})^2
-  =
-  \Theta^{-4}\Acyc
-  =
-  \qty{7.00e-16}{\g\per\cm}
-  \thetanorm[-4]{\num{3.0}}
+  \qty{7.2e11}{\cm}
+  ~\ab(\frac{\betash}{\num{0.2}})
+  ~\ab(\frac{t}{\qty{2}{\min}})
 \end{equation}
 number density of electron in unshocked medium
 \begin{equation}
   n_{\wind} 
-  \coloneq \frac{\rho_{\wind}}{\mu \mpro} 
-  = \frac{\Acyc}{4\pi\mu\mpro}
-  \ab(\frac{\phiA}{\betash c t})^2
+  = \frac{\rho_{\wind}}{\mu \mpro} 
 \end{equation}
-We assume the shock is strong.
-From Rankine-Hugoniot relation,
+% \begin{equation}
+%   \phiA
+%   \coloneq 
+%   \sqrt{\frac{\Awind}{\Asyn}}
+%   =
+%   \qty{2.00}{\GHz\min}
+%   \thetanorm[-4]{\num{3.0}}
+%   ~\ab(\frac{\Awind}{\qty{1.0e+07}{\g\per\cm}})^{\frac{1}{2}}
+% \end{equation}
+% and
+% \begin{equation}
+%   \Acyc
+%   \coloneq 
+%   \ab(\frac{4\pi\melecc}{3ec})^2
+%   =
+%   \qty{5.672e-14}{\g\per\cm}
+% \end{equation}
+% \begin{equation}
+%   \Asyn
+%   \coloneq 
+%   \ab(\frac{4\pi\melecc}{3\Theta^2 ec})^2
+%   =
+%   \Theta^{-4}\Acyc
+%   =
+%   \qty{7.00e-16}{\g\per\cm}
+%   \thetanorm[-4]{\num{3.0}}
+% \end{equation}
+\begin{equation}
+  u_{\shock}
+  =
+  \frac{9}{8}\rho_{\wind}(\betash c)^2
+\end{equation}
+% Given that the shock is strong,
+% From Rankine-Hugoniot relation,
+For a strong shock,
 the number density of electron in shocked medium
 is given by
 \begin{equation}
   n_{\ele} 
-  \coloneq 4\mu_{\ele} n_{\wind}
-  =
-  \frac{\Acyc}{\pi\mele}
-  \Mep
-  \ab(\frac{\phiA}{\betash c t})^2
+  = 4\mu_{\ele} n_{\wind}
 \end{equation}
 We assume that
 the strength of magnetic field has the fllowing condition
 \begin{equation}
-  \frac{B^2}{8\pi}
-  = \epsB \frac{9}{8}\rho_{\wind}(\betash c)^2
+  \frac{B^2}{8\pi} = \epsB u_{\shock}
 \end{equation}
-, that is,
-\begin{equation}
-  B
-  = 
-  \frac{3}{2}
-  \ab(\epsB \Acyc)^{1/2}
-  \frac{\phiA}{t}
-\end{equation}
-\begin{equation}
-  u_{\ele} = a(\Theta)n_{\ele}\Theta \melecc
-\end{equation}
-\begin{equation}
-  u = \frac{9}{8}n\mu \mpro (\betash c)^2
-\end{equation}
-\begin{equation}
-  u_{\ele} = \epsth u
-\end{equation}
-\begin{equation}
-  \label{eq:definition_of_theta}
-  \Theta = \frac{5\Theta_0 - 6 + \sqrt{25\Theta_0^2 + 180\Theta_0 + 36}}{30}
-  \underset{\Theta_0\gg 1}{\approx}
-  \frac{1}{3}\Theta_0
-\end{equation}
-\begin{equation}
-  \label{eq:definition_of_theta0}
-  \Theta_0
-  = 
-  \frac{
-    9
-  }{
-    32
-  }
-  \frac{
-    \epsth\betash^2
-  }{
-    \Mep
-  }
-  = \num{9.30}
-  ~\ab(\frac{\epsth}{0.4})^2
-  ~\ab(\frac{\betash}{0.3})^2
-  ~\ab(\frac{\Mep}{\num{1.1e-03}})^{-1}
-\end{equation}
-\begin{equation}
-  \label{eq:theta_in_hotlimit}
-  \Theta
-  \underset{\Theta_0\gg 1}{\approx}
-  \frac{
-    3
-  }{
-    32
-  }
-  \frac{
-    \epsth\betash^2
-  }{
-    \Mep
-  }
-\end{equation}
-\begin{equation}
-  \label{eq:definition_of_phi_theta}
-  \phith
-  =
-  \frac{3}{2}\phiA\sqrt{\epsB}
-  =
-  \qty{0.30}{\GHz\min}
-  ~\ab(\frac{\phiA}{\qty{2.0}{\GHz \min}})
-  ~\ab(\frac{\epsB}{\num{1.0e-02}})^{\frac{1}{2}}
-\end{equation}
+% , that is,
+% \begin{equation}
+%   B
+%   = 
+%   \frac{3}{2}
+%   \ab(\epsB \Acyc)^{1/2}
+%   \frac{\phiA}{t}
+% \end{equation}
+% \begin{equation}
+%   u_{\ele} = a(\Theta)n_{\ele}\Theta \melecc
+% \end{equation}
+% \begin{equation}
+%   u = \frac{9}{8}n\mu \mpro (\betash c)^2
+% \end{equation}
+% \begin{equation}
+%   \label{eq:definition_of_theta}
+%   \Theta = \frac{5\Theta_0 - 6 + \sqrt{25\Theta_0^2 + 180\Theta_0 + 36}}{30}
+%   \underset{\Theta_0\gg 1}{\approx}
+%   \frac{1}{3}\Theta_0
+% \end{equation}
+% \begin{equation}
+%   \label{eq:theta_in_hotlimit}
+%   \Theta
+%   \underset{\Theta_0\gg 1}{\approx}
+%   \frac{
+%     3
+%   }{
+%     32
+%   }
+%   \frac{
+%     \epsth\betash^2
+%   }{
+%     \Mep
+%   }
+% \end{equation}
+% \begin{equation}
+%   \label{eq:definition_of_phi_theta}
+%   \phith
+%   =
+%   \frac{3}{2}\phiA\sqrt{\epsB}
+%   =
+%   \qty{0.30}{\GHz\min}
+%   ~\ab(\frac{\phiA}{\qty{2.0}{\GHz \min}})
+%   ~\ab(\frac{\epsB}{\num{1.0e-02}})^{\frac{1}{2}}
+% \end{equation}
 % \begin{equation}
 %   \label{eq:definition_of_j_nu}
 %   j_{\nu}
@@ -214,57 +202,57 @@ the strength of magnetic field has the fllowing condition
 %   \ab(\frac{\phiA}{ct})
 %   f(\Theta)
 % \end{equation}
-\begin{empheq}{align}
-  \label{eq:definition_of_tau_theta}
-  \tauth
-  &\coloneq
-  \alpha_{\nu}R
-  =
-  \frac{2}{81}
-  \frac{\phith}{\epsB}
-  \sqrt{
-    \frac{
-      2\Mep
-    }{
-      \Theta^{15}
-    }
-  }
-  f(\Theta) \\
-  &\approx
-  \num{5.5e+05}
-  ~\ab(\frac{\phiA}{\qty{2.0}{\GHz \min}})
-  ~\ab(\frac{\muep}{\num{2.0}})^{-\frac{1}{2}}
-  \thetanorm[-\frac{15}{2}]{\num{3.0}}
-  \epsbnorm[-\frac{1}{2}]{\num{e-02}}
-\end{empheq}
-\begin{equation}
-  \label{eq:definition_of_l_theta}
-  \lnuth
-  \coloneq
-  4\pi^2 R^2
-  \frac{
-    j_{\Theta}
-  }{
-    \alpha_{\Theta}
-  }
-  =
-  \frac{256}{3}\pi^3
-  \Theta^{14}
-  \Mep
-  \melecc
-  \frac{\phith^2}{\epsth}
-\end{equation}
-\begin{equation}
-  \label{eq:definition_of_lambda}
-  \Lambda(\tauth,\xm)
-  \coloneq
-  \xm^2
-  \ab[
-    1-\exp(-\tauth\xm^{-1}I'(\xm))
-  ]
-\end{equation}
-
-\section{}
+% \begin{empheq}{align}
+%   \label{eq:definition_of_tau_theta}
+%   \tauth
+%   &\coloneq
+%   \alpha_{\nu}R
+%   =
+%   \frac{2}{81}
+%   \frac{\phith}{\epsB}
+%   \sqrt{
+%     \frac{
+%       2\Mep
+%     }{
+%       \Theta^{15}
+%     }
+%   }
+%   f(\Theta) \\
+%   &\approx
+%   \num{5.5e+05}
+%   ~\ab(\frac{\phiA}{\qty{2.0}{\GHz \min}})
+%   ~\ab(\frac{\muep}{\num{2.0}})^{-\frac{1}{2}}
+%   \thetanorm[-\frac{15}{2}]{\num{3.0}}
+%   \epsbnorm[-\frac{1}{2}]{\num{e-02}}
+% \end{empheq}
+% \begin{equation}
+%   \label{eq:definition_of_l_theta}
+%   \lnuth
+%   \coloneq
+%   4\pi^2 R^2
+%   \frac{
+%     j_{\Theta}
+%   }{
+%     \alpha_{\Theta}
+%   }
+%   =
+%   \frac{256}{3}\pi^3
+%   \Theta^{14}
+%   \Mep
+%   \melecc
+%   \frac{\phith^2}{\epsth}
+% \end{equation}
+% \begin{equation}
+%   \label{eq:definition_of_lambda}
+%   \Lambda(\tauth,\xm)
+%   \coloneq
+%   \xm^2
+%   \ab[
+%     1-\exp(-\tauth\xm^{-1}I'(\xm))
+%   ]
+% \end{equation}
+%
+% \section{}
 % \begin{equation}
 %   F_{\nu} = \delta^3\frac{L_{\nu}}{4\pi D^2},
 % \end{equation}
@@ -273,176 +261,201 @@ the strength of magnetic field has the fllowing condition
 % \begin{equation}
 %   \delta \approx \sqrt{\frac{1+\betash}{1-\betash}}
 % \end{equation}
-Here, we treated the persistent emission as
-the observed points
-before the onset of Type I X-ray burst,
-and the value of the persistent flux was
-taken by the mean of these observed points.
-
-The peak flux was estimated
-by taking the mean of the two heighest values,
-and the peak time was defined as the midpoint
-between the corresponding points.
-
-\begin{equation}
-  \phi_{\peak} = \phi_{\Theta}\xm^{\peak}
-\end{equation}
-\begin{equation}
-  f_{\nu,\peak} = 
-  \delta^3 \frac{L_{\Theta}}{4\pi D^2}
-  \Lambda_{\tau_{\Theta},\peak}
-\end{equation}
-
-\section{trans-relativistic limit}
-We set a trans-relativistic limit as
-\(\Theta_0 = 3\).
-\begin{equation}
-  \label{eq:beta_sh_tr}
-  \betash[\transrela]
-  =
-  \num{0.170}
-  \muepnorm{\num{2.0}}
-  \epsthnorm[-1]{\num{0.4}}
-  \thetatrnorm{\num{3.0}}
-\end{equation}
-
-\begin{equation}
-  \label{eq:tau_theta_tr}
-  \tauth[\transrela]
-  =
-  \num{2.3e9}
-  \phiAnorm{\phiAfiducial}
-  \muepnorm[-\frac{1}{2}]{\muepFiducial}
-  \epsbnorm[-\frac{1}{2}]{\epsBFiducial}
-  \thetatrnorm[-\frac{15}{2}]{\ThetaTrFiducial}
-\end{equation}
-The error of hot-limit fomula against
-exact one is smaller than \qty{0.5}{\percent}.
-\begin{equation}
-  \label{eq:phi_theta_tr}
-  \phith[\transrela]
-  =
-  \frac{3}{2}\phiA\sqrt{\epsB}
-\end{equation}
-\begin{equation}
-  \label{eq:lnu_theta_tr}
-  \lnuth[\transrela]
-  =
-  \qty{1.91e15}{erg \per\s\per\Hz}
-  \phiAnorm[2]{\phiAfiducial}
-  \muepnorm{\muepFiducial}
-  \epsbnorm{\epsBFiducial}
-  \epsthnorm[-1]{\epsthFiducial}
-  \thetatrnorm[14]{\ThetaTrFiducial}
-\end{equation}
-\section{Optically thin limit in the Thermal Synchrotron}
-\begin{equation}
-  \label{eq:condition_optically_thin}
-  \tauth \gtrsim \num{1.0}
-\end{equation}
-\begin{equation}
-  \label{eq:theta_optically_thin_limit}
-  \Theta 
-  \lesssim
-  \num{20.5}
-  \phiThnorm[\frac{2}{15}]{\phiThFiducial}
-  \epsbnorm[-\frac{2}{15}]{\epsBFiducial}
-  \muepnorm[\frac{1}{15}]{\muepFiducial}
-\end{equation}
-\begin{equation}
-  \label{eq:theta0_optically_thin_limit}
-  \Theta_0
-  \approx
-  \frac{1}{3}\Theta
-  \lesssim
-  \num{6.83}
-  \phiThnorm[\frac{2}{15}]{\phiThFiducial}
-  \epsbnorm[-\frac{2}{15}]{\epsBFiducial}
-  \muepnorm[\frac{1}{15}]{\muepFiducial}
-\end{equation}
-\begin{equation}
-  \label{eq:phith_optically_thin}
-  \phith[\thin]
-  =
-  \ab[
-    \frac{\pi}{\epsB\Theta^7}
-    \ab(\frac{2^5\epsth}{3^7\Theta_0})^{1/2}
-    f(\Theta)
-  ]^{-1}
-\end{equation}
-
-\section{Expression}
-\begin{equation}
-  \label{eq:awind_expressed}
-  \Awind = \frac{4\Acyc}{9\epsB}\ab(\frac{\phith}{\Theta^2})^2
-\end{equation}
-\begin{equation}
-  \label{eq:betash_expressed_by_theta0}
-  \betash = \sqrt{\frac{32\muep\mele\Theta_0}{9\epsth\mpro}}
-\end{equation}
-\begin{equation}
-  \label{eq:radius_expressed_by_theta0}
-  R = ct\sqrt{\frac{32\muep\mele\Theta_0}{9\epsth\mpro}}
-\end{equation}
-\begin{equation}
-  \label{eq:winddensity_expressed_by_theta0}
-  \rho_{\wind} 
-  =
-  \frac{\epsth}{32\pi\epsB\muep\Theta_0\Theta^4}
-  \frac{\mpro}{\mele}
-  \ab(\frac{\phith}{ct})^2
-  \Acyc
-\end{equation}
-\begin{equation}
-  \label{eq:electrondensity_downstream_expressed_by_th}
-  n_{\ele}
-  =
-  \frac{\epsth}{8\pi\epsB\mele\Theta_0\Theta^4}
-  \ab(\frac{\phith}{ct})^2
-  \Acyc
-\end{equation}
-\begin{equation}
-  \label{eq:magnetic_field_expressed}
-  B
-  =
-  \frac{\sqrt{\Acyc}}{t}\ab(\frac{\phith}{\Theta^2})
-\end{equation}
-\begin{equation}
-  \label{eq:jth_expressed}
-  \jth
-  =
-  \frac{8\pi^2\mele^2 c}{\sqrt{3^5 \Acyc^3}}n_{\ele}B f(\Theta)
-  =
-  \frac{\pi\epsth}{3^{5/2}\Theta_0 \epsB}\frac{\melecc}{(ct)^3}
-  \ab(\frac{\phith}{\Theta^2})^3
-\end{equation}
-\begin{equation}
-  \label{eq:alphath_expressed}
-  \alphath
-  =
-  \frac{8\pi^2\mele c}{\Theta^5\sqrt{3^5 \Acyc}}n_{\ele}B^{-1} f(\Theta)
-  =
-  \frac{\pi\epsth}{3^{5/2}\Theta_0 \epsB}
-  \frac{1}{\Theta^5(ct)}
-  \ab(\frac{\phith}{\Theta^2})
-\end{equation}
-\begin{empheq}{align}
-  \label{eq:lth_expressed}
-  L_{\Theta}
-  &=
-  \frac{2^7\pi^2\muep}{9\epsth}
-  \frac{\mele}{\mpro}\Theta_0 \Theta^5 \melecc
-  \ab(\frac{\phith}{\Theta^2})^2 \\
-  &\approx
-  \frac{128\pi^2}{27\epsth}
-  \muep\frac{\mele}{\mpro}
-  \phith^2
-  \Theta_0^2
-  \melecc
-\end{empheq}
+% Here, we treated the persistent emission as
+% the observed points
+% before the onset of Type I X-ray burst,
+% and the value of the persistent flux was
+% taken by the mean of these observed points.
+%
+% The peak flux was estimated
+% by taking the mean of the two heighest values,
+% and the peak time was defined as the midpoint
+% between the corresponding points.
+%
+% \begin{equation}
+%   \phi_{\peak} = \phi_{\Theta}\xm^{\peak}
+% \end{equation}
+% \begin{equation}
+%   f_{\nu,\peak} = 
+%   \delta^3 \frac{L_{\Theta}}{4\pi D^2}
+%   \Lambda_{\tau_{\Theta},\peak}
+% \end{equation}
+%
+% \section{trans-relativistic limit}
+% We set a trans-relativistic limit as
+% \(\Theta_0 = 3\).
+% \begin{equation}
+%   \label{eq:beta_sh_tr}
+%   \betash[\transrela]
+%   =
+%   \num{0.170}
+%   \muepnorm{\num{2.0}}
+%   \epsthnorm[-1]{\num{0.4}}
+%   \thetatrnorm{\num{3.0}}
+% \end{equation}
+%
+% \begin{equation}
+%   \label{eq:tau_theta_tr}
+%   \tauth[\transrela]
+%   =
+%   \num{2.3e9}
+%   \phiAnorm{\phiAfiducial}
+%   \muepnorm[-\frac{1}{2}]{\muepFiducial}
+%   \epsbnorm[-\frac{1}{2}]{\epsBFiducial}
+%   \thetatrnorm[-\frac{15}{2}]{\ThetaTrFiducial}
+% \end{equation}
+% The error of hot-limit fomula against
+% exact one is smaller than \qty{0.5}{\percent}.
+% \begin{equation}
+%   \label{eq:phi_theta_tr}
+%   \phith[\transrela]
+%   =
+%   \frac{3}{2}\phiA\sqrt{\epsB}
+% \end{equation}
+% \begin{equation}
+%   \label{eq:lnu_theta_tr}
+%   \lnuth[\transrela]
+%   =
+%   \qty{1.91e15}{erg \per\s\per\Hz}
+%   \phiAnorm[2]{\phiAfiducial}
+%   \muepnorm{\muepFiducial}
+%   \epsbnorm{\epsBFiducial}
+%   \epsthnorm[-1]{\epsthFiducial}
+%   \thetatrnorm[14]{\ThetaTrFiducial}
+% \end{equation}
+% \section{Optically thin limit in the Thermal Synchrotron}
+% \begin{equation}
+%   \label{eq:condition_optically_thin}
+%   \tauth \gtrsim \num{1.0}
+% \end{equation}
+% \begin{equation}
+%   \label{eq:theta_optically_thin_limit}
+%   \Theta 
+%   \lesssim
+%   \num{20.5}
+%   \phiThnorm[\frac{2}{15}]{\phiThFiducial}
+%   \epsbnorm[-\frac{2}{15}]{\epsBFiducial}
+%   \muepnorm[\frac{1}{15}]{\muepFiducial}
+% \end{equation}
+% \begin{equation}
+%   \label{eq:theta0_optically_thin_limit}
+%   \Theta_0
+%   \approx
+%   \frac{1}{3}\Theta
+%   \lesssim
+%   \num{6.83}
+%   \phiThnorm[\frac{2}{15}]{\phiThFiducial}
+%   \epsbnorm[-\frac{2}{15}]{\epsBFiducial}
+%   \muepnorm[\frac{1}{15}]{\muepFiducial}
+% \end{equation}
+% \begin{equation}
+%   \label{eq:phith_optically_thin}
+%   \phith[\thin]
+%   =
+%   \ab[
+%     \frac{\pi}{\epsB\Theta^7}
+%     \ab(\frac{2^5\epsth}{3^7\Theta_0})^{1/2}
+%     f(\Theta)
+%   ]^{-1}
+% \end{equation}
+%
+% \section{Expression}
+% \begin{equation}
+%   \label{eq:awind_expressed}
+%   \Awind = \frac{4\Acyc}{9\epsB}\ab(\frac{\phith}{\Theta^2})^2
+% \end{equation}
+% \begin{equation}
+%   \label{eq:betash_expressed_by_theta0}
+%   \betash = \sqrt{\frac{32\muep\mele\Theta_0}{9\epsth\mpro}}
+% \end{equation}
+% \begin{equation}
+%   \label{eq:radius_expressed_by_theta0}
+%   R = ct\sqrt{\frac{32\muep\mele\Theta_0}{9\epsth\mpro}}
+% \end{equation}
+% \begin{equation}
+%   \label{eq:winddensity_expressed_by_theta0}
+%   \rho_{\wind} 
+%   =
+%   \frac{\epsth}{32\pi\epsB\muep\Theta_0\Theta^4}
+%   \frac{\mpro}{\mele}
+%   \ab(\frac{\phith}{ct})^2
+%   \Acyc
+% \end{equation}
+% \begin{equation}
+%   \label{eq:electrondensity_downstream_expressed_by_th}
+%   n_{\ele}
+%   =
+%   \frac{\epsth}{8\pi\epsB\mele\Theta_0\Theta^4}
+%   \ab(\frac{\phith}{ct})^2
+%   \Acyc
+% \end{equation}
+% \begin{equation}
+%   \label{eq:magnetic_field_expressed}
+%   B
+%   =
+%   \frac{\sqrt{\Acyc}}{t}\ab(\frac{\phith}{\Theta^2})
+% \end{equation}
+% \begin{equation}
+%   \label{eq:jth_expressed}
+%   \jth
+%   =
+%   \frac{8\pi^2\mele^2 c}{\sqrt{3^5 \Acyc^3}}n_{\ele}B f(\Theta)
+%   =
+%   \frac{\pi\epsth}{3^{5/2}\Theta_0 \epsB}\frac{\melecc}{(ct)^3}
+%   \ab(\frac{\phith}{\Theta^2})^3
+% \end{equation}
+% \begin{equation}
+%   \label{eq:alphath_expressed}
+%   \alphath
+%   =
+%   \frac{8\pi^2\mele c}{\Theta^5\sqrt{3^5 \Acyc}}n_{\ele}B^{-1} f(\Theta)
+%   =
+%   \frac{\pi\epsth}{3^{5/2}\Theta_0 \epsB}
+%   \frac{1}{\Theta^5(ct)}
+%   \ab(\frac{\phith}{\Theta^2})
+% \end{equation}
+% \begin{empheq}{align}
+%   \label{eq:lth_expressed}
+%   L_{\Theta}
+%   &=
+%   \frac{2^7\pi^2\muep}{9\epsth}
+%   \frac{\mele}{\mpro}\Theta_0 \Theta^5 \melecc
+%   \ab(\frac{\phith}{\Theta^2})^2 \\
+%   &\approx
+%   \frac{128\pi^2}{27\epsth}
+%   \muep\frac{\mele}{\mpro}
+%   \phith^2
+%   \Theta_0^2
+%   \melecc
+% \end{empheq}
 %%=======================================================%%
 \section{Distribution of Electrons}
+We consider a distribution of post-shock electrons
+with a number density \(n_{\ele}\).
+We assume that the electron distribution consists of
+the sum of thermal and non-thermal components.
+
+\begin{equation}
+  \ab(\pdv{n}{\gamma})
+  =
+  \ab(\pdv{n}{\gamma})_{\thermal}
+  +
+  \ab(\pdv{n}{\gamma})_{\powerlaw}
+\end{equation}
+\begin{equation}
+  f_e
+  \coloneq
+  \frac{n_{\ele,\powerlaw}}{n_{\ele}}
+  =
+  \frac{
+    n_{\ele,\powerlaw}
+  }{
+    n_{\ele,\thermal}+n_{\ele,\powerlaw}
+  }
+\end{equation}
+
 Maxwell-J\"{u}ttner distribution
+\(\Theta \coloneq k_{\symup{B}}T_{\ele}/(\melecc)\)
 \begin{equation}
   \frac{1}{n_{\ele}}\ab(\pdv{n}{\gamma})_{\thermal}
   =
@@ -457,12 +470,59 @@ Maxwell-J\"{u}ttner distribution
   \coloneq
   \frac{2\Theta^2}{K_2(1/\Theta)}
 \end{equation}
-The mean Lorentz factor of electrons following
-a Maxwell-Jüttner distribution is given exactly by
 \begin{equation}
-  \ab<\gamma>_{\thermal}
+  \label{eq:thermal_energy}
+  u_{\ele,\thermal} = a(\Theta)n_{\ele}\Theta \melecc
+\end{equation}
+\begin{equation}
+  a(\Theta) 
   =
-  \frac{K_3(1/\Theta)}{K_2(1/\Theta)} - \Theta .
+  \frac{1}{\Theta}
+  \ab(\frac{K_3(1/\Theta)}{K_2(1/\Theta)}-1)
+  -1
+  \approx
+  \frac{6+15\Theta}{4+5\Theta}
+\end{equation}
+We use the last approximate expression
+\cite{gammieAdvectiondominatedAccretionFlows1998}
+.
+
+If a fraction $\epsth$ of the post-shock internal energy
+is transferred to the thermal component, then we have
+\begin{equation}
+  \label{eq:thermal_partition}
+  u_{\ele,\thermal} = \epsth u_{\shock}
+\end{equation}
+From Eqs.
+\eqref{eq:thermal_energy}
+and
+\eqref{eq:thermal_partition}
+,
+\begin{equation}
+  \label{eq:definition_of_theta}
+  \Theta = \frac{5\Theta_0 - 6 + \sqrt{25\Theta_0^2 + 180\Theta_0 + 36}}{30}
+  ,
+\end{equation}
+where
+\begin{equation}
+  \label{eq:definition_of_theta0}
+  \Theta_0
+  = 
+  \frac{
+    9
+  }{
+    32
+  }
+  \frac{
+    \mu\mpro
+  }{
+    \mue\mele
+  }
+  \epsth\betash^2
+  = \num{9.30}
+  ~\ab(\frac{\epsth}{0.4})^2
+  ~\ab(\frac{\betash}{0.3})^2
+  ~\ab(\frac{\mue/\mu}{\num{2.0}})^{-1}
 \end{equation}
 
 Power-law distribution\((p>2)\)
@@ -497,165 +557,14 @@ We assume
   =
   \ab<\gamma>_{\thermal}
 \end{equation}
-
-\section{Synchrotron Model}
-\subsection{Emissivity}
+The mean Lorentz factor of electrons following
+a Maxwell-J\"{u}ttner distribution is given exactly by
 \begin{equation}
-  \jnu
+  \ab<\gamma>_{\thermal}
   =
-  j_0
-  (
-    \mathscr{J}_{\thermal}
-    +
-    \mathscr{J}_{\powerlaw}
-  )
+  1 + a(\Theta)\Theta
 \end{equation}
-\begin{equation}
-  j_0
-  \coloneq
-  \ab(\frac{4\pi}{3})^3
-  \frac{\epsth}{8\pi\epsB\Theta_0}
-  \ab(\frac{\phith}{\Theta^2})^3
-  \ab(\frac{\melecc}{(ct)^3})
-\end{equation}
-\begin{equation}
-  \mathscr{J}_{\thermal}(\xm)
-  \coloneq
-  (1-f_{\ele})
-  \frac{\sqrt{3}}{8\pi}
-  f(\Theta)
-  \xm
-  I'(\xm)
-\end{equation}
-\begin{equation}
-  \mathscr{J}_{\powerlaw}(\xm)
-  \coloneq
-  f_{\ele}
-  C_{j}
-  g_N(\Theta)\xm^{-(p-1)/2}
-\end{equation}
-%%=======================================================%%
-\subsection{Absorption Coefficient}
-\begin{equation}
-  \anu
-  =
-  \alpha_0
-  (
-    \mathscr{A}_{\thermal}
-    +
-    \mathscr{A}_{\powerlaw}
-  )
-\end{equation}
-\begin{equation}
-  \alpha_0
-  =
-  \ab(\frac{4\pi}{3})
-  \frac{\epsth}{8\pi\epsB\Theta_0}
-  \ab(\frac{\phith}{\Theta^2})
-  \Theta^{-5}
-  \frac{1}{ct}
-\end{equation}
-\begin{equation}
-  \mathscr{A}_{\thermal}(\xm)
-  \coloneq
-  (1-f_{\ele})
-  \frac{\pi}{3^{3/2}}
-  f(\Theta)
-  \xm^{-1}
-  I'(\xm)
-\end{equation}
-\begin{equation}
-  \mathscr{A}_{\powerlaw}(\xm)
-  \coloneq
-  f_{\ele}
-  C_{\alpha}
-  g_N(\Theta)
-  \xm^{-(p+4)/2}
-\end{equation}
-
-\subsection{Optical Depth}
-\begin{equation}
-  \tau_{\nu}
-  =
-  \alpha_{\nu}R
-  =
-  \tau_0
-  (
-    \mathscr{A}_{\thermal}
-    +
-    \mathscr{A}_{\powerlaw}
-  )
-\end{equation}
-\begin{equation}
-  \tau_0
-  \coloneq
-  \alpha_0 R
-\end{equation}
-\begin{equation}
-  \log{\tau_0}
-  =
-  -7\log{\Theta}
-  -\frac{1}{2}\log\ab(\frac{\Theta_0}{\epsth})
-  +\frac{3}{2}\log{2}
-  -2\log{3}
-  -\log{\epsB}
-  +\log{\phith}
-  +\frac{1}{2}\log{\Mep}
-\end{equation}
-\subsection{Specific Luminosity}
-\begin{equation}
-  \log\frac{j_0}{\alpha_0}
-  =
-  2\log\frac{4\pi}{3}
-  + 2\log\frac{\phith}{\Theta^2}
-  + 5\log{\Theta}
-  +\log(\melecc)
-  -2\log(ct)
-\end{equation}
-\begin{equation}
-  L_{\nu}
-  =
-  4\pi^2 R^2
-  \frac{\jnu}{\anu}
-  (1-e^{-\tau_{\nu}})
-  =
-  L_0 \Lambda
-\end{equation}
-\begin{equation}
-  L_0
-  \coloneq
-  4\pi^2 R^2
-  \frac{j_0}{\alpha_0}
-\end{equation}
-\begin{equation}
-  \log\ab(\frac{L_0}{\melecc})
-  =
-  3\log{2} + 4\log\ab(\frac{4\pi}{3})
-  +2\log{\phith}
-  +\log\ab(\frac{\Theta_0}{\epsth})
-  +\log{\Mep}
-\end{equation}
-\begin{equation}
-  \Lambda(\xm)
-  \coloneq
-  \frac{
-    \mathscr{J}_{\thermal}
-    +
-    \mathscr{J}_{\powerlaw}
-  }{
-    \mathscr{A}_{\thermal}
-    +
-    \mathscr{A}_{\powerlaw}
-  }
-  \ab[1-\exp(
-    -\tau_0(
-    \mathscr{A}_{\thermal}
-    +
-    \mathscr{A}_{\powerlaw}
-    )
-  )]
-\end{equation}
-
+\subimport{.}{synchrotron_model}
 \section{Results}
 % Figure \ref{fig:chevalier_diagram} shows
 % a $F_{\nu,\mathrm{net},\peak}-\nu\tpeak$ diagram,
