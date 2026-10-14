@@ -144,8 +144,8 @@ $(FILEPATH_MINIMUM_CHI2_LC_PDF): \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
 	$(FILEPATH_OBSLC) \
 	$(PLOTCONFIGDIR)/minimum_chi_squared_lightcurves.yaml \
-	scripts/plot_minimum_chi2_lightcurve.py
-	$(PYTHON) -m scripts.plot_minimum_chi2_lightcurve \
+	scripts/plot_lightcurve.py
+	$(PYTHON) -m scripts.plot_lightcurve \
 		$(ARGS_INPUT) \
 		--minimum_chi_squared $(FILEPATH_MINIMUM_CHI_SQUARED) \
 		$(ARGS_BINNED_LIGHTCURVES) \
