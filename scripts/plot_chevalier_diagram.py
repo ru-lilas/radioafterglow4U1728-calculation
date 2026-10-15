@@ -1,37 +1,15 @@
-"""Chevalier contours with shared preparation and overlays."""
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
+"""Render one RUN through the shared Axes-based contour implementation"""
 from module import plot_utils
-from module.chevalier import ChevalierContours
-from module.chevalier_plotting import ChevalierPlotData, parse_args
-from module.timing_utils import timed
+from module.chevalier_plotting import ChevalierInputPaths, ChevalierPlotData, draw_contour_figure, parse_args, write_single_pdf
 
-@timed
-def main():
+
+def main() -> None:
     args = parse_args()
-    data = ChevalierPlotData.from_args(args)
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    with PdfPages(args.output) as pdf:
-        fig, axes = data.config.layout.create()
-        try:
-            plotter = plot_utils.Plotter(axes.flat[0])
-            for name, grid in (
-                ("a_wind", data.grids.a_wind_grid(data.model_parameters)),
-                ("beta_sh", data.grids.beta_sh_grid(data.model_parameters)),
-            ):
-                ChevalierContours.build(
-                    data.plotregion, grid,
-                    style=data.config.components[name].contour_style_config,
-                    mask=data.invisible,
-                ).plot(plotter)
-            data.draw_boundaries(plotter)
-            data.draw_observations(plotter)
-            plotter.title(strings=data.title_strings(), fontsize=data.config.metadata.fontsize)
-            pdf.savefig(fig)
-        finally:
-            plt.close(fig)
-    print(f"Saved Chevalier contours: {args.output}", flush=True)
+    paths = ChevalierInputPaths.from_args(args)
+    config = plot_utils.PlotConfig.from_yaml(args.plotconfig)
+    data = ChevalierPlotData.from_paths(paths, config)
+    write_single_pdf(args.output, lambda: draw_contour_figure(data), sources=(*paths.sources(), args.plotconfig))
+
 
 if __name__ == "__main__":
     main()
-
