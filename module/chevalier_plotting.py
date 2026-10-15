@@ -281,6 +281,7 @@ class ColormapRowConfig:
     axes: plot_utils.AxesConfig
     style: plot_utils.ColormapConfigure
     contours: tuple[ContourComponent, ...] = ()
+    transform: Literal["identity", "log10"] = "identity"
 
 
 RowConfig = ContourRowConfig | ColormapRowConfig
@@ -352,6 +353,27 @@ def visible_values(data: ChevalierPlotData, name: str, unit: str) -> NDArray[np.
     return parameter_values(data, name, unit)[~data.invisible.values]
 
 
+def colormap_values(data: ChevalierPlotData, row: ColormapRowConfig,
+                    *, grid: QuantityGrid | None = None) -> NDArray[np.float64]:
+    """Resolve display values without changing the physical quantity grid"""
+    if grid is None:
+        values = parameter_values(data, row.quantity, row.style.colorbar.label.unit)
+    else:
+        values = grid.to_FloatGrid(row.style.colorbar.label.unit).values.copy()
+        if values.shape != data.invisible.values.shape:
+            raise ValueError("Colormap grid and visibility mask shapes differ")
+    visible = ~data.invisible.values
+    if np.any(~np.isfinite(values[visible])):
+        raise ValueError(f"Nonfinite visible {row.quantity} values")
+    if row.transform == "log10":
+        if np.any(values[visible] <= 0):
+            raise ValueError(f"{row.quantity} must be positive before log10")
+        values[visible] = np.log10(values[visible])
+    elif row.transform != "identity":
+        raise ValueError(f"Unsupported colormap transform: {row.transform}")
+    return values
+
+
 def check_panel_plane(data: ChevalierPlotData, axes: plot_utils.AxesConfig) -> None:
     """Reject a row whose coordinate units or bounds differ from its prepared data"""
     if plane_signature(axes) != plane_signature(shared_plane_axes(data.config)):
@@ -388,12 +410,7 @@ def draw_colormap_panel(ax: Axes, data: ChevalierPlotData, row: ColormapRowConfi
     """Draw a map and overlays without creating a figure or colorbar"""
     check_panel_plane(data, row.axes)
     plot_utils.AxesConfigurator.apply(ax, row.axes)
-    if grid is None:
-        z = parameter_values(data, row.quantity, row.style.colorbar.label.unit)
-    else:
-        z = grid.to_FloatGrid(row.style.colorbar.label.unit).values.copy()
-        if z.shape != data.invisible.values.shape:
-            raise ValueError("Colormap grid and visibility mask shapes differ")
+    z = colormap_values(data, row, grid=grid)
     visible = z[~data.invisible.values]
     if np.any(~np.isfinite(visible)):
         raise ValueError(f"Nonfinite visible {row.quantity} values")

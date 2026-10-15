@@ -17,7 +17,7 @@ from matplotlib.figure import Figure
 from module import plot_utils as pu
 from module.chevalier_plotting import (
     ChevalierInputPaths, ChevalierPlotData, ColormapRowConfig, ContourRowConfig,
-    QUANTITY_RESOLVERS, RowConfig, colormap_row, contour_row, draw_colormap_panel,
+    QUANTITY_RESOLVERS, RowConfig, colormap_row, colormap_values, contour_row, draw_colormap_panel,
     draw_contour_panel, plane_signature, shared_plane_axes, visible_values,
 )
 
@@ -67,18 +67,17 @@ def build_plot_config(contours: pu.PlotConfig, maps: pu.PlotConfig) -> SweepSett
     wind = replace(colormap_row(maps, "a_wind"), label="A_wind", axes=contour.axes)
     beta = replace(colormap_row(maps, "beta_sh"), label="beta_sh", axes=contour.axes)
     ratio = ColormapRowConfig(
-        quantity="xm_peak_cutoff_ratio", label="Peak / cutoff", axes=contour.axes,
+        quantity="xm_peak_cutoff_ratio", label="log10(Peak / cutoff)", axes=contour.axes,
+        transform="log10",
         style=replace(
             wind.style,
             cmap="coolwarm",
-            vmin=1.0e-01,
-            vmax=1.0e+01,
             norm=pu.NormConfig(
                 "centered",
-                vcenter=1.0
+                vcenter=0.0
             ),
             colorbar=replace(wind.style.colorbar,
-                label=pu.LabelConfigure(r"$x_{M,\mathrm{peak}}/x_{M,\mathrm{cutoff}}$", "", 18))),
+                label=pu.LabelConfigure(r"$\log_{10}(x_{M,\mathrm{peak}}/x_{M,\mathrm{cutoff}})$", "", 18))),
     )
     # Add, remove or reorder complete row instances here
     rows = (contour, wind, beta, ratio)
@@ -108,8 +107,9 @@ def validate_settings(settings: SweepSettings) -> None:
             quantities = (row.quantity,) + tuple(component.quantity for component in row.contours)
             if any(component.style.levels.values is None for component in row.contours):
                 raise ValueError("Colormap overlay contours require explicit shared levels")
-            if row.quantity == "xm_peak_cutoff_ratio" and row.style.norm.type == "centered" and row.style.norm.vcenter != 1.0:
-                raise ValueError("The ratio colormap requires vcenter=1 for centered normalization")
+            center = 0.0 if row.transform == "log10" else 1.0
+            if row.quantity == "xm_peak_cutoff_ratio" and row.style.norm.type == "centered" and row.style.norm.vcenter != center:
+                raise ValueError(f"The ratio colormap requires vcenter={center:g} for centered normalization")
             if row.style.norm.type not in ("linear", "log", "centered"):
                 raise ValueError(f"Unsupported normalization for {row.label}")
         elif isinstance(row, ContourRowConfig):
@@ -233,7 +233,9 @@ def resolve_rows(runs: tuple[SelectedRun, ...], settings: SweepSettings) -> Swee
             else:
                 samples = tuple(items)
             for item, (quantity, unit, normalization) in enumerate(samples):
-                values = visible_values(data, quantity, unit)
+                values = (colormap_values(data, row)[~data.invisible.values]
+                          if isinstance(row, ColormapRowConfig)
+                          else visible_values(data, quantity, unit))
                 if normalization == "log" and np.any(values <= 0):
                     raise ValueError(f"{run.entry.run_name}, row {row.label}: logarithmic values must be positive")
                 ranges[index, item] = extend_range(ranges[index, item], values)
@@ -273,7 +275,7 @@ def validate_resolved_run(data: ChevalierPlotData, settings: SweepSettings, name
     """Detect data that no longer fit resolved global color bounds"""
     for row in settings.rows:
         if isinstance(row, ColormapRowConfig):
-            values = visible_values(data, row.quantity, row.style.colorbar.label.unit)
+            values = colormap_values(data, row)[~data.invisible.values]
             low, high = row.style.vmin, row.style.vmax
             if low is None or high is None:
                 raise ValueError("Resolve global row bounds before drawing")
@@ -357,6 +359,16 @@ def write_sweep_pdf(plan: SweepPlan, output: Path) -> None:
             temporary.unlink(missing_ok=True)
 
 
+def thin_runs(entries: list[RunEntry], max_runs: int = 5) -> list[RunEntry]:
+    """Select evenly spaced RUNs while preserving manifest order"""
+    if max_runs < 1:
+        raise ValueError("max_runs must be positive")
+    if len(entries) <= max_runs:
+        return entries
+    indices = np.linspace(0, len(entries) - 1, max_runs, dtype=int)
+    return [entries[int(index)] for index in indices]
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("sweep-index", "peak-grid-path", "model-parameter-table-path", "obslc",
@@ -373,7 +385,7 @@ def main() -> None:
         if args.columns_per_page is not None:
             settings = replace(settings, columns_per_page=args.columns_per_page)
         validate_settings(settings)
-        entries = read_manifest(args.sweep_index)
+        entries = thin_runs(read_manifest(args.sweep_index), max_runs=5)
         protected = [args.sweep_index, args.obslc, args.contour_plotconfig, args.colormap_plotconfig]
         for entry in entries:
             protected.extend((entry.input_path, within_run(entry, args.peak_grid_path),
