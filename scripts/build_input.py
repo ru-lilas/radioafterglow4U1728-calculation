@@ -12,7 +12,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
@@ -555,23 +555,54 @@ def apply_overrides(config: CommentedMap, overrides: list[str]) -> None:
 
 
 
-EPS_B_PATH = "model_parameters.shock.common.eps_b"
-SWEEP_FIELDS = ["eps_b", "run_id", "run_name", "input_path", "config_hash", "status"]
+SweepParameter = Literal["eps_b", "eps_th"]
+
+
+@dataclass(frozen=True, slots=True)
+class SweepSpec:
+    parameter: SweepParameter
+    mode: str
+    values_option: str
+    yaml_path: str
+    values_key: str
+
+    @property
+    def manifest_fields(self) -> list[str]:
+        """Return the manifest columns for the selected parameter"""
+        return [self.parameter, "run_id", "run_name", "input_path", "config_hash", "status"]
+
+
+SWEEP_SPECS: dict[SweepParameter, SweepSpec] = {
+    "eps_b": SweepSpec("eps_b", "eps-b-sweep", "--eps-b-values",
+                       "model_parameters.shock.common.eps_b", "eps_b_values"),
+    "eps_th": SweepSpec("eps_th", "eps-th-sweep", "--eps-th-values",
+                        "model_parameters.shock.common.eps_th", "eps_th_values"),
+}
+# Retain public constants used by existing eps_B callers
+EPS_B_PATH = SWEEP_SPECS["eps_b"].yaml_path
+SWEEP_FIELDS = SWEEP_SPECS["eps_b"].manifest_fields
+
+
+def validate_sweep_values(values: list[float], *, parameter: SweepParameter = "eps_b") -> list[float]:
+    """Validate energy fractions and deduplicate them in input order"""
+    if not values:
+        raise ValueError(f"{parameter}のリストが空です")
+    unique: list[float] = []
+    for value in values:
+        if (isinstance(value, bool) or not isinstance(value, (int, float))
+                or not math.isfinite(value) or not 0 < value <= 1):
+            raise ValueError(f"{parameter}には0より大きく1以下の有限値が必要です: {value}")
+        numeric = float(value)
+        if numeric in unique:
+            print(f"Duplicate {parameter} skipped: {numeric:g}")
+        else:
+            unique.append(numeric)
+    return unique
 
 
 def validate_eps_b_values(values: list[float]) -> list[float]:
-    """Validate and deduplicate the sweep values in input order"""
-    if not values:
-        raise ValueError("eps_Bのリストが空です")
-    unique: list[float] = []
-    for value in values:
-        if isinstance(value, bool) or not math.isfinite(value) or not 0 < value <= 1:
-            raise ValueError(f"eps_Bには0より大きく1以下の有限値が必要です: {value}")
-        if value in unique:
-            print(f"Duplicate eps_B skipped: {value:g}")
-        else:
-            unique.append(value)
-    return unique
+    """Preserve the existing eps_B value-validation entry point"""
+    return validate_sweep_values(values, parameter="eps_b")
 
 
 def semantic_config(value: Any) -> Any:
@@ -587,11 +618,11 @@ def semantic_config(value: Any) -> Any:
     return (type(value).__name__, value)
 
 
-def sweep_family(config: CommentedMap) -> Any:
-    """Compare all effective settings except eps_B"""
+def sweep_family(config: CommentedMap, *, parameter: SweepParameter = "eps_b") -> object:
+    """Compare all effective settings except the selected energy fraction"""
     plain = normalize_for_hash(config)
     parent = plain
-    keys = EPS_B_PATH.split(".")
+    keys = SWEEP_SPECS[parameter].yaml_path.split(".")
     for key in keys[:-1]:
         parent = parent[key]
     parent[keys[-1]] = None
@@ -629,18 +660,21 @@ def make_anchor_names_unique(config: CommentedMap) -> None:
 
     visit(config)
 
-def build_sweep_config(base: CommentedMap, eps_b: float) -> CommentedMap:
-    """Build an independent configuration changing only the designated eps_B field"""
+def build_sweep_config(base: CommentedMap, eps_b: float, *,
+                       parameter: SweepParameter = "eps_b") -> CommentedMap:
+    """Build a candidate while retaining the legacy eps_b argument name"""
+    path = SWEEP_SPECS[parameter].yaml_path
+    get_nested_value(base, path)
     config = deepcopy(base)
     # Detach each parent mapping so aliases outside this path retain their values
     parent = config
-    for key in EPS_B_PATH.split(".")[:-1]:
+    for key in path.split(".")[:-1]:
         parent[key] = deepcopy(parent[key])
         parent = parent[key]
-    set_nested_value(config, EPS_B_PATH, eps_b)
+    set_nested_value(config, path, eps_b)
     make_anchor_names_unique(config)
-    if sweep_family(config) != sweep_family(base):
-        raise ValueError("eps_B以外の設定が変わっています")
+    if sweep_family(config, parameter=parameter) != sweep_family(base, parameter=parameter):
+        raise ValueError(f"{parameter}以外の設定が変わっています")
     return config
 
 
@@ -674,13 +708,14 @@ def read_verified_runs(runs_dir: Path) -> list[tuple[dict[str, str], CommentedMa
 
 
 def validate_sweep_manifest(path: Path, configs: list[CommentedMap], *,
-                            allow_partial: bool = False) -> list[dict[str, str]]:
+                            allow_partial: bool = False,
+                            parameter: SweepParameter = "eps_b") -> list[dict[str, str]]:
     """Allow reruns of the same sweep without replacing another sweep"""
     if not path.exists():
         return []
     with path.open(encoding="utf-8", newline="") as file:
         reader = csv.DictReader(file)
-        if reader.fieldnames != SWEEP_FIELDS:
+        if reader.fieldnames != SWEEP_SPECS[parameter].manifest_fields:
             raise ValueError(f"Sweep manifest columns differ: {path}")
         rows = list(reader)
     if len(rows) > len(configs) or (not allow_partial and len(rows) != len(configs)):
@@ -690,7 +725,7 @@ def validate_sweep_manifest(path: Path, configs: list[CommentedMap], *,
         if not existing_path.exists():
             raise FileNotFoundError(f"Sweep input is missing: {existing_path}")
         existing_config = load_yaml(existing_path)
-        if (float(row["eps_b"]) != get_nested_value(config, EPS_B_PATH)
+        if (float(row[parameter]) != get_nested_value(config, SWEEP_SPECS[parameter].yaml_path)
                 or semantic_config(existing_config) != semantic_config(config)):
             raise ValueError(f"Sweep manifest belongs to another sweep: {path}")
         if calculate_config_hash(existing_config) != row["config_hash"]:
@@ -700,7 +735,8 @@ def validate_sweep_manifest(path: Path, configs: list[CommentedMap], *,
     return rows
 
 
-def write_sweep_manifest(path: Path, records: list[dict[str, Any]]) -> None:
+def write_sweep_manifest(path: Path, records: list[dict[str, Any]], *,
+                         parameter: SweepParameter = "eps_b") -> None:
     """Replace the manifest atomically with the completed sweep records"""
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary: Path | None = None
@@ -708,7 +744,7 @@ def write_sweep_manifest(path: Path, records: list[dict[str, Any]]) -> None:
         with NamedTemporaryFile(mode="w", encoding="utf-8", newline="", dir=path.parent,
                                 prefix=".sweep_", suffix=".csv", delete=False) as file:
             temporary = Path(file.name)
-            writer = csv.DictWriter(file, fieldnames=SWEEP_FIELDS)
+            writer = csv.DictWriter(file, fieldnames=SWEEP_SPECS[parameter].manifest_fields)
             writer.writeheader()
             writer.writerows(records)
             file.flush()
@@ -720,34 +756,65 @@ def write_sweep_manifest(path: Path, records: list[dict[str, Any]]) -> None:
 
 
 
-def sweep_plan(base: CommentedMap, values: list[float]) -> dict[str, object]:
-    """Record the full requested sweep independently of completion status"""
-    return {"eps_b_values": values,
-            "family": json.loads(json.dumps(sweep_family(base), sort_keys=True, default=str))}
+def sweep_plan(base: CommentedMap, values: list[float], *,
+               parameter: SweepParameter = "eps_b",
+               explicit_parameter: bool = False) -> dict[str, object]:
+    """Serialize a plan while retaining the legacy eps_B format by default"""
+    family: object = json.loads(json.dumps(sweep_family(base, parameter=parameter),
+                                          sort_keys=True, default=str))
+    return SavedSweepPlan(parameter, values, family, explicit_parameter).to_dict()
 
 
 @dataclass(frozen=True, slots=True)
 class SavedSweepPlan:
-    eps_b_values: list[float]
+    parameter: SweepParameter
+    values: list[float]
     family: object
+    explicit_parameter: bool = False
+
+    @property
+    def eps_b_values(self) -> list[float]:
+        """Retain the legacy eps_B accessor without accepting an eps_th plan"""
+        if self.parameter != "eps_b":
+            raise ValueError("An eps_th plan has no eps_b_values")
+        return self.values
 
     def to_dict(self) -> dict[str, object]:
-        """Return the serialized sweep-plan fields"""
-        return {"eps_b_values": self.eps_b_values, "family": self.family}
+        """Serialize axis-specific value keys and preserve discriminator presence"""
+        result: dict[str, object] = {
+            SWEEP_SPECS[self.parameter].values_key: self.values,
+            "family": self.family,
+        }
+        if self.parameter == "eps_th" or self.explicit_parameter:
+            result["parameter"] = self.parameter
+        return result
 
 
 def read_sweep_plan(path: Path) -> SavedSweepPlan:
-    """Validate JSON fields and return a typed saved sweep plan"""
+    """Validate JSON and return a typed plan with an unambiguous sweep axis"""
     with path.open(encoding="utf-8") as file:
         raw: object = json.load(file)
     if not isinstance(raw, dict):
         raise ValueError(f"Invalid sweep plan: {path}")
     fields: dict[str, object] = {}
-    for key, value in raw.items():
+    for key, item in raw.items():
         if not isinstance(key, str):
             raise ValueError(f"Invalid sweep-plan key: {path}")
-        fields[key] = value
-    raw_values = fields.get("eps_b_values")
+        fields[key] = item
+    present: list[SweepParameter] = [
+        parameter for parameter, spec in SWEEP_SPECS.items() if spec.values_key in fields
+    ]
+    if len(present) != 1:
+        raise ValueError(f"Exactly one supported values key is required: {path}")
+    parameter: SweepParameter = present[0]
+    explicit = "parameter" in fields
+    if explicit:
+        declared = fields["parameter"]
+        if declared != parameter:
+            raise ValueError(f"Conflicting or unsupported sweep parameter: {path}")
+    elif parameter != "eps_b":
+        raise ValueError(f"An eps_th plan requires its parameter discriminator: {path}")
+    raw_values = fields.get(SWEEP_SPECS[parameter].values_key)
     family = fields.get("family")
     if not isinstance(raw_values, list) or not isinstance(family, dict):
         raise ValueError(f"Invalid sweep plan fields: {path}")
@@ -755,12 +822,12 @@ def read_sweep_plan(path: Path) -> SavedSweepPlan:
     for item in raw_values:
         value: object = item
         if isinstance(value, bool) or not isinstance(value, (int, float)):
-            raise ValueError(f"Invalid eps_B value in saved sweep plan: {path}")
+            raise ValueError(f"Invalid {parameter} value in saved sweep plan: {path}")
         values.append(float(value))
-    planned = validate_eps_b_values(values)
+    planned = validate_sweep_values(values, parameter=parameter)
     if len(planned) != len(values):
         raise ValueError(f"Duplicate values in saved sweep plan: {path}")
-    return SavedSweepPlan(eps_b_values=planned, family=family)
+    return SavedSweepPlan(parameter, planned, family, explicit)
 
 
 def write_sweep_plan(path: Path, plan: dict[str, object]) -> None:
@@ -780,11 +847,12 @@ def write_sweep_plan(path: Path, plan: dict[str, object]) -> None:
         if temporary is not None and temporary.exists():
             temporary.unlink()
 
-def generate_eps_b_sweep(base: CommentedMap, values: list[float], *,
+def generate_parameter_sweep(base: CommentedMap, values: list[float], *,
                          runs_dir: Path, sweep_index: Path,
-                         extend_sweep: bool = False) -> list[dict[str, Any]]:
+                         extend_sweep: bool = False,
+                         parameter: SweepParameter = "eps_b") -> list[dict[str, Any]]:
     """Generate, reuse or extend a sweep while preserving completed RUN assignments"""
-    requested = validate_eps_b_values(values)
+    requested = validate_sweep_values(values, parameter=parameter)
     index_path = runs_dir / "index.csv"
     if sweep_index.resolve() == index_path.resolve():
         raise ValueError("sweep-indexはRUNのindex.csvとは別のパスにしてください")
@@ -793,32 +861,35 @@ def generate_eps_b_sweep(base: CommentedMap, values: list[float], *,
     saved_plan: SavedSweepPlan | None = None
     if existing_plan:
         saved_plan = read_sweep_plan(plan_path)
+        if saved_plan.parameter != parameter:
+            raise ValueError(f"Sweep parameter disagrees with requested mode: {plan_path}")
     if extend_sweep:
         if saved_plan is None or not sweep_index.is_file():
             raise FileNotFoundError("--extend-sweepには既存の走査対応表と.plan.jsonが必要です")
-        if saved_plan.family != sweep_plan(base, requested)["family"]:
+        if saved_plan.family != sweep_plan(base, requested, parameter=parameter)["family"]:
             raise ValueError(f"Common sweep settings differ: {plan_path}")
-        planned: list[float] = saved_plan.eps_b_values
+        planned: list[float] = saved_plan.values
         values = planned.copy()
         for value in requested:
             if value in values:
-                print(f"Already planned eps_B skipped: {value:g}")
+                print(f"Already planned {parameter} skipped: {value:g}")
             else:
                 values.append(value)
-        print(f"New eps_B values added: {len(values) - len(planned)}")
+        print(f"New {parameter} values added: {len(values) - len(planned)}")
     else:
         values = requested
-    plan = sweep_plan(base, values)
+    plan = sweep_plan(base, values, parameter=parameter,
+                      explicit_parameter=saved_plan.explicit_parameter if saved_plan is not None else False)
     if saved_plan is not None and not extend_sweep and saved_plan.to_dict() != plan:
         raise ValueError(f"Sweep plan belongs to another sweep: {plan_path}")
-    configs = [build_sweep_config(base, value) for value in values]
+    configs = [build_sweep_config(base, value, parameter=parameter) for value in values]
     for config in configs:
         extracted = extract_index_values(config)
         validate_index_header(index_path, [
             "run_id", "run_name", "config_hash", "created_at", "input_path", *extracted,
         ])
     verified = read_verified_runs(runs_dir)
-    completed = validate_sweep_manifest(sweep_index, configs, allow_partial=existing_plan)
+    completed = validate_sweep_manifest(sweep_index, configs, allow_partial=existing_plan, parameter=parameter)
     records: list[dict[str, Any]] = []
     used_ids: set[int] = set()
     for row in completed:
@@ -833,9 +904,9 @@ def generate_eps_b_sweep(base: CommentedMap, values: list[float], *,
         if len(indexed) != 1 or run_id in used_ids:
             raise ValueError(f"Existing sweep RUN is not uniquely registered in {index_path}: {row['run_name']}")
         used_ids.add(run_id)
-        records.append(dict(eps_b=float(row["eps_b"]), run_id=run_id,
-                            run_name=row["run_name"], input_path=row["input_path"],
-                            config_hash=row["config_hash"], status="reused"))
+        records.append({parameter: float(row[parameter]), "run_id": run_id,
+                        "run_name": row["run_name"], "input_path": row["input_path"],
+                        "config_hash": row["config_hash"], "status": "reused"})
     # Check all required new directories before changing either plan or manifest
     next_id = generate_next_run_id(index_path)
     pending = configs[len(records):]
@@ -848,9 +919,9 @@ def generate_eps_b_sweep(base: CommentedMap, values: list[float], *,
         write_sweep_plan(plan_path, plan)
     # Never shorten a completed manifest while replaying an existing sweep
     if records:
-        write_sweep_manifest(sweep_index, records)
+        write_sweep_manifest(sweep_index, records, parameter=parameter)
         for record in records:
-            print(f"eps_B={record['eps_b']:g}: reused {record['run_name']}")
+            print(f"{parameter}={record[parameter]:g}: reused {record['run_name']}")
     for value, config in zip(values[len(records):], pending):
         try:
             matches = [(row, path) for row, old, path in verified
@@ -860,30 +931,47 @@ def generate_eps_b_sweep(base: CommentedMap, values: list[float], *,
                 row, input_path = matches[0]
                 if len(matches) > 1:
                     print("Equivalent RUNs: " + ", ".join(item[0]["run_name"] for item in matches))
-                record = dict(eps_b=value, run_id=int(row["run_id"]), run_name=row["run_name"],
-                              input_path=input_path.as_posix(), config_hash=row["config_hash"], status="reused")
+                record = {parameter: value, "run_id": int(row["run_id"]), "run_name": row["run_name"],
+                          "input_path": input_path.as_posix(), "config_hash": row["config_hash"], "status": "reused"}
             else:
                 run_dir = create_run(config, runs_dir=runs_dir, interactive=False)
                 input_path = run_dir / "input.yaml"
-                record = dict(eps_b=value, run_id=int(run_dir.name.removeprefix("run_")),
-                              run_name=run_dir.name, input_path=input_path.as_posix(),
-                              config_hash=calculate_config_hash(config), status="created")
+                record = {parameter: value, "run_id": int(run_dir.name.removeprefix("run_")),
+                          "run_name": run_dir.name, "input_path": input_path.as_posix(),
+                          "config_hash": calculate_config_hash(config), "status": "created"}
             records.append(record)
-            write_sweep_manifest(sweep_index, records)
-            print(f"eps_B={value:g}: {record['status']} {record['run_name']}")
+            write_sweep_manifest(sweep_index, records, parameter=parameter)
+            print(f"{parameter}={value:g}: {record['status']} {record['run_name']}")
         except (OSError, KeyError, TypeError, ValueError, RuntimeError, YAMLError) as error:
-            raise RuntimeError(f"eps_B={value:g}, RUN root={runs_dir}, manifest={sweep_index}: {error}") from error
+            raise RuntimeError(f"{parameter}={value:g}, RUN root={runs_dir}, manifest={sweep_index}: {error}") from error
     return records
+
+
+def generate_eps_b_sweep(base: CommentedMap, values: list[float], *,
+                         runs_dir: Path, sweep_index: Path,
+                         extend_sweep: bool = False) -> list[dict[str, Any]]:
+    """Preserve the existing eps_B generation entry point"""
+    return generate_parameter_sweep(base, values, runs_dir=runs_dir, sweep_index=sweep_index,
+                                    extend_sweep=extend_sweep, parameter="eps_b")
+
+
+def generate_eps_th_sweep(base: CommentedMap, values: list[float], *,
+                          runs_dir: Path, sweep_index: Path,
+                          extend_sweep: bool = False) -> list[dict[str, Any]]:
+    """Generate or extend eps_th RUNs through the shared sweep engine"""
+    return generate_parameter_sweep(base, values, runs_dir=runs_dir, sweep_index=sweep_index,
+                                    extend_sweep=extend_sweep, parameter="eps_th")
 
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="general.yamlを基にrunのinput.yamlとindex.csvを生成する。"
     )
-    parser.add_argument("--mode", choices=("single", "eps-b-sweep"), default="single")
+    parser.add_argument("--mode", choices=("single", "eps-b-sweep", "eps-th-sweep"), default="single")
     parser.add_argument("--eps-b-values", type=float, nargs="+")
+    parser.add_argument("--eps-th-values", type=float, nargs="+")
     parser.add_argument("--sweep-index", type=Path)
     parser.add_argument("--extend-sweep", action="store_true",
-                        help="既存の走査条件を維持し、指定したeps_B値を末尾に追加")
+                        help="既存の走査条件を維持し、指定した走査値を末尾に追加")
     parser.add_argument("--template", type=Path, default=TEMPLATE_PATH)
     parser.add_argument("--runs-dir", type=Path, default=RUNS_DIR)
     parser.add_argument(
@@ -895,27 +983,41 @@ def main() -> None:
         "--allow-duplicate", action="store_true", help="同じ設定のrun生成を許可"
     )
     args = parser.parse_args()
-    if args.mode == "single" and (args.eps_b_values is not None or args.sweep_index is not None or args.extend_sweep):
-        parser.error("走査専用引数には--mode eps-b-sweepが必要です")
-    if args.mode == "eps-b-sweep":
-        if args.eps_b_values is None or args.sweep_index is None:
-            parser.error("eps-b-sweepには--eps-b-valuesと--sweep-indexが必要です")
+    parameter: SweepParameter | None = None
+    values: list[float] | None = None
+    sweep_index: Path | None = args.sweep_index
+    if args.mode == "single":
+        if (args.eps_b_values is not None or args.eps_th_values is not None
+                or sweep_index is not None or args.extend_sweep):
+            parser.error("走査専用引数には走査モードが必要です")
+    else:
+        if args.mode == "eps-b-sweep":
+            parameter = "eps_b"
+            values = args.eps_b_values
+            if args.eps_th_values is not None:
+                parser.error("eps-b-sweepでは--eps-th-valuesを使用できません")
+        else:
+            parameter = "eps_th"
+            values = args.eps_th_values
+            if args.eps_b_values is not None:
+                parser.error("eps-th-sweepでは--eps-b-valuesを使用できません")
+        if values is None or sweep_index is None:
+            parser.error(f"{SWEEP_SPECS[parameter].mode}には{SWEEP_SPECS[parameter].values_option}と--sweep-indexが必要です")
         if args.allow_duplicate:
-            parser.error("eps-b-sweepでは--allow-duplicateを使用できません")
+            parser.error("走査モードでは--allow-duplicateを使用できません")
 
     try:
         config = load_yaml(args.template)
         apply_overrides(config, args.overrides)
         if not args.yes:
             edit_config(config)
-        if args.mode == "eps-b-sweep":
-            eps_b_values: list[float] | None = args.eps_b_values
-            sweep_index: Path | None = args.sweep_index
-            if eps_b_values is None or sweep_index is None:
-                parser.error("eps-b-sweepには--eps-b-valuesと--sweep-indexが必要です")
-            generate_eps_b_sweep(config, eps_b_values, runs_dir=args.runs_dir,
-                                 sweep_index=sweep_index, extend_sweep=args.extend_sweep)
-            print(f"Sweep manifest: {args.sweep_index}")
+        if parameter is not None:
+            if values is None or sweep_index is None:
+                parser.error("走査値と対応表のパスが必要です")
+            generate_parameter_sweep(config, values, runs_dir=args.runs_dir,
+                                     sweep_index=sweep_index, extend_sweep=args.extend_sweep,
+                                     parameter=parameter)
+            print(f"Sweep manifest: {sweep_index}")
             return
         run_dir = create_run(
             config,
