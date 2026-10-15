@@ -11,9 +11,9 @@ FIGDIR := fig
 OBSDIR := obs
 PLOTCONFIGDIR := plotconfigs
 
-ifndef RUN_ID
-$(error RUN_IDを指定してください. 例 make RUN_ID=1)
-endif
+# ifndef RUN_ID
+# $(error RUN_IDを指定してください. 例 make RUN_ID=1)
+# endif
 RUN_DIR := $(shell printf 'run_%06d' '$(RUN_ID)')
 RUN_DATADIR := $(DATADIR)/$(RUN_DIR)
 RUN_FIGDIR := $(FIGDIR)/$(RUN_DIR)
@@ -56,8 +56,8 @@ FILEPATH_DIMENSIONLESS_SYNCHROTRONS_PDF:= $(call run_fig,dimensionless_synchrotr
 FILEPATH_OPTICALDEPTH_CMAPS_PDF:=$(call run_fig,opticaldepth_cmaps.pdf)
 FILEPATH_THERMAL_PEAK_PDF:=$(call run_fig,thermal_peak.pdf)
 FILEPATH_PEAK_CUTOFF_RATIO_PDF:=$(call run_fig,peak_cutoff_ratio.pdf)
+FILEPATH_ENERGETICS_PDF:=$(FIGDIR)/energetics.pdf
 
-# 共通CLI引数（$<・$@はレシピ実行時に展開するため = を使う）
 ARGS_INPUT = --input $<
 ARGS_OUTPUT = --output $@
 ARGS_OBSLC = --obslc $(FILEPATH_OBSLC)
@@ -76,7 +76,18 @@ ARGS_CHEVALIER_BESTFIT_POINTS = --chevalier_bestfit_points $(FILEPATH_CHEVALIER_
     chevaliercm chevalier min_chi2 chi2 lc_bin lc candidates \
     peak_grid lc_all modeltable peak_table
 
-all: view-best-lc view-chevalierbest view-chevaliercm
+all: view-best-lc view-chevalierbest view-chevaliercm cutoff-ratio
+
+# view-energetics: $(FILEPATH_ENERGETICS_PDF)
+# 	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
+
+fig/energetics_epsb.pdf: \
+	scripts/plot_energetics.py \
+	data/energetics_epsb.csv
+	$(PYTHON) -m scripts.plot_energetics\
+		--input data/energetics_epsb.csv \
+		--parameter eps_b \
+		--output $@
 
 view-best-lc: $(FILEPATH_MINIMUM_CHI2_LC_PDF)
 	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
@@ -215,6 +226,7 @@ $(FILEPATH_CHEVALIER_PDF): \
 
 view-peak-cutoff-ratio: $(FILEPATH_PEAK_CUTOFF_RATIO_PDF)
 	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
+cutoff-ratio: $(FILEPATH_PEAK_CUTOFF_RATIO_PDF)
 $(FILEPATH_PEAK_CUTOFF_RATIO_PDF): \
 	$(FILEPATH_PEAK_GRID) \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
