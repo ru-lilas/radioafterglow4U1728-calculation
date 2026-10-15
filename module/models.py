@@ -175,6 +175,16 @@ class ScenarioParameter:
 class ElectronTemperature:
     values:FloatArray
 
+    @staticmethod
+    def theta0(
+        effmass_ep: float, 
+        eps_th: float,
+        beta_sh: NDArray[np.float64]
+    )->NDArray[np.float64]:
+        return (
+            9.0*eps_th*beta_sh**2
+            /(32.0*effmass_ep)
+        )
 
 class DimensionlessElectronTemperature:
     @staticmethod
