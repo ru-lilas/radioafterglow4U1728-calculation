@@ -103,6 +103,8 @@ def calculate_energetics_table(
             MetadataNames.EPS_B: selected_model.eps_b,
             MetadataNames.EPS_TH: selected_model.eps_th,
             MetadataNames.MU_E_MU: selected_model.molecular_weight.to_ratio(),
+            MetadataNames.P_INDEX: selected_model.powerlaw.p_index,
+            MetadataNames.F_E: selected_model.powerlaw.f_e
         })
 
     df = pd.DataFrame.from_records(records)

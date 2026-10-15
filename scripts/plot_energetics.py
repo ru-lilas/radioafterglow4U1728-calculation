@@ -18,6 +18,7 @@ from numpy.typing import NDArray
 
 from module import plot_utils as pu
 from module.utils import FileReader
+from module.mydataclasses import QuantityData
 
 SweepParameter = Literal["eps_b", "eps_th"]
 FractionName = Literal["mass_fraction", "energy_fraction"]
@@ -33,6 +34,28 @@ class PanelConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class TitleItem:
+    field: str
+    source: Literal["column", "attrs", "fixed"]
+    display: pu.MetadataConfig
+    validation: Literal["finite", "positive", "fraction"] = "finite"
+    missing: Literal["required", "omit"] = "required"
+    unit_key: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ResolvedTitleItem:
+    item: TitleItem
+    component: pu.MetadataComponent
+
+    def text(self) -> str:
+        """Format a validated quantity using the shared metadata component"""
+        strings: list[str] = []
+        self.component.add_strings(strings)
+        return "".join(strings)
+
+
+@dataclass(frozen=True, slots=True)
 class PlotSettings:
     layout: pu.PlotLayout
     panels: tuple[PanelConfig, PanelConfig]
@@ -42,6 +65,9 @@ class PlotSettings:
     reference: pu.LineStyle | None
     title_fontsize: float
     show_metadata: bool
+    sweep_label: str
+    fixed_title: TitleItem
+    title_items: tuple[TitleItem, ...]
 
 
 def build_plot_config(parameter: SweepParameter) -> PlotSettings:
@@ -64,13 +90,35 @@ def build_plot_config(parameter: SweepParameter) -> PlotSettings:
             pu.LabelConfigure(r"$M_{\mathrm{ej}}/M_{\mathrm{acc}}$", "", 20)), ticks),
     )
     # Change only this tuple to reverse the panel order
-    panels = (energy_panel, mass_panel)
-    colors = ("#FF4B00", "#005AFF", "#03AF7A", "#990099")
+    panels = (
+        mass_panel,
+        energy_panel
+    )
+    colors = ("#005AFF", "#FF4B00", "#03AF7A", "#990099")
     styles = tuple(
         pu.ErrorbarStyle(marker=marker, markersize=6, markerfacecolor=color,
                          markeredgecolor=color, ecolor=color, markeredgewidth=1,
                          linestyle="none", alpha=0.85, zorder=3)
         for marker in ("o", "s", "^", "D") for color in colors
+    )
+    # Each item owns its source, label, format, units and validation policy
+    title_items = (
+        TitleItem("distance_value", "attrs", pu.MetadataConfig(True, "kpc",
+            pu.QuantityLabel("D", ".4g", r"\mathrm{kpc}")), "positive", "omit", "distance_unit"),
+        TitleItem("mu_e_mu", "column", pu.MetadataConfig(True, "",
+            pu.QuantityLabel(r"\mu_e/\mu", ".4g", "")), "positive", "omit"),
+        TitleItem("p_index", "column", pu.MetadataConfig(True, "",
+            pu.QuantityLabel("p", ".1f", "")), "positive", "omit"),
+        TitleItem("f_e", "column", pu.MetadataConfig(True, "",
+            pu.QuantityLabel(r"f_e", ".1e", "")), "positive", "omit"),
+        TitleItem("burnt_mass_fraction", "attrs", pu.MetadataConfig(True, "",
+            pu.QuantityLabel(r"\mathrm{burnt\ mass\ fraction}", ".4g", "")), "fraction", "omit"),
+    )
+    fixed_title = TitleItem(
+        "eps_th" if parameter == "eps_b" else "eps_b", "fixed",
+        pu.MetadataConfig(True, "", pu.QuantityLabel(
+            r"\varepsilon_{\mathrm{th}}" if parameter == "eps_b" else r"\varepsilon_{\mathrm{B}}",
+            ".4g", "")), "fraction",
     )
     return PlotSettings(
         layout=pu.PlotLayout(
@@ -82,6 +130,9 @@ def build_plot_config(parameter: SweepParameter) -> PlotSettings:
         frequency_label=pu.QuantityLabel(prefix="", fmt=".4g", unit=r"\mathrm{GHz}", show_equals=False),
         reference=pu.LineStyle(color="#777777", linewidth=1, linestyle="--", zorder=1),
         title_fontsize=12, show_metadata=True,
+        sweep_label=(r"$\varepsilon_{\mathrm{B}}$ sweep" if parameter == "eps_b"
+                     else r"$\varepsilon_{\mathrm{th}}$ sweep"),
+        fixed_title=fixed_title, title_items=title_items,
     )
 
 
@@ -175,6 +226,8 @@ class PlotData:
     groups: tuple[FrequencyGroup, ...]
     metadata: dict[str, object]
     row_count: int
+    title_columns: dict[str, tuple[object, ...]]
+    title_rows: tuple[PlotRow, ...]
 
 
 def metadata_flag(value: object) -> bool:
@@ -190,6 +243,8 @@ def metadata_flag(value: object) -> bool:
 
 def prepare_data(df: pd.DataFrame, parameter: SweepParameter) -> PlotData:
     """Validate external data and prepare concrete arrays grouped by frequency"""
+    if not df.columns.is_unique:
+        raise ValueError("Duplicate column labels are not allowed")
     missing = REQUIRED - set(df.columns)
     if missing:
         raise ValueError(f"Missing columns: {sorted(missing)}")
@@ -207,7 +262,6 @@ def prepare_data(df: pd.DataFrame, parameter: SweepParameter) -> PlotData:
     rows: list[PlotRow] = []
     identities: set[tuple[int, float, int]] = set()
     run_parameters: dict[int, tuple[float, float]] = {}
-    mu_values: list[float] = []
     for position, record in enumerate(df.to_dict(orient="records")):
         try:
             row = PlotRow(
@@ -232,8 +286,6 @@ def prepare_data(df: pd.DataFrame, parameter: SweepParameter) -> PlotData:
             if previous is not None and not all(math.isclose(a, b, rel_tol=RTOL, abs_tol=0) for a, b in zip(pair, previous)):
                 raise ValueError(f"Input parameters differ within RUN: {row.identity}")
             run_parameters[row.run_id] = pair
-            if "mu_e_mu" in record:
-                mu_values.append(real_scalar(record["mu_e_mu"]))
             rows.append(row)
         except (TypeError, ValueError) as error:
             raise ValueError(f"Input row {position}, run_id={record.get('run_id')}, model_index={record.get('model_index')}: {error}") from error
@@ -242,12 +294,6 @@ def prepare_data(df: pd.DataFrame, parameter: SweepParameter) -> PlotData:
     for row in rows:
         if not math.isclose(row.x_value(fixed_parameter), fixed, rel_tol=RTOL, abs_tol=0):
             raise ValueError(f"Fixed {fixed_parameter} varies: {row.identity}")
-    if mu_values:
-        if any(v <= 0 or not math.isclose(v, mu_values[0], rel_tol=RTOL, abs_tol=0) for v in mu_values):
-            raise ValueError("mu_e_mu must be positive and shared across the table")
-        if "mu_e_mu" in metadata and not math.isclose(real_scalar(metadata["mu_e_mu"]), mu_values[0], rel_tol=RTOL, abs_tol=0):
-            raise ValueError("mu_e_mu metadata disagrees with its column")
-        metadata["mu_e_mu"] = mu_values[0]
     groups: list[FrequencyGroup] = []
     for nu in sorted({row.nu for row in rows}):
         selected = tuple(row for row in rows if row.nu == nu)
@@ -261,7 +307,12 @@ def prepare_data(df: pd.DataFrame, parameter: SweepParameter) -> PlotData:
         print("WARNING: only one horizontal value is available; a sweep trend cannot be assessed", flush=True)
     if "provenance_complete" in metadata and not metadata_flag(metadata["provenance_complete"]):
         print("WARNING: input provenance is incomplete; stale results cannot be excluded", flush=True)
-    return PlotData(parameter, fixed_parameter, fixed, tuple(groups), metadata, len(rows))
+    columns: dict[str, tuple[object, ...]] = {}
+    for name in df.columns:
+        if not isinstance(name, str):
+            raise TypeError("Column labels must be strings")
+        columns[name] = tuple(require_series(df, name).tolist())
+    return PlotData(parameter, fixed_parameter, fixed, tuple(groups), metadata, len(rows), columns, tuple(rows))
 
 
 def validate_panels(config: PlotSettings) -> None:
@@ -299,30 +350,82 @@ def validate_scales(data: PlotData, config: PlotSettings) -> None:
                         raise ValueError(f"Configured {column} limits would hide a point: {row.identity}")
 
 
+def require_series(df: pd.DataFrame, name: str) -> pd.Series:
+    """Narrow a single column selection before processing its elements"""
+    column: object = df[name]
+    if not isinstance(column, pd.Series):
+        raise TypeError(f"Expected a single Series for {name}")
+    return column
+
+
+def validate_title_scalar(value: object, item: TitleItem) -> float:
+    """Validate a title value using the rule owned by its item"""
+    number = real_scalar(value)
+    if item.validation == "positive" and number <= 0:
+        raise ValueError(f"{item.field} must be positive")
+    if item.validation == "fraction" and not 0 < number <= 1:
+        raise ValueError(f"{item.field} must be in (0, 1]")
+    if item.validation not in ("finite", "positive", "fraction"):
+        raise ValueError(f"Unsupported validation for {item.field}")
+    return number
+
+
+def resolve_title_item(data: PlotData, item: TitleItem) -> ResolvedTitleItem | None:
+    """Resolve one declared source and validate a shared physical quantity"""
+    if not item.display.show:
+        return None
+    if item.missing not in ("required", "omit"):
+        raise ValueError(f"Unsupported missing-value policy for {item.field}")
+    unit = item.display.unit
+    if item.source == "fixed":
+        if item.field != data.fixed_parameter:
+            raise ValueError("Fixed title item disagrees with the selected sweep")
+        value = validate_title_scalar(data.fixed_value, item)
+    elif item.source == "column":
+        values = data.title_columns.get(item.field)
+        if values is None:
+            if item.missing == "omit":
+                return None
+            raise ValueError(f"Missing title column: {item.field}")
+        checked: list[float] = []
+        for raw, row in zip(values, data.title_rows):
+            try:
+                checked.append(validate_title_scalar(raw, item))
+            except (TypeError, ValueError) as error:
+                raise ValueError(f"Title {item.field}, {row.identity}: {error}") from error
+        if not checked or len(checked) != data.row_count:
+            raise ValueError(f"Incomplete title column: {item.field}")
+        value = checked[0]
+        for current, row in zip(checked, data.title_rows):
+            if not math.isclose(current, value, rel_tol=RTOL, abs_tol=0):
+                raise ValueError(f"Title {item.field} varies: {row.identity}")
+    elif item.source == "attrs":
+        has_value = item.field in data.metadata
+        has_unit = item.unit_key is not None and item.unit_key in data.metadata
+        if not has_value:
+            if has_unit or item.missing == "required":
+                raise ValueError(f"Missing title metadata: {item.field}")
+            return None
+        value = validate_title_scalar(data.metadata[item.field], item)
+    else:
+        raise ValueError(f"Unsupported title source: {item.source}")
+    if item.unit_key is not None:
+        raw_unit = data.metadata.get(item.unit_key)
+        if not isinstance(raw_unit, str) or not raw_unit:
+            raise ValueError(f"Title {item.field} requires unit metadata {item.unit_key}")
+        value = validate_title_scalar(value * real_scalar(u.Unit(raw_unit).to(unit)), item)
+    component = pu.MetadataComponent(QuantityData(value, unit), item.display)
+    return ResolvedTitleItem(item, component)
+
+
 def title_text(data: PlotData, config: PlotSettings) -> str:
-    """Format validated fixed parameters and optional shared physical metadata"""
-    labels = {"eps_b": r"\varepsilon_{\mathrm{B}}", "eps_th": r"\varepsilon_{\mathrm{th}}"}
-    parts = [f"${labels[data.parameter]}$ sweep", f"${labels[data.fixed_parameter]}={data.fixed_value:.4g}$"]
-    if config.show_metadata:
-        metadata = data.metadata
-        if "distance_value" in metadata or "distance_unit" in metadata:
-            unit = metadata.get("distance_unit")
-            if not isinstance(unit, str) or "distance_value" not in metadata:
-                raise ValueError("Distance metadata requires distance_value and distance_unit")
-            distance = real_scalar(metadata["distance_value"]) * real_scalar(u.Unit(unit).to(u.kpc))
-            if not math.isfinite(distance) or distance <= 0:
-                raise ValueError("Distance must be positive and finite")
-            parts.append(rf"$D={distance:.4g}\,\mathrm{{kpc}}$")
-        if "mu_e_mu" in metadata:
-            ratio = real_scalar(metadata["mu_e_mu"])
-            if ratio <= 0:
-                raise ValueError("mu_e_mu must be positive")
-            parts.append(rf"$\mu_e/\mu={ratio:.4g}$")
-        if "burnt_mass_fraction" in metadata:
-            fraction = real_scalar(metadata["burnt_mass_fraction"])
-            if not 0 < fraction <= 1:
-                raise ValueError("burnt_mass_fraction must be in (0, 1]")
-            parts.append(f"burnt mass fraction = {fraction:.4g}")
+    """Join configured title components without quantity-specific branches"""
+    items = (config.fixed_title,) + (config.title_items if config.show_metadata else ())
+    parts = [config.sweep_label]
+    for item in items:
+        resolved = resolve_title_item(data, item)
+        if resolved is not None:
+            parts.append(resolved.text())
     return ", ".join(parts)
 
 
