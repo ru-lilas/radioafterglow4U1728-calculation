@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 import math
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Literal
@@ -25,6 +25,7 @@ from module.peak_cutoff_ratio import build_ratio_quantity_grid
 from module.mydataclasses import QuantityArray1D, QuantityData, QuantityGrid, FloatGrid, BoolGrid
 from module.observation import LongformatLightcurve, ObservedLightcurve
 from module.utils import FileReader
+from module.scalar_field import ScalarField2D
 
 ParameterName = Literal["beta_sh", "a_wind"]
 
@@ -263,6 +264,8 @@ def page_title(data: ChevalierPlotData, page_label: str | None) -> list[str]:
 
 @dataclass(frozen=True, slots=True)
 class ContourComponent:
+    """Unresolved row configuration; rendering uses plot_utils.ContourComponent."""
+
     quantity: str
     style: plot_utils.ContourStyleConfig
 
@@ -380,10 +383,74 @@ def check_panel_plane(data: ChevalierPlotData, axes: plot_utils.AxesConfig) -> N
         raise ValueError("Panel coordinates disagree with the prepared Chevalier plane")
 
 
+def contour_scalar_field(data: ChevalierPlotData, name: str, unit: str) -> ScalarField2D:
+    """Convert a physical grid to plotting units before applying exclusions.
+
+    Keep the original coordinate order and (ny, nx) orientation. Coordinates
+    come from the full region, since masked coordinates are not valid inputs
+    to ScalarField2D. The region and visibility exclusions belong on z.
+    """
+    values = quantity_grid(data, name).to_FloatGrid(unit).values
+    if values.dtype.kind not in "fiu":
+        raise TypeError(f"{name} must contain real numeric values")
+    scalar_field = ScalarField2D(data.plotregion.x.values, data.plotregion.y.values, values)
+    return scalar_field.masked(data.plotregion.out_of_plotregion.values).masked(data.invisible.values)
+
+
+def local_contour_style(scalar_field: ScalarField2D,
+                        style: plot_utils.ContourStyleConfig) -> plot_utils.ContourStyleConfig | None:
+    """Resolve levels once, preserving explicit sweep levels and config errors.
+
+    None means valid configuration with no locally visible contour levels.
+    Automatic levels use the existing ContourLevelConfig generator. Passing
+    explicit local values onward retains the low-level Plotter API.
+    """
+    samples = scalar_field.z.compressed()
+    config = style.levels
+    if config.values is not None:
+        requested = np.asarray(config.values, dtype=np.float64)
+    else:
+        if config.scale not in ("linear", "log"):
+            raise ValueError(f"Unsupported contour scale: {config.scale}")
+        if isinstance(config.num, bool) or not isinstance(config.num, (int, np.integer)) or config.num < 1:
+            raise ValueError("Automatic contour levels require a positive integer num")
+        # Validate configuration even when the field has no visible samples.
+        validation_samples = samples if samples.size else np.asarray([1.0, 10.0])
+        start = config.start_value(validation_samples)
+        stop = config.stop_value(validation_samples)
+        if not np.isfinite(start) or not np.isfinite(stop) or start > stop:
+            raise ValueError("Contour bounds must be finite and ordered")
+        if config.scale == "log" and (start <= 0 or stop <= 0):
+            raise ValueError("Logarithmic contour bounds must be positive")
+        requested = np.asarray(config.build_levels_auto(validation_samples), dtype=np.float64)
+    if requested.ndim != 1 or requested.size == 0 or not np.all(np.isfinite(requested)):
+        raise ValueError("Contour levels must be a nonempty finite one-dimensional sequence")
+    if samples.size == 0:
+        return None
+    levels = np.unique(requested)
+    levels = levels[(samples.min() <= levels) & (levels <= samples.max())]
+    if levels.size == 0:
+        return None
+    return replace(style, levels=replace(config, values=levels.tolist()))
+
+
 def draw_contour_components(plotter: plot_utils.Plotter, data: ChevalierPlotData,
                             components: tuple[ContourComponent, ...]) -> None:
     """Draw only contour components and omit levels with no local crossing"""
     for component in components:
+        if component.quantity in ("a_wind", "beta_sh"):
+            scalar_field = contour_scalar_field(data, component.quantity, component.style.unit)
+            style = local_contour_style(scalar_field, component.style)
+            if style is not None:
+                resolved = plot_utils.ContourComponent(
+                    field=scalar_field,
+                    levels=np.asarray(style.levels.values, dtype=np.float64),
+                    line_style=style.lines,
+                    label_style=style.label,
+                    label_format=style.label_format,
+                )
+                resolved.draw(plotter.ax, plotter)
+            continue
         values = visible_values(data, component.quantity, component.style.unit)
         if values.size == 0:
             continue

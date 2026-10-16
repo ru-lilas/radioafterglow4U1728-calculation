@@ -25,6 +25,7 @@ import numpy as np
 from pathlib import Path
 from module.utils import FileReader
 from module.types import FloatArray, ValueScale,FloatPair
+from module.scalar_field import ScalarField2D
 
 AxisDirection = Literal["x","y"]
 ComponentType = Literal[
@@ -692,6 +693,55 @@ class ContourStyleConfig(YAMLReadable):
     levels: ContourLevelConfig
     label: ContourLabelStyle
     label_format: QuantityLabel
+
+
+@dataclass(frozen=True, slots=True, eq=False)
+class ContourComponent:
+    """Draw an already resolved, masked field without quantity or unit resolution.
+
+    Levels must be nonempty, finite and strictly increasing. Their selection
+    belongs to the caller. Label formatting reuses the existing presentation
+    type; label_style=None disables labels.
+    """
+
+    field: ScalarField2D
+    levels: NDArray[np.float64]
+    line_style: ContourLineStyle
+    label_style: ContourLabelStyle | None = None
+    label_format: QuantityLabel = QuantityLabel("", "g", "", show_equals=False)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.field, ScalarField2D):
+            raise TypeError("field must be a ScalarField2D")
+        levels = np.array(self.levels, dtype=np.float64, copy=True)
+        if (levels.ndim != 1 or levels.size == 0
+                or not np.all(np.isfinite(levels))
+                or np.any(np.diff(levels) <= 0)):
+            raise ValueError("Contour levels must be nonempty, finite and strictly increasing")
+        levels.setflags(write=False)
+        object.__setattr__(self, "levels", levels)
+
+    def draw(self, ax: Axes, plotter: "Plotter") -> QuadContourSet:
+        """Delegate to Plotter on its existing axes, leaving inputs untouched."""
+        if plotter.ax is not ax:
+            raise ValueError("ax must be the axes owned by plotter")
+        # Adapt resolved inputs to the unchanged low-level interface. The empty
+        # unit is unused by Plotter; no physical unit conversion occurs here.
+        style = ContourStyleConfig(
+            unit="",
+            lines=self.line_style,
+            levels=ContourLevelConfig(values=self.levels.tolist()),
+            label=self.label_style if self.label_style is not None
+            else ContourLabelStyle(inline=False, inline_spacing=0, fontsize=10),
+            label_format=self.label_format,
+        )
+        # Matplotlib may update a masked-array mask; isolate its working copy.
+        contour = plotter.contour(
+            self.field.x, self.field.y, self.field.z.copy(), style,
+        )
+        if self.label_style is not None:
+            plotter.contour_labels(contour, style)
+        return contour
 
 @dataclass(frozen=True, slots=True)
 class ColorbarConfigure:
