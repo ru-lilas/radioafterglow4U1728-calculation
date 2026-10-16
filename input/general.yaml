@@ -24,8 +24,8 @@ model_parameters: &ModelParameters
         mu: 0.5
         mu_e: 1.00
     powerlaw:
-      p_index: 2.5
-      f_e: 1.0e-02
+      p_index: 2.01
+      f_e: 5.0e-03
   distance:
     value: 5.0
     unit: "kpc"

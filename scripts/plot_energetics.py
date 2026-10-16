@@ -230,6 +230,49 @@ class PlotData:
     title_rows: tuple[PlotRow, ...]
 
 
+def select_frequency_groups(
+    groups: tuple[FrequencyGroup, ...],
+    frequencies: list[float] | None,
+) -> tuple[FrequencyGroup, ...]:
+    """Select GHz groups without changing full-table metadata or row counts."""
+    if frequencies is None:
+        return groups
+    if not frequencies:
+        raise ValueError("--frequencies requires at least one frequency in GHz")
+    invalid = [nu for nu in frequencies if not math.isfinite(nu) or nu <= 0]
+    if invalid:
+        raise ValueError(
+            f"--frequencies must contain positive finite values in GHz; invalid: {invalid}"
+        )
+    selected: set[int] = set()
+    missing: list[float] = []
+    available = ", ".join(f"{group.nu:.17g}" for group in groups) or "(none)"
+    for nu in frequencies:
+        matches = [
+            index for index, group in enumerate(groups)
+            if math.isclose(nu, group.nu, rel_tol=RTOL, abs_tol=0)
+        ]
+        if not matches:
+            missing.append(nu)
+        elif len(matches) > 1:
+            raise ValueError(
+                f"Ambiguous frequency {nu:.17g} GHz matches multiple groups; "
+                f"available frequencies (GHz): {available}"
+            )
+        else:
+            selected.add(matches[0])
+    if missing:
+        values = ", ".join(f"{nu:.17g}" for nu in missing)
+        raise ValueError(
+            f"Requested frequencies not found (GHz): {values}; "
+            f"available frequencies (GHz): {available}"
+        )
+    return tuple(sorted(
+        (group for index, group in enumerate(groups) if index in selected),
+        key=lambda group: group.nu,
+    ))
+
+
 def metadata_flag(value: object) -> bool:
     """Interpret explicit provenance flags from CSV metadata"""
     if isinstance(value, bool):
@@ -495,16 +538,24 @@ def main() -> None:
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--parameter", type=parse_parameter, choices=("eps_b", "eps_th"), required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--frequencies", nargs="+", type=float, default=None, metavar="GHz",
+        help="Plot only these frequencies in GHz (default: all available frequencies)",
+    )
     args = parser.parse_args()
     try:
         parameter = parse_parameter(args.parameter)
         df: pd.DataFrame = FileReader.table_from_csv(args.input)
         data = prepare_data(df, parameter)
+        frequencies: list[float] | None = args.frequencies
+        # Retain full-table title data; only the plotted groups form a subset.
+        data = replace(data, groups=select_frequency_groups(data.groups, frequencies))
         config = build_plot_config(parameter)
         write_pdf(data, config, args.output, input_path=args.input)
     except (OSError, KeyError, TypeError, ValueError, RuntimeError) as error:
         parser.exit(1, f"Error: {error}\n")
-    print(f"Saved: {args.output}; plotted rows: {data.row_count}")
+    plotted_rows = sum(len(group.rows) for group in data.groups)
+    print(f"Saved: {args.output}; plotted rows: {plotted_rows}")
     for group in data.groups:
         print(f"{group.nu:g} GHz: {len(group.rows)} points per panel")
 
