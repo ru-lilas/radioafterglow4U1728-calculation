@@ -111,6 +111,22 @@ def build_plot_config(parameter: SweepParameter) -> PlotSettings:
             pu.QuantityLabel("p", ".1f", "")), "positive", "omit"),
         TitleItem("f_e", "column", pu.MetadataConfig(True, "",
             pu.QuantityLabel(r"f_e", ".1e", "")), "positive", "omit"),
+        TitleItem(
+            "v_wind_value",
+            "attrs",
+            pu.MetadataConfig(
+                True,
+                "km/s",
+                pu.QuantityLabel(
+                    r"v_{\mathrm{w}}",
+                    ".4g",
+                    r"\mathrm{km\,s^{-1}}",
+                ),
+            ),
+            "positive",
+            "required",
+            "v_wind_unit",
+        ),
         TitleItem("burnt_mass_fraction", "attrs", pu.MetadataConfig(True, "",
             pu.QuantityLabel(r"\mathrm{burnt\ mass\ fraction}", ".4g", "")), "fraction", "omit"),
     )

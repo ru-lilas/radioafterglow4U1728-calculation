@@ -231,9 +231,21 @@ def result_metadata(df: pd.DataFrame) -> dict[str, float | str]:
             raise ValueError(f"Missing physical metadata: {key}")
     distance = real_scalar(real_scalar(df.attrs["distance_value"]) * unit_factor(df.attrs["distance_unit"], "kpc"))
     fraction = real_scalar(df.attrs["burnt_mass_fraction"])
+    v_wind = real_scalar(
+        real_scalar(df.attrs["v_wind_value"])
+        * unit_factor(df.attrs["v_wind_unit"], "km/s")
+    )
+    if v_wind <= 0:
+        raise ValueError("v_wind must be positive")
     if not 0 < fraction <= 1 or distance <= 0:
         raise ValueError("Distance and burnt_mass_fraction must be physically valid")
-    return {"distance_value": distance, "distance_unit": "kpc", "burnt_mass_fraction": fraction}
+    return {
+        "distance_value": distance,
+        "distance_unit": "kpc",
+        "burnt_mass_fraction": fraction,
+        "v_wind_value": v_wind,
+        "v_wind_unit": "km/s",
+    }
 
 
 def result_path(entry: RunEntry, relative_path: Path) -> Path:
@@ -326,8 +338,16 @@ def combine_tables(entries: list[RunEntry], relative_path: Path, *, skip_missing
             if common is None:
                 common = metadata
             else:
-                for key in ("distance_value", "burnt_mass_fraction"):
-                    assert_equal(real_scalar(metadata[key]), real_scalar(common[key]), key)
+                for key in (
+                    "distance_value",
+                    "burnt_mass_fraction",
+                    "v_wind_value",
+                ):
+                    assert_equal(
+                        real_scalar(metadata[key]),
+                        real_scalar(common[key]),
+                        key,
+                    )
             if "run_id" in df:
                 assert_equal(numeric_column(df, "run_id"), entry.run_id, "result run_id")
             validate_run_names(df, entry.run_name)

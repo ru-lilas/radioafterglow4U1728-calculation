@@ -22,8 +22,8 @@ BURNT_MASS_FRACTION = 1.0
 V_WIND = u.Quantity(300.0,V_UNIT)
 # MetadataNamesに追加されていない版でも同じキーで保存できる
 BURNT_MASS_FRACTION_KEY = "burnt_mass_fraction"
-V_WIND_KEY = "v_wind"
-V_UNIT_KEY = "v_unit"
+V_WIND_KEY = "v_wind_value"
+V_UNIT_KEY = "v_wind_unit"
 
 
 def require_model_index(value: object) -> int:
@@ -124,7 +124,7 @@ def calculate_energetics_table(
         MetadataNames.T_UNIT: DefaultUnits.t,
         "a_wind_unit": A_WIND_UNIT,
         BURNT_MASS_FRACTION_KEY: burnt_mass_fraction,
-        V_WIND_KEY: v_wind.value,
+        V_WIND_KEY: float(v_wind.value),
         V_UNIT_KEY: V_UNIT,
     }
     if MetadataNames.NU_UNIT in df_bests.attrs:
