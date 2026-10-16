@@ -150,7 +150,6 @@ components:
       prefix: ''
       fmt: '.1f'
       unit: '\mathrm{GHz}'
-      suffix: '(\mathrm{Russell}+24)'
   bestfits:
     type: errorbar
     legend: false
