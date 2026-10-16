@@ -14,19 +14,27 @@ from module.mydataclasses import QuantityData
 
 
 def require_scalar_float(value: object) -> float:
-    """Validate a real scalar or a single-element array and return a float"""
+    if isinstance(value, u.Quantity):
+        raise TypeError(
+            "Quantity is not accepted; convert it with "
+            ".to_value(unit) before calling require_scalar_float"
+        )
+
     if isinstance(value, np.ndarray):
         if value.size != 1:
             raise ValueError("単一の数値が必要です")
         return require_scalar_float(value.item())
+
     if isinstance(value, np.generic):
         return require_scalar_float(value.item())
+
     if isinstance(value, float):
         return value
+
     if isinstance(value, int) and not isinstance(value, bool):
         return float(value)
-    raise TypeError(f"実数のスカラーが必要です: {type(value).__name__}")
 
+    raise TypeError(f"実数のスカラーが必要です: {type(value).__name__}")
 def calculate_swept_mass(
     a_wind: u.Quantity,
     v_ej: u.Quantity,
@@ -114,6 +122,7 @@ class EjectaProperties:
 class Energetics:
     mass_fraction: float
     energy_fraction: float
+    mdot_fraction: float
 
     @classmethod
     def build_from(
@@ -121,8 +130,10 @@ class Energetics:
         burster: BursterProperty,
         ejecta: EjectaProperties,
         *,
-        burnt_mass_fraction: float
+        burnt_mass_fraction: float,
+        v_wind: u.Quantity
     )->Self:
+        mdot_wind = u.Quantity(ejecta.a_wind * v_wind)
         return cls(
             mass_fraction = require_scalar_float(
                 (ejecta.ejected_mass / burster.accumulated_mass).to_value(u.dimensionless_unscaled)
@@ -130,4 +141,8 @@ class Energetics:
             energy_fraction = require_scalar_float(
                 (ejecta.kinetic_energy / burster.nuclear_energy(burnt_mass_fraction)).to_value(u.dimensionless_unscaled)
             ),
+            mdot_fraction = require_scalar_float(
+                (mdot_wind/burster.mdot_acc)
+                .to_value(u.dimensionless_unscaled)
+            )
         )

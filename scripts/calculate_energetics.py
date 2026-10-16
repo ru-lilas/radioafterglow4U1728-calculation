@@ -12,13 +12,18 @@ from module.estimate_ejecta_property import BursterProperty, EjectaProperties, E
 from module.inputs_as_dataclass import GeneralInputs
 from module.models import ColumnNames, DefaultUnits, MetadataNames, ModelParameters
 from module.utils import FileReader, FileWriter
+from module.timing_utils import timed
 
 MASS_UNIT = "g"
 A_WIND_UNIT = "g/cm"
 ENERGY_UNIT = "erg"
+V_UNIT = "km/s"
 BURNT_MASS_FRACTION = 1.0
+V_WIND = u.Quantity(300.0,V_UNIT)
 # MetadataNamesに追加されていない版でも同じキーで保存できる
 BURNT_MASS_FRACTION_KEY = "burnt_mass_fraction"
+V_WIND_KEY = "v_wind"
+V_UNIT_KEY = "v_unit"
 
 
 def require_model_index(value: object) -> int:
@@ -72,6 +77,7 @@ def calculate_energetics_table(
     burster: BursterProperty,
     *,
     burnt_mass_fraction: float,
+    v_wind: u.Quantity
 ) -> pd.DataFrame:
     """Calculate an energetics table while preserving bestfit row order"""
     if df_bests.empty:
@@ -89,11 +95,13 @@ def calculate_energetics_table(
         )
         energetics = Energetics.build_from(
             burster, ejecta, burnt_mass_fraction=burnt_mass_fraction,
+            v_wind=v_wind
         )
         records.append({
             "model_index": model_index,
             "mass_fraction": energetics.mass_fraction,
             "energy_fraction": energetics.energy_fraction,
+            "mdot_fraction": energetics.mdot_fraction,
             "nu": require_scalar_float(row[ColumnNames.NU]),
             "kinetic_energy": require_scalar_float(ejecta.kinetic_energy.to_value(ENERGY_UNIT)),
             "ejected_mass": require_scalar_float(ejecta.ejected_mass.to_value(MASS_UNIT)),
@@ -116,6 +124,8 @@ def calculate_energetics_table(
         MetadataNames.T_UNIT: DefaultUnits.t,
         "a_wind_unit": A_WIND_UNIT,
         BURNT_MASS_FRACTION_KEY: burnt_mass_fraction,
+        V_WIND_KEY: v_wind.value,
+        V_UNIT_KEY: V_UNIT,
     }
     if MetadataNames.NU_UNIT in df_bests.attrs:
         df.attrs[MetadataNames.NU_UNIT] = df_bests.attrs[MetadataNames.NU_UNIT]
@@ -127,16 +137,17 @@ def main() -> None:
     inputs = GeneralInputs.from_yaml(args.input)
     models = ModelParameters.from_df(FileReader.table_from_csv(args.model_parameter_table))
     df_bests = FileReader.table_from_csv(args.chevalier_bestfit_points)
+    print("calculate energetics...")
     df = calculate_energetics_table(
         df_bests,
         models,
         build_burster_property(inputs),
         burnt_mass_fraction=BURNT_MASS_FRACTION,
+        v_wind=V_WIND
     )
-    print(df)
+    print("finished")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     FileWriter.df_to_csv(path=args.output, df=df)
-
 
 if __name__ == "__main__":
     main()
