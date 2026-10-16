@@ -76,7 +76,7 @@ ARGS_CHEVALIER_BESTFIT_POINTS = --chevalier_bestfit_points $(FILEPATH_CHEVALIER_
     chevaliercm chevalier min_chi2 chi2 lc_bin lc candidates \
     peak_grid lc_all modeltable peak_table
 
-all: view-best-lc view-chevalierbest view-chevaliercm cutoff-ratio
+all: best-lc chevalierbest
 
 # view-energetics: $(FILEPATH_ENERGETICS_PDF)
 # 	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
@@ -148,6 +148,7 @@ $(FILEPATH_OPTICALDEPTH_CMAPS_PDF): \
 		--plotconfig $(PLOTCONFIGDIR)/opticaldepth_cmaps.yaml \
 		$(ARGS_OUTPUT)
 
+best-lc: $(FILEPATH_MINIMUM_CHI2_LC_PDF)
 $(FILEPATH_MINIMUM_CHI2_LC_PDF): \
 	$(FILEPATH_INPUT) \
 	$(FILEPATH_MINIMUM_CHI_SQUARED) \
@@ -186,6 +187,7 @@ $(FILEPATH_CHEVALIER_COLORMAP_PDF): \
 
 view-chevalierbest: $(FILEPATH_CHEVALIER_WITH_BESTFITS_PDF)
 	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
+chevalierbest: $(FILEPATH_CHEVALIER_WITH_BESTFITS_PDF)
 $(FILEPATH_CHEVALIER_WITH_BESTFITS_PDF): \
 	$(FILEPATH_PEAK_GRID) \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \

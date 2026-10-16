@@ -290,11 +290,19 @@ class ColormapRowConfig:
 RowConfig = ContourRowConfig | ColormapRowConfig
 
 
-def contour_row(config: plot_utils.PlotConfig) -> ContourRowConfig:
-    """Construct the legacy contour row using its existing configuration"""
-    return ContourRowConfig("Contours", shared_plane_axes(config), tuple(
-        ContourComponent(name, config.components[name].contour_style_config) for name in ("a_wind", "beta_sh")
-    ))
+def contour_row(config: plot_utils.PlotConfig, *,
+                components: tuple[ContourComponent, ...] | None = None) -> ContourRowConfig:
+    """Use caller-owned contours; retain YAML styles only for legacy callers.
+
+    An explicit tuple is authoritative, including an empty tuple. It is never
+    merged with contour settings from config.
+    """
+    if components is None:
+        components = tuple(
+            ContourComponent(name, config.components[name].contour_style_config)
+            for name in ("a_wind", "beta_sh")
+        )
+    return ContourRowConfig("Contours", shared_plane_axes(config), components)
 
 
 def colormap_row(config: plot_utils.PlotConfig, name: str) -> ColormapRowConfig:
@@ -492,7 +500,8 @@ def draw_colormap_panel(ax: Axes, data: ChevalierPlotData, row: ColormapRowConfi
     return mesh
 
 
-def draw_contour_figure(data: ChevalierPlotData, *, page_label: str | None = None) -> Figure:
+def draw_contour_figure(data: ChevalierPlotData, *, page_label: str | None = None,
+                        components: tuple[ContourComponent, ...] | None = None) -> Figure:
     """Build one contour figure without saving or closing a successful result"""
     subplots = data.config.layout.subplots
     if (subplots.nrows, subplots.ncols) != (1, 1):
@@ -501,7 +510,7 @@ def draw_contour_figure(data: ChevalierPlotData, *, page_label: str | None = Non
     title = page_title(data, page_label)
     fig, axes = data.config.layout.create()
     try:
-        draw_contour_panel(axes[0, 0], data, contour_row(data.config))
+        draw_contour_panel(axes[0, 0], data, contour_row(data.config, components=components))
         plotter = plot_utils.Plotter(axes[0, 0])
         metadata = title[1:] if page_label is not None else title
         lines = [", ".join(metadata[index:index + 3]) for index in range(0, len(metadata), 3)]

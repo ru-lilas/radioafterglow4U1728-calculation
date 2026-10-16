@@ -16,7 +16,7 @@ from matplotlib.figure import Figure
 
 from module import plot_utils as pu
 from module.chevalier_plotting import (
-    ChevalierInputPaths, ChevalierPlotData, ColormapRowConfig, ContourRowConfig,
+    ChevalierInputPaths, ChevalierPlotData, ColormapRowConfig, ContourComponent, ContourRowConfig,
     QUANTITY_RESOLVERS, RowConfig, colormap_row, colormap_values, contour_row, draw_colormap_panel,
     draw_contour_panel, plane_signature, shared_plane_axes, visible_values,
 )
@@ -59,11 +59,37 @@ class SweepPlan:
     protected: tuple[Path, ...]
 
 
+def build_contour_components() -> tuple[ContourComponent, ...]:
+    """Edit sweep contour styles here; the preflight resolves shared numeric levels.
+
+    Initial values match the previous presentation. Tune sizes and widths here
+    independently of the single-RUN script and obsolete YAML contour entries.
+    """
+    return (
+        ContourComponent("a_wind", pu.ContourStyleConfig(
+            unit="g cm-1",
+            lines=pu.ContourLineStyle(colors="#84919B", linestyles="-", linewidths=1.0),
+            levels=pu.ContourLevelConfig(
+                scale="log", values=[1e4, 1e5, 1e6, 1e7, 1e8, 1e9]),
+            label=pu.ContourLabelStyle(inline=True, inline_spacing=5, fontsize=16),
+            label_format=pu.QuantityLabel(r"A_{\mathrm{w}}", ".0e", r"\mathrm{g\,cm^{-1}}"),
+        )),
+        ContourComponent("beta_sh", pu.ContourStyleConfig(
+            unit="",
+            lines=pu.ContourLineStyle(colors="#84919B", linestyles="--", linewidths=1.0),
+            levels=pu.ContourLevelConfig(
+                scale="linear", values=[0.20, 0.30, 0.40, 0.50, 0.60]),
+            label=pu.ContourLabelStyle(inline=True, inline_spacing=5, fontsize=16),
+            label_format=pu.QuantityLabel(r"\beta_{\mathrm{sh}}", ".2f", ""),
+        )),
+    )
+
+
 def build_plot_config(contours: pu.PlotConfig, maps: pu.PlotConfig) -> SweepSettings:
     """Edit row instances, their order, pagination and cell sizes here"""
     if plane_signature(shared_plane_axes(contours)) != plane_signature(shared_plane_axes(maps)):
         raise ValueError("Contour and colormap configurations must use the same Chevalier plane")
-    contour = contour_row(contours)
+    contour = contour_row(contours, components=build_contour_components())
     wind = replace(colormap_row(maps, "a_wind"), label="A_wind", axes=contour.axes)
     beta = replace(colormap_row(maps, "beta_sh"), label="beta_sh", axes=contour.axes)
     ratio = ColormapRowConfig(
@@ -72,6 +98,8 @@ def build_plot_config(contours: pu.PlotConfig, maps: pu.PlotConfig) -> SweepSett
         style=replace(
             wind.style,
             cmap="coolwarm",
+            vmin=-1.0,
+            vmax=1.0,
             norm=pu.NormConfig(
                 "centered",
                 vcenter=0.0
