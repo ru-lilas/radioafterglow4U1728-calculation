@@ -11,7 +11,11 @@ def build_contour_components() -> tuple[ContourComponent, ...]:
     return (
         ContourComponent("a_wind", plot_utils.ContourStyleConfig(
             unit="g cm-1",
-            lines=plot_utils.ContourLineStyle(colors="#84919B", linestyles="-", linewidths=1.0),
+            lines=plot_utils.ContourLineStyle(
+                colors="#000000",
+                linestyles="-",
+                linewidths=2.0
+            ),
             levels=plot_utils.ContourLevelConfig(
                 scale="log", values=[1e4, 1e5, 1e6, 1e7, 1e8, 1e9]),
             label=plot_utils.ContourLabelStyle(inline=True, inline_spacing=5, fontsize=16),
@@ -19,7 +23,11 @@ def build_contour_components() -> tuple[ContourComponent, ...]:
         )),
         ContourComponent("beta_sh", plot_utils.ContourStyleConfig(
             unit="",
-            lines=plot_utils.ContourLineStyle(colors="#84919B", linestyles="--", linewidths=1.0),
+            lines=plot_utils.ContourLineStyle(
+                colors="#000000",
+                linestyles="--",
+                linewidths=2.0
+            ),
             levels=plot_utils.ContourLevelConfig(
                 scale="linear", values=[0.20, 0.30, 0.40, 0.50, 0.60]),
             label=plot_utils.ContourLabelStyle(inline=True, inline_spacing=5, fontsize=16),
