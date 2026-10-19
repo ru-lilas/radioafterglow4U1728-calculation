@@ -30,6 +30,12 @@ ARRAY_COLUMNS = ("eps_b", "eps_th", *FRACTION_COLUMNS)
 REQUIRED = {"run_id", "model_index", "nu", *ARRAY_COLUMNS}
 FrequencyGroups = dict[float, dict[str, FloatArray]]
 
+QUANTITY_LABELS = {
+    "mass_fraction": r"$M_{\mathrm{ej}}~/~M_{\mathrm{acc}}$",
+    "energy_fraction": r"$E_{\mathrm{kin,ej}}~/~E_{\mathrm{nuc}}$",
+    "mdot_fraction": r"$\dot{M}_{\mathrm{w}}~/~\dot{M}_{\mathrm{acc}}$",
+}
+
 
 @dataclass(frozen=True, slots=True)
 class ScatterComponent:
@@ -109,15 +115,15 @@ def build_plot_config(parameter: SweepParameter) -> PlotSettings:
     # Each item owns its source, label, format, units and validation policy
     title_items = (
         TitleItem("distance_value", "attrs", pu.MetadataConfig(True, "kpc",
-            pu.QuantityLabel("D", ".4g", r"\mathrm{kpc}")), "positive", "omit", "distance_unit"),
+            pu.QuantityLabel("D", ".1f", r"\mathrm{kpc}")), "positive", "omit", "distance_unit"),
         TitleItem("mu_e_mu", "column", pu.MetadataConfig(True, "",
-            pu.QuantityLabel(r"\mu_e/\mu", ".4g", "")), "positive", "omit"),
+            pu.QuantityLabel(r"\mu_e/\mu", ".1f", "")), "positive", "omit"),
         TitleItem("p_index", "column", pu.MetadataConfig(True, "",
             pu.QuantityLabel("p", ".2f", "")), "positive", "omit"),
         TitleItem("f_e", "column", pu.MetadataConfig(True, "",
-            pu.QuantityLabel(r"f_e", ".2e", "")), "positive", "omit"),
+            pu.QuantityLabel(r"f_e", ".0e", "")), "positive", "omit"),
         TitleItem("burnt_mass_fraction", "attrs", pu.MetadataConfig(True, "",
-            pu.QuantityLabel(r"\mathrm{burnt\ mass\ fraction}", ".4g", "")), "fraction", "omit"),
+            pu.QuantityLabel(r"f_{\mathrm{nuc}}", ".1f", "")), "fraction", "omit"),
     )
     fixed_title = TitleItem(
         "eps_th" if parameter == "eps_b" else "eps_b", "fixed",
@@ -463,7 +469,7 @@ def resolve_title_item(data: PlotData, item: TitleItem) -> ResolvedTitleItem | N
 def title_text(data: PlotData, config: PlotSettings) -> str:
     """Join configured title components without quantity-specific branches"""
     items = (config.fixed_title,) + (config.title_items if config.show_metadata else ())
-    parts = [config.sweep_label]
+    parts = []
     for item in items:
         resolved = resolve_title_item(data, item)
         if resolved is not None:
@@ -488,7 +494,7 @@ def draw_panel(
             if artist is None:
                 raise RuntimeError("The scatter point artist was not created")
             handles.append(artist)
-            labels.append(f"{quantity}: {config.frequency_label.to_text(nu)}")
+            labels.append(f"{QUANTITY_LABELS[quantity]}")
     if not isinstance(config.legend.style, pu.LegendStyle):
         raise TypeError("Expected LegendStyle")
     ax.legend(handles=handles, labels=labels, **config.legend.style.to_kwargs())
