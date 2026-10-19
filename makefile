@@ -447,11 +447,11 @@ $(FILEPATH_OBSLC_TMP): \
 		--config $(INPUTDIR)/obslc.yaml \
 		$(ARGS_OUTPUT)
 
-fig/distribution_factors.pdf: \
-	$(PLOTCONFIGDIR)/distribution_factors.yaml \
-	scripts/plot_distribution_factors.py
-	$(PYTHON) -m scripts.plot_distribution_factors \
-		--plotconfig $(PLOTCONFIGDIR)/distribution_factors.yaml \
+fig/electron_distribution.pdf: \
+	$(PLOTCONFIGDIR)/electron_distribution.yaml \
+	scripts/plot_electron_distribution.py
+	$(PYTHON) -m scripts.plot_electron_distribution\
+		--plotconfig $(PLOTCONFIGDIR)/electron_distribution.yaml \
 		$(ARGS_OUTPUT)
 
 #=== config files ===#
