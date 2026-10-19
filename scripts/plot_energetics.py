@@ -25,7 +25,11 @@ from module.mydataclasses import QuantityData
 SweepParameter = Literal["eps_b", "eps_th"]
 FloatArray = NDArray[np.float64]
 RTOL = 1e-10
-FRACTION_COLUMNS = ("mass_fraction", "energy_fraction", "mdot_fraction")
+FRACTION_COLUMNS = (
+    "energy_fraction",
+    "mass_fraction",
+    "mdot_fraction"
+)
 ARRAY_COLUMNS = ("eps_b", "eps_th", *FRACTION_COLUMNS)
 REQUIRED = {"run_id", "model_index", "nu", *ARRAY_COLUMNS}
 FrequencyGroups = dict[float, dict[str, FloatArray]]
@@ -53,6 +57,32 @@ class ScatterComponent:
 
 @dataclass(frozen=True, slots=True)
 class TitleItem:
+    """タイトルに表示する1項目の取得元, 表示方法, 検証規則を定義する
+    Attributes:
+        field: 取得対象の名前
+            sourceが
+            "column"ならCSV列名
+            "attrs"ならDataFrame.attrsのkey
+            "fixed"なら固定パラメータ名を指定する
+        source: 値の取得元
+            "column"は全行で共通の列値
+            "attrs"はメタデータ
+            "fixed"は固定パラメータの値
+        display: 表示の有無
+            表示単位
+            ラベルと数値書式を指定
+        validation: 数値の検証規則
+            "finite"は有限値,
+            "positive"は正の有限値
+            "fraction"は0より大きく1以下の有限値を要求
+        missing: 値が存在しない場合の扱い
+            "required"はエラー
+            "omit"はタイトルから省略する.
+            ただし, 不完全な単位メタデータなどの不整合はエラーになる
+        unit_key: 入力値の単位を保持するDataFrame.attrsのキー
+            指定した場合はその単位からdisplay.unitへ変換する
+            Noneの場合は単位変換を行わない
+    """
     field: str
     source: Literal["column", "attrs", "fixed"]
     display: pu.MetadataConfig
@@ -71,6 +101,18 @@ class ResolvedTitleItem:
         strings: list[str] = []
         self.component.add_strings(strings)
         return "".join(strings)
+
+V_WIND = TitleItem(
+    "v_wind_value",
+    "attrs",
+    pu.MetadataConfig(
+        True, "km/s",
+        pu.QuantityLabel(r"v_{\mathrm{w}}", "3.0f", r"\mathrm{km/s}")
+    ),
+    "positive",
+    "omit",
+    unit_key="v_wind_unit"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,8 +146,8 @@ def build_plot_config(parameter: SweepParameter) -> PlotSettings:
     # Quantity markers and frequency colors are independent visual encodings.
     # Add another fraction here and to FRACTION_COLUMNS to extend.
     quantity_styles = {
-        "mass_fraction": pu.ErrorbarStyle(marker="o", markersize=6, alpha=0.85, zorder=3),
         "energy_fraction": pu.ErrorbarStyle(marker="s", markersize=6, alpha=0.85, zorder=3),
+        "mass_fraction": pu.ErrorbarStyle(marker="o", markersize=6, alpha=0.85, zorder=3),
         "mdot_fraction": pu.ErrorbarStyle(marker="^", markersize=6, alpha=0.85, zorder=3),
     }
     colors = ("#000000", "#FF4B00", "#03AF7A", "#990099",
@@ -114,16 +156,17 @@ def build_plot_config(parameter: SweepParameter) -> PlotSettings:
               "#7F7F00", "#17BECF", "#E377C2", "#222222")
     # Each item owns its source, label, format, units and validation policy
     title_items = (
-        TitleItem("distance_value", "attrs", pu.MetadataConfig(True, "kpc",
-            pu.QuantityLabel("D", ".1f", r"\mathrm{kpc}")), "positive", "omit", "distance_unit"),
-        TitleItem("mu_e_mu", "column", pu.MetadataConfig(True, "",
-            pu.QuantityLabel(r"\mu_e/\mu", ".1f", "")), "positive", "omit"),
         TitleItem("p_index", "column", pu.MetadataConfig(True, "",
             pu.QuantityLabel("p", ".2f", "")), "positive", "omit"),
         TitleItem("f_e", "column", pu.MetadataConfig(True, "",
             pu.QuantityLabel(r"f_e", ".0e", "")), "positive", "omit"),
         TitleItem("burnt_mass_fraction", "attrs", pu.MetadataConfig(True, "",
             pu.QuantityLabel(r"f_{\mathrm{nuc}}", ".1f", "")), "fraction", "omit"),
+        TitleItem("distance_value", "attrs", pu.MetadataConfig(True, "kpc",
+            pu.QuantityLabel("D", ".1f", r"\mathrm{kpc}")), "positive", "omit", "distance_unit"),
+        TitleItem("mu_e_mu", "column", pu.MetadataConfig(True, "",
+            pu.QuantityLabel(r"\mu_e/\mu", ".1f", "")), "positive", "omit"),
+        V_WIND
     )
     fixed_title = TitleItem(
         "eps_th" if parameter == "eps_b" else "eps_b", "fixed",
@@ -512,7 +555,8 @@ def draw_figure(data: PlotData, config: PlotSettings) -> Figure:
     fig, axes = config.layout.create()
     try:
         draw_panel(axes.flat[0], data, config, components)
-        fig.suptitle(title, fontsize=config.title_fontsize)
+        ax = axes.flat[0]
+        ax.set_title(title, fontsize=config.title_fontsize)
         return fig
     except Exception:
         plt.close(fig)
