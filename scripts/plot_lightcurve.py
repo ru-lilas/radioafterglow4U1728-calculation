@@ -56,7 +56,6 @@ class PlotMetadata:
                 values[field.name] = quantity
         return values
 
-
 @dataclass(frozen=True, slots=True)
 class ColumnPlotData:
     observed: ObservedLightcurve
@@ -192,13 +191,6 @@ def add_model_metadata(
     plotconf: plot_utils.PlotConfig,
     synchrotron_label: str,
 ) -> None:
-    plotter.text(
-        x=0.98,
-        y=0.98,
-        label=synchrotron_label,
-        style=plotconf.components["synchrotron_component"].text_style_config,
-        coordinates="axes",
-    )
     strings: list[str] = []
     for name, quantity in metadata.to_dict().items():
         plot_utils.MetadataComponent(
