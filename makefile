@@ -447,6 +447,7 @@ $(FILEPATH_OBSLC_TMP): \
 		--config $(INPUTDIR)/obslc.yaml \
 		$(ARGS_OUTPUT)
 
+electron-distribution: fig/electron_distribution.pdf
 fig/electron_distribution.pdf: \
 	$(PLOTCONFIGDIR)/electron_distribution.yaml \
 	scripts/plot_electron_distribution.py

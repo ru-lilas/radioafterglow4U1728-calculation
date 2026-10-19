@@ -14,6 +14,13 @@ from module.mydataclasses import FloatVectorSpace, LongformatDataFrame, Quantity
 from module.observation import LongformatLightcurve
 from module.electron_distributions import ElectronDistribution, MaxwellJuttnerDistribution, PowerlawDistribution
 
+GAMMA_SPACE =  FloatVectorSpace(
+    start=1.01e+00,
+    stop =1.0e+03,
+    num = 2048,
+    scale="log"
+)
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     for name in (
@@ -33,20 +40,14 @@ def main() -> None:
     components = plotconf.components
     metadata_config = plotconf.metadata
 
-    gamma_space = FloatVectorSpace(
-        start=1.01e+00,
-        stop =1.0e+03,
-        num = 2048,
-        scale="log"
-    )
-    f_e = 0.1
-    p_index=2.5
+    f_e = 5.0e-03
+    p_index=2.01
     theta = np.array([
         5.0e-01,
         1.0e+00,
         5.0e+00
     ])
-    gamma_e = gamma_space.geomspace()
+    gamma_e = GAMMA_SPACE.geomspace()
 
     totdist = ElectronDistribution.compute(
         theta=theta,
