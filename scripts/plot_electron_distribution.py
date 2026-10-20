@@ -31,71 +31,85 @@ def parse_args() -> argparse.Namespace:
         parser.add_argument(f"--{name}", type=Path, required=True)
     return parser.parse_args()
 
-# @dataclass(frozen=True,slots=True)
-# class ElectronDistributionParameterDependence:
+ParameterName = Literal[
+    "theta",
+    "f_e",
+    "p_index"
+]
 
-def calculate_thetasweep(gamma_e:NDArray[np.float64]):
-    f_e = 1.0e-02
-    p_index=2.01
-    theta_sweep = [
-        5.0e-01,
-        1.0e+00,
-        5.0e+00
-    ]
+@dataclass(frozen=True,slots=True)
+class DistributionParameters:
+    theta: float
+    f_e: float
+    p_index: float
+    gamma_e: NDArray[np.float64]
 
-    dists = [
-        ElectronDistribution.compute(
-            theta=theta,
-            gamma=gamma_e,
-            gamma_min=None,
-            p_index=p_index,
-            f_e=f_e
+    def build_distribution(
+        self,
+    )->ElectronDistribution:
+        return ElectronDistribution.compute(
+            theta=self.theta,
+            gamma=self.gamma_e,
+            p_index=self.p_index,
+            f_e=self.f_e
         )
-        for theta in theta_sweep
-    ]
-    return dists
 
-def calculate_fesweep(gamma_e:NDArray[np.float64]):
-    fe_sweep = [
+@dataclass(frozen=True,slots=True)
+class SweepSpec:
+    parameter: ParameterName
+    values: tuple[float,...]
+    reference: DistributionParameters
+
+    def build_params(
+        self,
+    )->list[DistributionParameters]:
+        return [
+            replace(
+                self.reference,
+                **{self.parameter:value}
+            )
+            for value in self.values
+        ]
+
+    def build_distributions(self)->list[ElectronDistribution]:
+        return [
+            params.build_distribution()
+            for params in self.build_params()
+        ]
+
+reference = DistributionParameters(
+    theta=1.0,
+    f_e=1.0e-02,
+    p_index=2.01,
+    gamma_e=GAMMA_SPACE.geomspace()
+)
+theta_sweep = SweepSpec(
+    parameter="theta",
+    values=(
+        0.5,
+        1.0,
+        5.0
+    ),
+    reference=reference
+)
+fe_sweep = SweepSpec(
+    parameter="f_e",
+    values=(
         1.0e-03,
         1.0e-02,
         1.0e-01
-    ]
-    p_index=2.01
-    theta = 1.0
-
-    dists = [
-        ElectronDistribution.compute(
-            theta=theta,
-            gamma=gamma_e,
-            gamma_min=None,
-            p_index=p_index,
-            f_e=f_e
-        )
-        for f_e in fe_sweep
-    ]
-    return dists
-
-def calculate_psweep(gamma_e:NDArray[np.float64]):
-    f_e = 1.0e-01
-    p_indices=[
+    ),
+    reference=reference
+)
+p_sweep = SweepSpec(
+    parameter="p_index",
+    values=(
         2.01,
         2.50,
         3.00
-    ]
-    theta = 1.0
-
-    dists = [
-        ElectronDistribution.compute(
-            theta=theta,
-            gamma=gamma_e,
-            gamma_min=None,
-            p_index=p_index,
-            f_e=f_e
-        )
-        for p_index in p_indices
-    ]
-    return dists
+    ),
+    reference=reference
+)
 
 def main() -> None:
     args = parse_args()
@@ -108,14 +122,14 @@ def main() -> None:
     metadata_config = plotconf.metadata
 
     gamma_e = GAMMA_SPACE.geomspace()
-
-    dists_ele = calculate_thetasweep(gamma_e)
-    dist_fe = calculate_fesweep(gamma_e)
-    dist_p = calculate_psweep(gamma_e)
+    sweeps = (
+        theta_sweep,
+        p_sweep,
+        fe_sweep
+    )
     dists = [
-        dists_ele,
-        dist_p,
-        dist_fe
+        sweep.build_distributions()
+        for sweep in sweeps
     ]
 
     style_thermal = pu.LineStyleConfig(
@@ -134,19 +148,6 @@ def main() -> None:
         style_thermal,
         linestyle="-"
     )
-
-    # totdist = ElectronDistribution.compute(
-    #     theta=theta,
-    #     gamma=gamma_e,
-    #     gamma_min=None,
-    #     p_index=p_index,
-    #     f_e=f_e
-    # )
-    # totfrac = totdist.integrated_number_fraction()
-    # metadata:dict[str,QuantityData] = {
-    #     "f_e":QuantityData(f_e,""),
-    #     "p_index":QuantityData(p_index,"")
-    # }
 
     with PdfPages(outpath) as pdf:
         fig, axes = layout.create()
