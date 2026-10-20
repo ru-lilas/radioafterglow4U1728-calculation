@@ -1,11 +1,11 @@
 layout:
   figure:
-    figsize: [16,9]
+    figsize: [48,9]
     dpi: 100
     layout_engine: constrained
   subplots:
     nrows: 1
-    ncols: 1
+    ncols: 3
     sharex: col
     sharey: col
     hide_shared_labels: true
@@ -18,10 +18,12 @@ layout:
           prefix: 'Electron Lorentz factor,$\gamma$'
           unit: ""
           fontsize: 32
+      - *theta_axis
+      - *theta_axis
     y:
       - &occupation_axis
         scale: "log"
-        limits: [1.0e-03,2.0e+00]
+        limits: [1.0e-04,2.0e+00]
         label:
           prefix: '$\frac{1}{n_e}\frac{\partial{n}}{\partial{\gamma}}$'
           unit: ""
