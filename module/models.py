@@ -497,12 +497,16 @@ class ModelParameters:
         )
 
     @property
-    def gamma_min(self):
+    def gamma_min(self)->NDArray[np.float64]:
         """
             minimum Lorentz factor for electrons to be acceralated
             Margalit&Quataert(2021)
         """
-        return MaxwellJuttnerDistribution.calculate_mean_gamma(self.theta)
+        gamma_mean = [
+            MaxwellJuttnerDistribution.calculate_mean_gamma(theta)
+            for theta in self.theta
+        ]
+        return np.asarray(gamma_mean)
 
     @property
     def xm_cutoff(self) -> NDArray64:

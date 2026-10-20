@@ -47,27 +47,27 @@ class MaxwellJuttnerDistribution:
     Each row integrates to 1-f_e over gamma from 1 to infinity.
     """
 
-    theta: NDArray[np.float64]
+    theta: float
     gamma: NDArray[np.float64]
     gamma_pdf: NDArray[np.float64]
 
     @staticmethod
-    def calculate_mean_gamma(theta:NDArray[np.float64]) -> NDArray[np.float64]:
+    def calculate_mean_gamma(theta:float) -> float:
         """Mean Lorentz factor within the thermal component; shape (N,)."""
         z = 1.0 / theta
         return special.kve(3, z) / special.kve(2, z) - theta
 
     @property
-    def mean_gamma(self) -> NDArray[np.float64]:
+    def mean_gamma(self) -> float:
         """Mean Lorentz factor within the thermal component; shape (N,)."""
         return self.calculate_mean_gamma(self.theta)
 
     @property
-    def mean_gamma_hot(self) -> NDArray[np.float64]:
+    def mean_gamma_hot(self) -> float:
         return 3.0 * self.theta
 
     @property
-    def mean_kinetic_gamma(self) -> NDArray[np.float64]:
+    def mean_kinetic_gamma(self) -> float:
         return self.mean_gamma - 1.0
 
     def integrated_number_fraction(
@@ -90,26 +90,24 @@ class MaxwellJuttnerDistribution:
     def compute(
         cls,
         f_e: float,
-        theta: NDArray[np.float64],
+        theta: float,
         gamma: NDArray[np.float64],
     ) -> Self:
-        if theta.ndim != 1 or gamma.ndim != 1:
-            raise ValueError("thetaとgammaは1次元配列が必要です")
+        if gamma.ndim != 1:
+            raise ValueError("gammaは1次元配列が必要です")
         if np.any(theta <= 0):
             raise ValueError("thetaは正の値が必要です")
         if np.any(gamma < 1):
             raise ValueError("gammaは1以上が必要です")
 
-        theta_column = theta[:, None]
-        gamma_row = gamma[None, :]
-        f_factor = MaxwellJuttnerFactor.compute(theta_column)
+        f_factor = MaxwellJuttnerFactor.compute(np.atleast_1d(theta))
         gamma_pdf = (
             (1.0 - f_e)
             * f_factor.exact
-            * np.sqrt(1.0 - gamma_row**(-2))
-            * gamma_row**2
-            / (2.0 * theta_column**3)
-            * np.exp(-gamma_row / theta_column)
+            * np.sqrt(1.0 - gamma**(-2))
+            * gamma**2
+            / (2.0 * theta**3)
+            * np.exp(-gamma / theta)
         )
         return cls(theta=theta, gamma=gamma, gamma_pdf=gamma_pdf)
 
@@ -145,7 +143,7 @@ class PowerlawDistribution:
 
     p_index: float
     f_e: float
-    gamma_min: NDArray[np.float64]
+    gamma_min: float
     gamma: NDArray[np.float64]
     gamma_pdf: NDArray[np.float64]
 
@@ -170,11 +168,11 @@ class PowerlawDistribution:
         cls,
         p_index: float,
         f_e: float,
-        gamma_min: NDArray[np.float64],
+        gamma_min: float,
         gamma: NDArray[np.float64],
     ) -> Self:
-        if gamma_min.ndim != 1 or gamma.ndim != 1:
-            raise ValueError("gamma_minとgammaは1次元配列が必要です")
+        if gamma.ndim != 1:
+            raise ValueError("gammaは1次元配列が必要です")
         if not p_index > 1:
             raise ValueError("p_indexは1より大きい値が必要です")
         if not 0 <= f_e <= 1:
@@ -182,12 +180,10 @@ class PowerlawDistribution:
         if np.any(gamma_min < 1) or np.any(gamma < 1):
             raise ValueError("gamma_minとgammaは1以上が必要です")
 
-        minimum = gamma_min[:, None]
-        gamma_row = gamma[None, :]
         gamma_pdf = np.where(
-            gamma_row >= minimum,
-            f_e * (p_index - 1.0) / minimum
-            * (gamma_row / minimum)**(-p_index),
+            gamma >= gamma_min,
+            f_e * (p_index - 1.0) / gamma_min
+            * (gamma / gamma_min)**(-p_index),
             0.0,
         )
         return cls(
@@ -241,11 +237,11 @@ class ElectronDistribution:
     @classmethod
     def compute(
         cls,
-        theta: NDArray[np.float64],
+        theta: float,
         gamma: NDArray[np.float64],
         p_index: float,
         f_e: float,
-        gamma_min: NDArray[np.float64] | None = None,
+        gamma_min: float | None = None,
     ) -> Self:
         if not 0 <= f_e <= 1:
             raise ValueError("f_eは0以上1以下が必要です")
@@ -256,8 +252,6 @@ class ElectronDistribution:
             gamma=gamma,
         )
         minimum = thermal.mean_gamma if gamma_min is None else gamma_min
-        if minimum.shape != theta.shape:
-            raise ValueError("gamma_minとthetaは同じ形状が必要です")
 
         powerlaw = PowerlawDistribution.compute(
             p_index=p_index,

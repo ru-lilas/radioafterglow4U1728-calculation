@@ -42,90 +42,89 @@ def main() -> None:
 
     f_e = 5.0e-03
     p_index=2.01
-    theta = np.array([
-        5.0e-01,
+    theta = [
+        5.0e-1,
         1.0e+00,
         5.0e+00
-    ])
+    ]
     gamma_e = GAMMA_SPACE.geomspace()
 
-    totdist = ElectronDistribution.compute(
-        theta=theta,
-        gamma=gamma_e,
-        gamma_min=None,
-        p_index=p_index,
-        f_e=f_e
-    )
-    totfrac = totdist.integrated_number_fraction()
-    metadata:dict[str,QuantityData] = {
-        "f_e":QuantityData(f_e,""),
-        "p_index":QuantityData(p_index,"")
-    }
+    # totdist = ElectronDistribution.compute(
+    #     theta=theta,
+    #     gamma=gamma_e,
+    #     gamma_min=None,
+    #     p_index=p_index,
+    #     f_e=f_e
+    # )
+    # totfrac = totdist.integrated_number_fraction()
+    # metadata:dict[str,QuantityData] = {
+    #     "f_e":QuantityData(f_e,""),
+    #     "p_index":QuantityData(p_index,"")
+    # }
 
-    with PdfPages(outpath) as pdf:
-        fig, axes = layout.create()
-        for (row,col), ax in np.ndenumerate(axes):
-            axis_config = plotconf.layout.axes.for_subplot(row,col)
-            plotter = plot_utils.Plotter(ax)
-
-            gamma_e = totdist.gamma
-            legends = []
-            for i,gamma_pdf in enumerate(totdist.gamma_pdf):
-                mjdist = totdist.thermal
-                pldist = totdist.powerlaw
-                theta = mjdist.theta
-                print(f"--- theta={theta[i]:.2f} ---")
-                print("f_num \t E/mc2")
-                line = plotter.line(
-                    x=gamma_e,
-                    y=totdist.thermal.gamma_pdf[i],
-                    style=components["thermal"].resolve_line_style(i)
-                )
-                print(
-                    f"{mjdist.integrated_number_fraction()[i]:.2f}\t"
-                    f"{mjdist.integrated_kinetic_energy()[i]:.2f}"
-                )
-                plotter.line(
-                    x=gamma_e,
-                    y=totdist.powerlaw.gamma_pdf[i],
-                    style=components["powerlaw"].resolve_line_style(i)
-                )
-                print(
-                    f"{pldist.integrated_number_fraction()[i]:.2f}\t"
-                    f"{pldist.integrated_kinetic_energy()[i]:.2f}"
-                )
-                line = plotter.line(
-                    x=gamma_e,
-                    y=totdist.gamma_pdf[i],
-                    style=components["total"].resolve_line_style(i)
-                )
-                print(
-                    f"{totdist.integrated_number_fraction()[i]:.2f}\t"
-                    f"{totdist.integrated_kinetic_energy()[i]:.2f}"
-                )
-                legends.append(
-                    plot_utils.LegendEntry(
-                        components["total"],
-                        line[0],
-                        value=theta[i]
-                    )
-                )
-            plotter.legend(
-                entries= legends,
-                config = components["legend"]
-            )
-            strings: list[str] = []
-            for name, quantity in metadata.items():
-                plot_utils.MetadataComponent(
-                    quantity=quantity,
-                    config=plotconf.metadata.items[name],
-                ).add_strings(strings)
-            plotter.title(
-                strings=strings,
-                fontsize=plotconf.metadata.fontsize,
-            )
-        pdf.savefig(fig)
-        plt.close(fig)
+    # with PdfPages(outpath) as pdf:
+    #     fig, axes = layout.create()
+    #     for (row,col), ax in np.ndenumerate(axes):
+    #         axis_config = plotconf.layout.axes.for_subplot(row,col)
+    #         plotter = plot_utils.Plotter(ax)
+    #
+    #         gamma_e = totdist.gamma
+    #         legends = []
+    #         for i,gamma_pdf in enumerate(totdist.gamma_pdf):
+    #             mjdist = totdist.thermal
+    #             pldist = totdist.powerlaw
+    #             theta = mjdist.theta
+    #             print("f_num \t E/mc2")
+    #             line = plotter.line(
+    #                 x=gamma_e,
+    #                 y=totdist.thermal.gamma_pdf[i],
+    #                 style=components["thermal"].resolve_line_style(i)
+    #             )
+    #             print(
+    #                 f"{mjdist.integrated_number_fraction()[i]:.2f}\t"
+    #                 f"{mjdist.integrated_kinetic_energy()[i]:.2f}"
+    #             )
+    #             plotter.line(
+    #                 x=gamma_e,
+    #                 y=totdist.powerlaw.gamma_pdf[i],
+    #                 style=components["powerlaw"].resolve_line_style(i)
+    #             )
+    #             print(
+    #                 f"{pldist.integrated_number_fraction()[i]:.2f}\t"
+    #                 f"{pldist.integrated_kinetic_energy()[i]:.2f}"
+    #             )
+    #             line = plotter.line(
+    #                 x=gamma_e,
+    #                 y=totdist.gamma_pdf[i],
+    #                 style=components["total"].resolve_line_style(i)
+    #             )
+    #             print(
+    #                 f"{totdist.integrated_number_fraction()[i]:.2f}\t"
+    #                 f"{totdist.integrated_kinetic_energy()[i]:.2f}"
+    #             )
+    #             legends.append(
+    #                 plot_utils.LegendEntry(
+    #                     components["total"],
+    #                     line[0],
+    #                     value=theta[i]
+    #                 )
+    #             )
+    #         plotter.legend(
+    #             entries= legends,
+    #             config = components["legend"]
+    #         )
+    #         strings: list[str] = []
+    #         for name, quantity in metadata.items():
+    #             plot_utils.MetadataComponent(
+    #                 quantity=quantity,
+    #                 config=plotconf.metadata.items[name],
+    #             ).add_strings(strings)
+    #         plotter.title(
+    #             strings=strings,
+    #             fontsize=plotconf.metadata.fontsize,
+    #         )
+    #     pdf.savefig(fig)
+    #     plt.close(fig)
 
 if __name__ == "__main__":
     main()
