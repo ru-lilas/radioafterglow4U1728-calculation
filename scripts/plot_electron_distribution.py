@@ -37,6 +37,25 @@ ParameterName = Literal[
     "p_index"
 ]
 
+PARAMETER_LABELS: dict[ParameterName, pu.QuantityLabel] = {
+    "theta": pu.QuantityLabel(
+        prefix=r"\Theta",
+        fmt=".1f",
+        unit="",
+    ),
+    "p_index": pu.QuantityLabel(
+        prefix="p",
+        fmt=".2f",
+        unit="",
+    ),
+    "f_e": pu.QuantityLabel(
+        prefix=r"f_{\mathrm{e}}",
+        fmt=".3g",
+        unit="",
+    ),
+}
+
+
 @dataclass(frozen=True,slots=True)
 class DistributionParameters:
     theta: float
@@ -80,7 +99,7 @@ class SweepSpec:
 reference = DistributionParameters(
     theta=1.0,
     f_e=1.0e-02,
-    p_index=2.01,
+    p_index=2.0001,
     gamma_e=GAMMA_SPACE.geomspace()
 )
 theta_sweep = SweepSpec(
@@ -104,7 +123,7 @@ fe_sweep = SweepSpec(
 p_sweep = SweepSpec(
     parameter="p_index",
     values=(
-        2.01,
+        2.0001,
         2.50,
         3.00
     ),
@@ -127,10 +146,6 @@ def main() -> None:
         p_sweep,
         fe_sweep
     )
-    dists = [
-        sweep.build_distributions()
-        for sweep in sweeps
-    ]
 
     style_thermal = pu.LineStyleConfig(
             colors=[
@@ -148,14 +163,33 @@ def main() -> None:
         style_thermal,
         linestyle="-"
     )
+    components = {
+        "thermal": pu.ComponentConfig(
+            type="line",
+            style=style_thermal,
+        ),
+        "powerlaw": pu.ComponentConfig(
+            type="line",
+            style=style_powerlaw,
+        ),
+    }
 
     with PdfPages(outpath) as pdf:
         fig, axes = layout.create()
         for (row,col), ax in np.ndenumerate(axes):
             axis_config = plotconf.layout.axes.for_subplot(row,col)
-            dists_ele = dists[int(col)]
-            plotter = pu.Plotter(ax)
+            sweep = sweeps[int(col)]
+            dists_ele = sweep.build_distributions()
+            label = PARAMETER_LABELS[sweep.parameter]
+            components["total"] = pu.ComponentConfig(
+                type="line",
+                style=style_total,
+                show_legend=True,
+                label_format=label
+            )
+
             legends = []
+            plotter = pu.Plotter(ax)
             for i,dist in enumerate(dists_ele):
                 print(dist.powerlaw.f_e)
                 plotter.line(
@@ -168,36 +202,37 @@ def main() -> None:
                     y=dist.powerlaw.gamma_pdf,
                     style=style_powerlaw.resolve(i)
                 )
-                plotter.line(
+                line=plotter.line(
                     x=gamma_e,
                     y=dist.gamma_pdf,
                     style=style_total.resolve(i)
                 )
-    #             print(
-    #                 f"{totdist.integrated_number_fraction()[i]:.2f}\t"
-    #                 f"{totdist.integrated_kinetic_energy()[i]:.2f}"
-    #             )
-    #             legends.append(
-    #                 plot_utils.LegendEntry(
-    #                     components["total"],
-    #                     line[0],
-    #                     value=theta[i]
-    #                 )
-    #             )
-    #         plotter.legend(
-    #             entries= legends,
-    #             config = components["legend"]
-    #         )
-    #         strings: list[str] = []
-    #         for name, quantity in metadata.items():
-    #             plot_utils.MetadataComponent(
-    #                 quantity=quantity,
-    #                 config=plotconf.metadata.items[name],
-    #             ).add_strings(strings)
-    #         plotter.title(
-    #             strings=strings,
-    #             fontsize=plotconf.metadata.fontsize,
-    #         )
+                legends.append(
+                    pu.LegendEntry(
+                        components["total"],
+                        line[0],
+                        value=sweep.values[i]
+                    )
+                )
+            plotter.legend(
+                entries= legends,
+                config = pu.ComponentConfig(
+                    type="legend",
+                    style=pu.LegendStyle(
+                        fontsize=28,
+                        loc="upper right"
+                    )
+                )
+            )
+            strings = [
+                label.to_text(getattr(sweep.reference, name))
+                for name, label in PARAMETER_LABELS.items()
+                if name != sweep.parameter
+            ]
+            plotter.title(
+                strings=strings,
+                fontsize=plotconf.metadata.fontsize,
+            )
         pdf.savefig(fig)
         plt.close(fig)
 

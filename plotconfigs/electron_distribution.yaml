@@ -7,7 +7,7 @@ layout:
     nrows: 1
     ncols: 3
     sharex: col
-    sharey: col
+    sharey: row
     hide_shared_labels: true
   axes:
     x:
@@ -66,7 +66,7 @@ components:
     fontsize: 24
     loc: upper right
 metadata:
-  fontsize: 18
+  fontsize: 32
   items:
     f_e:
       show: true
