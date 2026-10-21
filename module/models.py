@@ -519,25 +519,17 @@ class ModelParameters:
 
     @property
     def f_factor(self):
-        use_exact = self.switches[SwitchKeys.EXACT_DIST_FACTORS]
         f_factor = MaxwellJuttnerFactor.compute(self.theta)
-        if use_exact:
-            return f_factor.exact
-        else:
-            return f_factor.hot
+        return f_factor.exact
 
     @property
     def g_factor(self)->NDArray[np.float64]:
-        use_exact = self.switches[SwitchKeys.EXACT_DIST_FACTORS]
         g_factor = PowerlawNormalization.compute(
             p=self.powerlaw.p_index,
             theta=self.theta,
             gamma_min=self.gamma_min
         )
-        if use_exact:
-            return g_factor.exact
-        else:
-            return g_factor.hot
+        return g_factor.exact
 
     @staticmethod
     def phi(

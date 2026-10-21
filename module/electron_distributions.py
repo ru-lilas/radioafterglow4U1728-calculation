@@ -117,7 +117,6 @@ class PowerlawNormalization:
     """Power-law normalization factor for radiation and its hot approximation."""
 
     exact: NDArray[np.float64]
-    hot: NDArray[np.float64]
 
     @classmethod
     def compute(
@@ -127,10 +126,10 @@ class PowerlawNormalization:
         gamma_min: NDArray[np.float64],
     ) -> Self:
         pm1 = p - 1.0
-        exact = (
-            pm1 * gamma_min / (pm1 * gamma_min - pm1 + 1.0)
-        ) * (gamma_min / (3.0 * theta))**pm1
-        return cls(exact=exact, hot=np.ones_like(theta))
+        return cls(
+            pm1/(p-2.0)
+            *(gamma_min/(3.0*theta))**pm1
+        )
 
 
 @dataclass(frozen=True, slots=True)
