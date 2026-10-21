@@ -1,0 +1,84 @@
+layout:
+  figure:
+    figsize: [16,9]
+    dpi: 100
+    layout_engine: constrained
+  subplots:
+    nrows: 1
+    ncols: 1
+    sharex: col
+    sharey: row
+    hide_shared_labels: true
+  axes:
+    x:
+      - &theta_axis
+        scale: "log"
+        limits: [1.0e-01,1.0e+02]
+        label:
+          prefix: '$\Theta$'
+          unit: ""
+          fontsize: 32
+    y:
+      - &occupation_axis
+        scale: "log"
+        limits: [0.8e+00,1.0e+03]
+        label:
+          prefix: 'Distribution Factor'
+          unit: ""
+          fontsize: 32
+    ticks:
+      labelsize: 32
+      direction: "in"
+      major_length: 10.0
+      minor_length: 8.0
+      width: 1.0
+      pad: 10.0
+components:
+  thermal: &factor_tmp
+    type: line
+    style: &linestyle_tmp
+      colors: 
+        - "#005AFF"
+        - "#000000"
+        - "#FF4B00"
+      linewidth: 2.0
+      linestyle: "--"
+      alpha: null
+      zorder: 1.0
+  powerlaw:
+    type: line
+    style:
+      <<: *linestyle_tmp
+      linestyle: "-."
+  total:
+    type: line
+    style:
+      <<: *linestyle_tmp
+      linestyle: "-"
+    legend: true
+    label_format:
+      prefix: '\Theta'
+      fmt: '.1f'
+      unit: ''
+  legend:
+    fontsize: 24
+    loc: upper right
+metadata:
+  fontsize: 32
+  items:
+    f_e:
+      show: true
+      unit: ""
+      label_format: &LabelFormatTmp
+        prefix: 'f_e'
+        fmt: '.1e'
+        unit: ""
+        suffix: ""
+        show_equals: true
+    p_index:
+      show: true
+      unit: ""
+      label_format:
+        <<: *LabelFormatTmp
+        prefix: 'p'
+        fmt: '.2f'
