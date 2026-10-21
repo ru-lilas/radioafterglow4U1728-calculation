@@ -44,7 +44,7 @@ PARAMETER_LABELS: dict[ParameterName, pu.QuantityLabel] = {
         unit="",
     ),
     "p_index": pu.QuantityLabel(
-        prefix="p",
+        prefix=r"g(\Theta),\,p",
         fmt=".2f",
         unit="",
     ),
@@ -122,6 +122,10 @@ def main() -> None:
         linestyle="-",
         linewidth=2.0
     )
+    style_f_limit = replace(
+        style_f,
+        linestyle=":"
+    )
     style_g = replace(
         style_f,
         colors=[
@@ -130,15 +134,15 @@ def main() -> None:
             "#03AF7A"
         ]
     )
+    style_g_limit = replace(
+        style_g,
+        linestyle="--"
+    )
     components = {
         "f": pu.ComponentConfig(
             type="line",
             style=style_f,
-        ),
-        "g_factor": pu.ComponentConfig(
-            type="line",
-            style=style_g,
-        ),
+        )
     }
 
     with PdfPages(outpath) as pdf:
@@ -161,6 +165,12 @@ def main() -> None:
                 for param in params
             ]
             label = PARAMETER_LABELS[sweep.parameter]
+            components["g_factor"] = pu.ComponentConfig(
+                type="line",
+                style=style_g,
+                show_legend=True,
+                label_format=label
+            )
 
             legends = []
             plotter = pu.Plotter(ax)
@@ -169,12 +179,31 @@ def main() -> None:
                 y=f_factor.exact,
                 style=style_f.resolve(0)
             )
+            plotter.line(
+                x=THETA,
+                y=np.full_like(
+                    THETA,
+                    1.0,
+                    dtype=np.float64
+                ),
+                style=style_f_limit.resolve(0)
+            )
             for i,gN in enumerate(gNs):
-                print(gN)
+                param = params[i]
+                p_index = param.p_index
                 line=plotter.line(
                     x=THETA,
                     y=gN.exact,
                     style=style_g.resolve(i)
+                )
+                plotter.line(
+                    x=THETA,
+                    y=np.full_like(
+                        THETA,
+                        (p_index-1.0)/(p_index-2.0),
+                        dtype=np.float64
+                    ),
+                    style=style_g_limit.resolve(i)
                 )
                 legends.append(
                     pu.LegendEntry(
