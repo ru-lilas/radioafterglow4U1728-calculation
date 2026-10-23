@@ -86,16 +86,17 @@ class EmissivityFequencyDependenceTerm:
     def compute_thermal(
         x: NDArray,
         f_factor: NDArray,
-        ip: NDArray
+        ip: NDArray,
+        f_e: float
     )->NDArray:
         return (
-            np.sqrt(3.0)*f_factor*x*ip/(8.0*np.pi)
+            (1.0-f_e)*np.sqrt(3.0)*f_factor*x*ip/(8.0*np.pi)
         )
 
     @staticmethod
     def compute_powerlaw(
         cj: float,
-        eps_e: float,
+        f_e: float,
         g_factor: NDArray,
         x: NDArray,
         p:float,
@@ -105,7 +106,7 @@ class EmissivityFequencyDependenceTerm:
             raise ValueError("xは2次元配列が必要です")
         if xm_cutoff.ndim != 1 or xm_cutoff.size != x.shape[0]:
             raise ValueError("xm_cutoffはxの行数と同じ長さの1次元配列が必要です")
-        jpl = cj*eps_e*g_factor*x**(-0.5*(p-1.0))
+        jpl = cj*f_e*g_factor*x**(-0.5*(p-1.0))
         return np.where(
             x < xm_cutoff[:, None],
             POWERLAW_FLOOR,
@@ -117,7 +118,7 @@ class EmissivityFequencyDependenceTerm:
         cls,
         cj: float,
         p:float,
-        eps_e: float,
+        f_e: float,
         x: NDArray64,
         ip: NDArray64,
         f_factor: NDArray64,
@@ -125,8 +126,8 @@ class EmissivityFequencyDependenceTerm:
         xm_cutoff: NDArray64,
     )->Self:
         return cls(
-            thermal = cls.compute_thermal(x,f_factor,ip),
-            powerlaw = cls.compute_powerlaw(cj,eps_e,g_factor,x,p,xm_cutoff)
+            thermal = cls.compute_thermal(x,f_factor,ip,f_e),
+            powerlaw = cls.compute_powerlaw(cj,f_e,g_factor,x,p,xm_cutoff)
         )
 
     @property
@@ -142,16 +143,17 @@ class AbsorptionCoefficientFrequencyDependence:
     def compute_thermal(
         x: NDArray,
         f_factor: NDArray,
-        ip: NDArray
+        ip: NDArray,
+        f_e: float
     )->NDArray[np.float64]:
         return (
-            np.pi*f_factor*ip/(3.0**1.5*x)
+            (1.0-f_e)*np.pi*f_factor*ip/(3.0**1.5*x)
         )
 
     @staticmethod
     def compute_powerlaw(
         ca: float,
-        eps_e: float,
+        f_e: float,
         g_factor: NDArray,
         x: NDArray,
         p: float,
@@ -161,7 +163,7 @@ class AbsorptionCoefficientFrequencyDependence:
             raise ValueError("xは2次元配列が必要です")
         if xm_cutoff.ndim != 1 or xm_cutoff.size != x.shape[0]:
             raise ValueError("xm_cutoffはxの行数と同じ長さの1次元配列が必要です")
-        apl = ca*eps_e*g_factor*x**(-0.5*(p+4.0))
+        apl = ca*f_e*g_factor*x**(-0.5*(p+4.0))
         return np.where(
             x < xm_cutoff[:, None],
             POWERLAW_FLOOR,
@@ -173,7 +175,7 @@ class AbsorptionCoefficientFrequencyDependence:
         cls,
         ca: float,
         p:float,
-        eps_e: float,
+        f_e: float,
         x: NDArray64,
         ip: NDArray64,
         f_factor: NDArray64,
@@ -181,8 +183,8 @@ class AbsorptionCoefficientFrequencyDependence:
         xm_cutoff: NDArray64,
     )->Self:
         return cls(
-            thermal = cls.compute_thermal(x,f_factor,ip),
-            powerlaw = cls.compute_powerlaw(ca,eps_e,g_factor,x,p,xm_cutoff)
+            thermal = cls.compute_thermal(x,f_factor,ip,f_e),
+            powerlaw = cls.compute_powerlaw(ca,f_e,g_factor,x,p,xm_cutoff)
         )
 
     @property
@@ -200,7 +202,7 @@ class FrequencyDependence:
         ca: float,
         cj:float,
         p:float,
-        eps_e: float,
+        f_e: float,
         x: NDArray64,
         ip: NDArray64,
         f_factor: NDArray64,
@@ -211,7 +213,7 @@ class FrequencyDependence:
             j=EmissivityFequencyDependenceTerm.from_grid(
                 cj=cj,
                 p=p,
-                eps_e=eps_e,
+                f_e=f_e,
                 x=x,
                 ip=ip,
                 f_factor=f_factor,
@@ -221,7 +223,7 @@ class FrequencyDependence:
             alpha=AbsorptionCoefficientFrequencyDependence.from_grid(
                 ca=ca,
                 p=p,
-                eps_e=eps_e,
+                f_e=f_e,
                 x=x,
                 ip=ip,
                 f_factor=f_factor,

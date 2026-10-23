@@ -1056,7 +1056,7 @@ class SynchrotronResults:
             ca=model_params.powerlaw.ca,
             cj=model_params.powerlaw.cj,
             p=model_params.powerlaw.p_index,
-            eps_e=model_params.powerlaw.f_e,
+            f_e=model_params.powerlaw.f_e,
             x=xm_grid,
             ip=model_params.ip(xm,table),
             f_factor=model_params.f_factor.reshape(-1,1),
