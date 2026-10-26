@@ -10,10 +10,12 @@ from dataclasses import fields, dataclass, replace
 from matplotlib.backends.backend_pdf import PdfPages
 
 from module import plot_utils as pu
+from module import models
 from module.models import ColumnNames, FluxName, MetadataNames, ModelParameters, SwitchKeys
 from module.mydataclasses import FloatVectorSpace, LongformatDataFrame, QuantityArray1D, QuantityData
 from module.observation import LongformatLightcurve
-from module.electron_distributions import ElectronDistribution, MaxwellJuttnerDistribution, PowerlawDistribution
+from module.electron_distributions import ElectronDistribution, MaxwellJuttnerDistribution, MaxwellJuttnerFactor, PowerlawDistribution, PowerlawNormalization
+from module.synchrotron_coefficients import FrequencyDependence
 
 GAMMA_SPACE =  FloatVectorSpace(
     start=1.01e+00,
@@ -72,6 +74,36 @@ class DistributionParameters:
             p_index=self.p_index,
             f_e=self.f_e
         )
+
+    @property
+    def cj(self)->float:
+        pl = models.PowerlawParameters(self.p_index,self.f_e)
+        return pl.cj
+    
+    @property
+    def ca(self)->float:
+        pl = models.PowerlawParameters(self.p_index,self.f_e)
+        return pl.ca
+
+    @property
+    def f_factor(self)->float:
+        f = MaxwellJuttnerFactor.compute(
+            np.asarray([self.theta])
+        )
+        return f.exact[0]
+
+    @property
+    def gamma_min(self)->float:
+        return MaxwellJuttnerDistribution.calculate_mean_gamma(self.theta)
+
+    @property
+    def gN_factor(self)->float:
+        gN = PowerlawNormalization.compute(
+            p=self.p_index,
+            theta=np.asarray([self.theta]),
+            gamma_min = np.asarray([self.gamma_min])
+        )
+        return gN.exact[0]
 
 @dataclass(frozen=True,slots=True)
 class SweepSpec:
@@ -148,12 +180,12 @@ def main() -> None:
     )
 
     style_thermal = pu.LineStyleConfig(
-            colors=[
-                "#000000",
-                "#005AFF",
-                "#FF4B00"
-            ],
-            linestyle="--"
+        colors=[
+            "#000000",
+            "#005AFF",
+            "#FF4B00"
+        ],
+        linestyle="--",
     )
     style_powerlaw = replace(
         style_thermal,
@@ -161,7 +193,8 @@ def main() -> None:
     )
     style_total = replace(
         style_thermal,
-        linestyle="-"
+        linestyle="-",
+        linewidth=2.0
     )
     components = {
         "thermal": pu.ComponentConfig(
@@ -191,7 +224,6 @@ def main() -> None:
             legends = []
             plotter = pu.Plotter(ax)
             for i,dist in enumerate(dists_ele):
-                print(dist.powerlaw.f_e)
                 plotter.line(
                     x=gamma_e,
                     y=dist.thermal.gamma_pdf,

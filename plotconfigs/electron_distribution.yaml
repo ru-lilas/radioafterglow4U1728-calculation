@@ -1,6 +1,6 @@
 layout:
   figure:
-    figsize: [48,9]
+    figsize: [36,9]
     dpi: 100
     layout_engine: constrained
   subplots:
