@@ -237,7 +237,31 @@ class Emissivity:
     j_0: NDArray[np.float64]
     j_scr: EmissivityFequencyDependenceTerm
 
+    @property
+    def thermal(self)->NDArray[np.float64]:
+        return self.j_0*self.j_scr.thermal
+
+    @property
+    def powerlaw(self)->NDArray[np.float64]:
+        return self.j_0*self.j_scr.powerlaw
+
+    @property
+    def total(self)->NDArray[np.float64]:
+        return self.j_0*self.j_scr.total
+
 @dataclass(frozen=True,slots=True)
 class AbsorptionCoefficient:
     alpha_0: NDArray[np.float64]
     alpha_scr: AbsorptionCoefficientFrequencyDependence
+
+    @property
+    def thermal(self)->NDArray[np.float64]:
+        return self.alpha_0*self.alpha_scr.thermal
+
+    @property
+    def powerlaw(self)->NDArray[np.float64]:
+        return self.alpha_0*self.alpha_scr.powerlaw
+
+    @property
+    def total(self)->NDArray[np.float64]:
+        return self.alpha_0*self.alpha_scr.total

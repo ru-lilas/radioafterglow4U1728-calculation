@@ -62,12 +62,12 @@ class DefaultUnits(StrEnum):
     phi = "GHz min"
 
 class DimensionlessSynchrotronKeys(StrEnum):
-    ZETA_THERMAL = auto()
-    ZETA_POWERLAW = auto()
-    ZETA_TOTAL = auto()
-    ETA_THERMAL = auto()
-    ETA_POWERLAW = auto()
-    ETA_TOTAL = auto()
+    JNU_THERMAL = auto()
+    JNU_POWERLAW = auto()
+    JNU_TOTAL = auto()
+    ALPHA_NU_THERMAL = auto()
+    ALPHA_NU_POWERLAW = auto()
+    ALPHA_NU_TOTAL = auto()
     SNU_THERMAL = auto()
     SNU_POWERLAW = auto()
     SNU_TOTAL = auto()
@@ -1034,6 +1034,7 @@ class SynchrotronResults:
         _, n_xm = self.xm.shape
         fnu = self.fnu_obsframe
         jnu = self.j_nu
+        anu = self.alpha_nu
 
         dataset = {
             ColumnNames.MODEL_INDEX: np.repeat(self.model_params.model_indices.ravel(), n_xm),
@@ -1049,12 +1050,12 @@ class SynchrotronResults:
             FluxName.FNU_THERMAL: fnu.thermal_only.to_value(fnu_unit).ravel(),
             FluxName.FNU_POWERLAW: fnu.powerlaw_only.to_value(fnu_unit).ravel(),
             FluxName.FNU_TOTAL: fnu.total.to_value(fnu_unit).ravel(),
-            DimensionlessSynchrotronKeys.ZETA_THERMAL: jnu.j_scr.thermal.ravel(),
-            DimensionlessSynchrotronKeys.ZETA_POWERLAW: jnu.j_scr.powerlaw.ravel(),
-            DimensionlessSynchrotronKeys.ZETA_TOTAL: jnu.j_scr.total.ravel(),
-            DimensionlessSynchrotronKeys.ETA_THERMAL: self.alpha_nu.alpha_scr.thermal.ravel(),
-            DimensionlessSynchrotronKeys.ETA_POWERLAW: self.alpha_nu.alpha_scr.powerlaw.ravel(),
-            DimensionlessSynchrotronKeys.ETA_TOTAL: self.alpha_nu.alpha_scr.total.ravel(),
+            DimensionlessSynchrotronKeys.JNU_THERMAL: jnu.thermal.ravel(),
+            DimensionlessSynchrotronKeys.JNU_POWERLAW: jnu.powerlaw.ravel(),
+            DimensionlessSynchrotronKeys.JNU_TOTAL: jnu.total.ravel(),
+            DimensionlessSynchrotronKeys.ALPHA_NU_THERMAL: anu.thermal.ravel(),
+            DimensionlessSynchrotronKeys.ALPHA_NU_POWERLAW: anu.powerlaw.ravel(),
+            DimensionlessSynchrotronKeys.ALPHA_NU_TOTAL: anu.total.ravel(),
             DimensionlessSynchrotronKeys.SNU_THERMAL: self.snu.dependence.thermal.ravel(),
             DimensionlessSynchrotronKeys.SNU_POWERLAW: self.snu.dependence.powerlaw.ravel(),
             DimensionlessSynchrotronKeys.SNU_TOTAL: self.snu.dependence.total.ravel(),
