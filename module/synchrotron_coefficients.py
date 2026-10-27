@@ -234,10 +234,10 @@ class FrequencyDependence:
 
 @dataclass(frozen=True,slots=True)
 class Emissivity:
-    norm: NDArray[np.float64]
-    zeta: EmissivityFequencyDependenceTerm
+    j_0: NDArray[np.float64]
+    j_scr: EmissivityFequencyDependenceTerm
 
 @dataclass(frozen=True,slots=True)
 class AbsorptionCoefficient:
-    norm: NDArray[np.float64]
-    eta: AbsorptionCoefficientFrequencyDependence
+    alpha_0: NDArray[np.float64]
+    alpha_scr: AbsorptionCoefficientFrequencyDependence

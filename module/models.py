@@ -628,10 +628,10 @@ class SourceFunction:
         anu: AbsorptionCoefficient
     )->Self:
         return cls(
-            norm=jnu.norm/anu.norm,
+            norm=jnu.j_0/anu.alpha_0,
             dependence=SourceFunctionFrequencyDependence.compute_from(
-                j_scr=jnu.zeta,
-                alpha_scr=anu.eta,
+                j_scr=jnu.j_scr,
+                alpha_scr=anu.alpha_scr,
             ),
         )
 
@@ -656,8 +656,8 @@ class OpticalDepth(SynchrotronComponents):
         anu: AbsorptionCoefficient,
         norm_r: NDArray64
     )->Self:
-        alpha0 = anu.norm
-        eta = anu.eta
+        alpha0 = anu.alpha_0
+        eta = anu.alpha_scr
         tau0 = alpha0*norm_r
         return cls(
             thermal_only = tau0*eta.thermal,
@@ -1008,12 +1008,12 @@ class SynchrotronResults:
             FluxName.FNU_THERMAL: fnu.thermal_only.to_value(fnu_unit).ravel(),
             FluxName.FNU_POWERLAW: fnu.powerlaw_only.to_value(fnu_unit).ravel(),
             FluxName.FNU_TOTAL: fnu.total.to_value(fnu_unit).ravel(),
-            DimensionlessSynchrotronKeys.ZETA_THERMAL: jnu.zeta.thermal.ravel(),
-            DimensionlessSynchrotronKeys.ZETA_POWERLAW: jnu.zeta.powerlaw.ravel(),
-            DimensionlessSynchrotronKeys.ZETA_TOTAL: jnu.zeta.total.ravel(),
-            DimensionlessSynchrotronKeys.ETA_THERMAL: self.alpha_nu.eta.thermal.ravel(),
-            DimensionlessSynchrotronKeys.ETA_POWERLAW: self.alpha_nu.eta.powerlaw.ravel(),
-            DimensionlessSynchrotronKeys.ETA_TOTAL: self.alpha_nu.eta.total.ravel(),
+            DimensionlessSynchrotronKeys.ZETA_THERMAL: jnu.j_scr.thermal.ravel(),
+            DimensionlessSynchrotronKeys.ZETA_POWERLAW: jnu.j_scr.powerlaw.ravel(),
+            DimensionlessSynchrotronKeys.ZETA_TOTAL: jnu.j_scr.total.ravel(),
+            DimensionlessSynchrotronKeys.ETA_THERMAL: self.alpha_nu.alpha_scr.thermal.ravel(),
+            DimensionlessSynchrotronKeys.ETA_POWERLAW: self.alpha_nu.alpha_scr.powerlaw.ravel(),
+            DimensionlessSynchrotronKeys.ETA_TOTAL: self.alpha_nu.alpha_scr.total.ravel(),
             DimensionlessSynchrotronKeys.SNU_THERMAL: self.snu.dependence.thermal.ravel(),
             DimensionlessSynchrotronKeys.SNU_POWERLAW: self.snu.dependence.powerlaw.ravel(),
             DimensionlessSynchrotronKeys.SNU_TOTAL: self.snu.dependence.total.ravel(),
@@ -1064,12 +1064,12 @@ class SynchrotronResults:
             xm_cutoff=model_params.xm_cutoff.ravel(),
         )
         jnu = Emissivity(
-            norm=norms.j0.reshape(-1, 1),
-            zeta=x_dependent_terms.j
+            j_0=norms.j0.reshape(-1, 1),
+            j_scr=x_dependent_terms.j
         )
         alpha_nu = AbsorptionCoefficient(
-            norm=norms.alpha0.reshape(-1, 1),
-            eta=x_dependent_terms.alpha
+            alpha_0=norms.alpha0.reshape(-1, 1),
+            alpha_scr=x_dependent_terms.alpha
         )
         snu = SourceFunction.compute_from(jnu,alpha_nu)
         tau = OpticalDepth.compute_from(alpha_nu,r)
