@@ -555,7 +555,7 @@ def apply_overrides(config: CommentedMap, overrides: list[str]) -> None:
 
 
 
-SweepParameter = Literal["eps_b", "eps_th"]
+SweepParameter = Literal["eps_b", "eps_th", "f_e"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -577,6 +577,8 @@ SWEEP_SPECS: dict[SweepParameter, SweepSpec] = {
                        "model_parameters.shock.common.eps_b", "eps_b_values"),
     "eps_th": SweepSpec("eps_th", "eps-th-sweep", "--eps-th-values",
                         "model_parameters.shock.common.eps_th", "eps_th_values"),
+    "f_e": SweepSpec("f_e", "f-e-sweep", "--f-e-values",
+                     "model_parameters.shock.powerlaw.f_e", "f_e_values"),
 }
 # Retain public constants used by existing eps_B callers
 EPS_B_PATH = SWEEP_SPECS["eps_b"].yaml_path
@@ -584,14 +586,17 @@ SWEEP_FIELDS = SWEEP_SPECS["eps_b"].manifest_fields
 
 
 def validate_sweep_values(values: list[float], *, parameter: SweepParameter = "eps_b") -> list[float]:
-    """Validate energy fractions and deduplicate them in input order"""
+    """Validate the selected fraction and deduplicate in input order"""
     if not values:
         raise ValueError(f"{parameter}のリストが空です")
     unique: list[float] = []
     for value in values:
         if (isinstance(value, bool) or not isinstance(value, (int, float))
-                or not math.isfinite(value) or not 0 < value <= 1):
-            raise ValueError(f"{parameter}には0より大きく1以下の有限値が必要です: {value}")
+                or not math.isfinite(value)
+                or not (0 <= value <= 1 if parameter == "f_e" else 0 < value <= 1)):
+            raise ValueError(f"Invalid {parameter} fraction: {value}; "
+                             + ("require 0 <= f_e <= 1" if parameter == "f_e"
+                                else "require 0 < fraction <= 1"))
         numeric = float(value)
         if numeric in unique:
             print(f"Duplicate {parameter} skipped: {numeric:g}")
@@ -619,7 +624,7 @@ def semantic_config(value: Any) -> Any:
 
 
 def sweep_family(config: CommentedMap, *, parameter: SweepParameter = "eps_b") -> object:
-    """Compare all effective settings except the selected energy fraction"""
+    """Compare all effective settings except the selected parameter"""
     plain = normalize_for_hash(config)
     parent = plain
     keys = SWEEP_SPECS[parameter].yaml_path.split(".")
@@ -776,7 +781,7 @@ class SavedSweepPlan:
     def eps_b_values(self) -> list[float]:
         """Retain the legacy eps_B accessor without accepting an eps_th plan"""
         if self.parameter != "eps_b":
-            raise ValueError("An eps_th plan has no eps_b_values")
+            raise ValueError(f"A {self.parameter} plan has no eps_b_values")
         return self.values
 
     def to_dict(self) -> dict[str, object]:
@@ -785,7 +790,7 @@ class SavedSweepPlan:
             SWEEP_SPECS[self.parameter].values_key: self.values,
             "family": self.family,
         }
-        if self.parameter == "eps_th" or self.explicit_parameter:
+        if self.parameter != "eps_b" or self.explicit_parameter:
             result["parameter"] = self.parameter
         return result
 
@@ -813,7 +818,7 @@ def read_sweep_plan(path: Path) -> SavedSweepPlan:
         if declared != parameter:
             raise ValueError(f"Conflicting or unsupported sweep parameter: {path}")
     elif parameter != "eps_b":
-        raise ValueError(f"An eps_th plan requires its parameter discriminator: {path}")
+        raise ValueError(f"A {parameter} plan requires its parameter discriminator: {path}")
     raw_values = fields.get(SWEEP_SPECS[parameter].values_key)
     family = fields.get("family")
     if not isinstance(raw_values, list) or not isinstance(family, dict):
@@ -846,6 +851,23 @@ def write_sweep_plan(path: Path, plan: dict[str, object]) -> None:
     finally:
         if temporary is not None and temporary.exists():
             temporary.unlink()
+
+def validate_f_e_input(config: CommentedMap) -> None:
+    """Validate the physical settings required by number-fraction sweeps"""
+    validate_sweep_values(
+        [get_nested_value(config, SWEEP_SPECS["f_e"].yaml_path)], parameter="f_e",
+    )
+    thermal_only: object = get_nested_value(config, "model_parameters.switches.thermal_only")
+    if not isinstance(thermal_only, bool) or thermal_only:
+        raise ValueError("f_e sweeps require thermal_only: false")
+    for parameter in ("eps_b", "eps_th"):
+        validate_sweep_values([get_nested_value(config, SWEEP_SPECS[parameter].yaml_path)],
+                              parameter=parameter)
+    p_index: object = get_nested_value(config, "model_parameters.shock.powerlaw.p_index")
+    if (isinstance(p_index, bool) or not isinstance(p_index, (int, float))
+            or not math.isfinite(p_index) or p_index <= 2):
+        raise ValueError("Number-normalized power-law models require finite p_index > 2")
+
 
 def generate_parameter_sweep(base: CommentedMap, values: list[float], *,
                          runs_dir: Path, sweep_index: Path,
@@ -884,6 +906,8 @@ def generate_parameter_sweep(base: CommentedMap, values: list[float], *,
         raise ValueError(f"Sweep plan belongs to another sweep: {plan_path}")
     configs = [build_sweep_config(base, value, parameter=parameter) for value in values]
     for config in configs:
+        if parameter == "f_e":
+            validate_f_e_input(config)
         extracted = extract_index_values(config)
         validate_index_header(index_path, [
             "run_id", "run_name", "config_hash", "created_at", "input_path", *extracted,
@@ -966,9 +990,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="general.yamlを基にrunのinput.yamlとindex.csvを生成する。"
     )
-    parser.add_argument("--mode", choices=("single", "eps-b-sweep", "eps-th-sweep"), default="single")
+    parser.add_argument("--mode", choices=("single", "eps-b-sweep", "eps-th-sweep", "f-e-sweep"), default="single")
     parser.add_argument("--eps-b-values", type=float, nargs="+")
     parser.add_argument("--eps-th-values", type=float, nargs="+")
+    parser.add_argument("--f-e-values", type=float, nargs="+")
     parser.add_argument("--sweep-index", type=Path)
     parser.add_argument("--extend-sweep", action="store_true",
                         help="既存の走査条件を維持し、指定した走査値を末尾に追加")
@@ -988,19 +1013,24 @@ def main() -> None:
     sweep_index: Path | None = args.sweep_index
     if args.mode == "single":
         if (args.eps_b_values is not None or args.eps_th_values is not None
-                or sweep_index is not None or args.extend_sweep):
+                or args.f_e_values is not None or sweep_index is not None or args.extend_sweep):
             parser.error("走査専用引数には走査モードが必要です")
     else:
-        if args.mode == "eps-b-sweep":
-            parameter = "eps_b"
-            values = args.eps_b_values
-            if args.eps_th_values is not None:
-                parser.error("eps-b-sweepでは--eps-th-valuesを使用できません")
-        else:
-            parameter = "eps_th"
-            values = args.eps_th_values
-            if args.eps_b_values is not None:
-                parser.error("eps-th-sweepでは--eps-b-valuesを使用できません")
+        supplied: dict[SweepParameter, list[float] | None] = {
+            "eps_b": args.eps_b_values,
+            "eps_th": args.eps_th_values,
+            "f_e": args.f_e_values,
+        }
+        for candidate, spec in SWEEP_SPECS.items():
+            if args.mode == spec.mode:
+                parameter = candidate
+                break
+        if parameter is None:
+            parser.error("Unsupported sweep mode")
+        values = supplied[parameter]
+        for other, provided in supplied.items():
+            if other != parameter and provided is not None:
+                parser.error(f"{args.mode} cannot use {SWEEP_SPECS[other].values_option}")
         if values is None or sweep_index is None:
             parser.error(f"{SWEEP_SPECS[parameter].mode}には{SWEEP_SPECS[parameter].values_option}と--sweep-indexが必要です")
         if args.allow_duplicate:

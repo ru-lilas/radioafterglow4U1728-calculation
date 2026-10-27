@@ -7,7 +7,7 @@ layout:
     nrows: 1
     ncols: 2
     sharex: col
-    sharey: col
+    sharey: row
     hide_shared_labels: true
   axes:
     x:
