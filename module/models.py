@@ -239,6 +239,47 @@ class MolecularWeight:
         return float(mass_ratio/MASS_RATIO_ELE_PRO)
 
 @dataclass(frozen=True,slots=True)
+class PowerlawIndex:
+    p:float
+
+    @property
+    def cj(
+        self
+    )->float:
+        p=self.p_index
+        return (
+            3.0**(0.5*(2.0*p-1.0)) \
+            *(p-2.0) \
+            *special.gamma( 0.25*(p+5.0)) \
+            *special.gamma( (3.0*p +  19.0)  / 12.0) \
+            *special.gamma( (3.0*p -  1.0)   / 12.0) \
+            / (
+                2.0**(0.5*(7.0-p)) \
+                *np.sqrt(np.pi) \
+                *(p + 1.0) \
+                *special.gamma(0.25*(p+7.0))
+            )
+        )
+
+    @property
+    def ca(
+        self
+    )->float:
+        p=self.p_index
+        return (
+            2.0**(0.5*p) \
+            *np.pi**1.5 \
+            *(p-2) \
+            *special.gamma( 0.25*(p+6.0)) \
+            *special.gamma( (3.0*p +  2.0)  / 12.0) \
+            *special.gamma( (3.0*p + 22.0)  / 12.0) \
+            / (
+                3.0**(0.5*(5.0-2.0*p)) \
+                *special.gamma(0.25*(p+8.0))
+            )
+        )
+
+@dataclass(frozen=True,slots=True)
 class PowerlawParameters:
     p_index:float
     f_e: float

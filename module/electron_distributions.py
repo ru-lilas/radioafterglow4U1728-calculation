@@ -57,6 +57,11 @@ class MaxwellJuttnerDistribution:
         z = 1.0 / theta
         return special.kve(3, z) / special.kve(2, z) - theta
 
+    @staticmethod
+    def calculate_f_factor(theta:float)->float:
+        f_factor = MaxwellJuttnerFactor.compute(np.atleast_1d(theta))
+        return f_factor.exact[0]
+
     @property
     def mean_gamma(self) -> float:
         """Mean Lorentz factor within the thermal component; shape (N,)."""
