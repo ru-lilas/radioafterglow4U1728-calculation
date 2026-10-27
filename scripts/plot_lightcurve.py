@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, replace
 from pathlib import Path
 from typing import Hashable
 
@@ -11,12 +11,51 @@ import pandas as pd
 from matplotlib.backends.backend_pdf import PdfPages
 
 from module import calculation_lightcurve as clc
-from module import plot_utils
+from module import plot_utils as pu
 from module.models import ColumnNames, FluxName, MetadataNames, ModelParameters, SwitchKeys
 from module.mydataclasses import LongformatDataFrame, QuantityArray1D, QuantityData
 from module.observation import LongformatLightcurve, ObservedLightcurve
 from module.utils import FileReader
 from module.timing_utils import timed
+
+style_continuous = pu.LineStyleConfig(
+    colors=[
+        "#FF4B00",
+        "#005AFF"
+    ],
+    linestyle="--",
+    linewidth=1.0
+)
+style_thermal = replace(
+    style_continuous,
+    linestyle=":",
+)
+style_binned = replace(
+    style_continuous,
+    linestyle="-",
+    linewidth=2.0
+)
+style_observed = pu.ErrorbarStyleConfig(
+    colors=[
+        "#FF4B00",
+        "#005AFF"
+    ],
+    marker="o",
+    markersize= 6.0,
+    markeredgewidth= 1.0,
+    elinewidth= 1.0,
+    capsize= 1.0,
+    capthick= 1.0,
+    linestyle= "none",
+    alpha= None,
+    zorder= 0.0,
+)
+style_background = replace(
+    style_continuous,
+    colors=[
+        "#000000"
+    ],
+)
 
 @dataclass(frozen=True, slots=True)
 class PlotMetadata:
@@ -68,11 +107,10 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--mode",
-        choices=("bestfit", "candidates"),
+        choices=("bestfit", "candidates", "sweep"),
         default="bestfit",
         help="描画モード（既定値: bestfit）",
     )
-    # 呼び出し側との互換性のため、既存の--inputも受け付ける。
     for name in (
         "input",
         "candidate_lightcurves",
@@ -149,9 +187,9 @@ def prepare_column_data(
 
 
 def plot_lightcurves(
-    plotter: plot_utils.Plotter,
+    plotter: pu.Plotter,
     data: ColumnPlotData,
-    plotconf: plot_utils.PlotConfig,
+    plotconf: pu.PlotConfig,
     col: int,
     *,
     x_unit: str,
@@ -164,41 +202,40 @@ def plot_lightcurves(
     plotter.line(
         x=t_obs,
         y=background,
-        style=components["background"].resolve_line_style(col),
+        style=style_background.resolve(col),
     )
     plotter.errorbar(
         x=t_obs,
         y=observed.fnu_total.to_value_in(y_unit),
         yerr=observed.fnu_total_err.to_value_in(y_unit),
-        style=components["observed"].resolve_errorbar_style(col),
+        style=style_observed.resolve(col),
     )
     plotter.step(
         edges=data.binned.bin_edges.to_value_in(x_unit),
         values=data.binned.fnu_with_bg.to_value_in(y_unit),
-        style=components["binned"].resolve_line_style(col),
+        style=style_binned.resolve(col),
         baseline=background[0],
     )
     plotter.line(
         x=data.continuous.t.to_value_in(x_unit),
         y=data.continuous.fnu_with_bg(observed.fnu_background.index(0)).to_value_in(y_unit),
-        style=components["continuous"].resolve_line_style(col),
+        style=style_continuous.resolve(col),
     )
 
 
 def add_model_metadata(
-    plotter: plot_utils.Plotter,
+    plotter: pu.Plotter,
     metadata: PlotMetadata,
-    plotconf: plot_utils.PlotConfig,
+    plotconf: pu.PlotConfig,
     synchrotron_label: str,
 ) -> None:
     strings: list[str] = []
     for name, quantity in metadata.to_dict().items():
-        plot_utils.MetadataComponent(
+        pu.MetadataComponent(
             quantity=quantity,
             config=plotconf.metadata.items[name],
         ).add_strings(strings)
     plotter.title(strings=strings, fontsize=plotconf.metadata.fontsize)
-
 
 @timed
 def main() -> None:
@@ -207,7 +244,7 @@ def main() -> None:
         raise NotImplementedError("candidatesモードの描画処理は未実装です")
     outpath: Path = args.output
     outpath.parent.mkdir(parents=True, exist_ok=True)
-    plotconf = plot_utils.PlotConfig.from_yaml(args.plotconfig)
+    plotconf = pu.PlotConfig.from_yaml(args.plotconfig)
     df_minchi2 = FileReader.table_from_csv(args.minimum_chi_squared)
     dfs_binned_nu = LongformatDataFrame.read_from(args.binned_lightcurves).parse(ColumnNames.NU)
     dfs_continuous_nu = LongformatDataFrame.read_from(args.candidate_lightcurves).parse(ColumnNames.NU)
@@ -224,8 +261,10 @@ def main() -> None:
             column_data: dict[int, ColumnPlotData] = {}
             for (row, col), ax in np.ndenumerate(axes):
                 if col not in column_data:
+                    result = clc.ChiSquaredResult.from_series(df_minchi2.iloc[col])
+                    model_index = int(result.model_index)
                     column_data[col] = prepare_column_data(
-                        clc.ChiSquaredResult.from_series(df_minchi2.iloc[col]),
+                        result,
                         nu_unit,
                         dfs_binned_nu,
                         dfs_continuous_nu,
@@ -235,7 +274,7 @@ def main() -> None:
                     )
                 data = column_data[col]
                 axis_config = plotconf.layout.axes.for_subplot(row, col)
-                plotter = plot_utils.Plotter(ax)
+                plotter = pu.Plotter(ax)
                 plot_lightcurves(
                     plotter, data, plotconf, col,
                     x_unit=axis_config.x_unit, y_unit=axis_config.y_unit,
