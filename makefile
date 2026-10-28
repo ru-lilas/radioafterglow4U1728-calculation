@@ -58,6 +58,7 @@ FILEPATH_OPTICALDEPTH_CMAPS_PDF:=$(call run_fig,opticaldepth_cmaps.pdf)
 FILEPATH_THERMAL_PEAK_PDF:=$(call run_fig,thermal_peak.pdf)
 FILEPATH_PEAK_CUTOFF_RATIO_PDF:=$(call run_fig,peak_cutoff_ratio.pdf)
 FILEPATH_ENERGETICS_PDF:=$(FIGDIR)/energetics.pdf
+FILEPATH_SPECTRUM_PDF:=$(call run_fig,spectrum.pdf)
 
 ARGS_INPUT = --input $<
 ARGS_OUTPUT = --output $@
@@ -99,6 +100,13 @@ view-dimless-syn: $(FILEPATH_DIMENSIONLESS_SYNCHROTRONS_PDF)
 view-pl-lc: $(FILEPATH_POWERLAW_LIGHTUCURVES_PDF)
 	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
 
+pdf-spectrum: $(FILEPATH_SPECTRUM_PDF)
+$(FILEPATH_SPECTRUM_PDF): \
+	$(FILEPATH_SPECTRUM_MINIMUM_CHI_SQUARED) \
+	scripts/plot_spectrum.py
+	$(PYTHON) -m scripts.plot_spectrum\
+		--spectrum $(FILEPATH_SPECTRUM_MINIMUM_CHI_SQUARED) \
+		$(ARGS_OUTPUT)
 
 $(FILEPATH_DIMENSIONLESS_SYNCHROTRONS_PDF): \
 	$(FILEPATH_POWERLAW_LIGHTUCURVES) \

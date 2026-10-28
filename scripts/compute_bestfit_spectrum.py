@@ -55,7 +55,7 @@ def main() -> None:
             xm=XM,
             table=integral
         )
-        spectrum = results.to_spectrum(QuantityData(2.0,"min"))
+        spectrum = results.to_spectrum(QuantityData(2.5,"min"))
         df = spectrum.to_df()
         dfs.append(df)
     df_out = pd.concat(dfs)

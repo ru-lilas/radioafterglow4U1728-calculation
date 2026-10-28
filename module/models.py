@@ -1045,12 +1045,14 @@ class SynchrotronResults:
         *,
         fnu_unit: str = DefaultUnits.fnu,
         phi_unit: str = DefaultUnits.phi,
-        index_column_name: str = ColumnNames.MODEL_INDEX
+        index_column_name: str = ColumnNames.MODEL_INDEX,
+        lnu_unit: str = DefaultUnits.lnu
     ) -> pd.DataFrame:
         _, n_xm = self.xm.shape
         fnu = self.fnu_obsframe
         jnu = self.j_nu
         anu = self.alpha_nu
+
 
         dataset = {
             ColumnNames.MODEL_INDEX: np.repeat(self.model_params.model_indices.ravel(), n_xm),
@@ -1081,9 +1083,13 @@ class SynchrotronResults:
             DimensionlessSynchrotronKeys.LAMBDA_THERMAL: self.lnu.dependence.thermal.ravel(),
             DimensionlessSynchrotronKeys.LAMBDA_POWERLAW: self.lnu.dependence.powerlaw.ravel(),
             DimensionlessSynchrotronKeys.LAMBDA_TOTAL: self.lnu.dependence.total.ravel(),
+            "lnu_thermal": self.lnu.thermal_quantity.to_value(lnu_unit).ravel(),
+            "lnu_powerlaw": self.lnu.powerlaw_quantity.to_value(lnu_unit).ravel(),
+            "lnu_total": self.lnu.total_quantity.to_value(lnu_unit).ravel(),
         })
         df.attrs[MetadataNames.FNU_UNIT] = str(fnu_unit)
         df.attrs[MetadataNames.PHI_UNIT] = str(phi_unit)
+        df.attrs[MetadataNames.LNU_UNIT] = str(lnu_unit)
         return df
 
     @classmethod
@@ -1166,6 +1172,7 @@ class SynchrotronLightcurves(SynchrotronResults):
         phi_unit: str = DefaultUnits.phi,
         nu_unit: str = DefaultUnits.nu,
         t_unit: str = DefaultUnits.t,
+        lnu_unit: str = DefaultUnits.lnu,
         index_column_name: str = ColumnNames.MODEL_INDEX,
     ) -> pd.DataFrame:
         df = SynchrotronResults.to_df(
@@ -1195,6 +1202,7 @@ class SynchrotronSpectrum(SynchrotronResults):
         phi_unit: str = DefaultUnits.phi,
         nu_unit: str = DefaultUnits.nu,
         t_unit: str = DefaultUnits.t,
+        lnu_unit: str = DefaultUnits.lnu,
         index_column_name: str = ColumnNames.MODEL_INDEX,
     ) -> pd.DataFrame:
         df = SynchrotronResults.to_df(
