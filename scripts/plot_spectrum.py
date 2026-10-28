@@ -29,12 +29,13 @@ XM = XM_SPACE.geomspace()
 XM = XM[None,:]
 
 figure = pu.FigureConfig(
-    figsize=(12,27)
+    figsize=(24,27)
 )
 subplots = pu.SubplotConfig(
     nrows=3,
-    ncols=1,
+    ncols=2,
     sharex="col",
+    sharey="row",
     hide_shared_labels=True
 )
 x_axis = pu.AxisConfig(
@@ -100,12 +101,12 @@ styles_black = [
     replace(STYLE_FIDUCIAL,linestyle=":"),
 ]
 styles_red = [
-    replace(STYLE_FIDUCIAL,color="#FF4B00",linestyle="--"),
+    replace(STYLE_FIDUCIAL,color="#FF4B00",linestyle="-"),
     replace(STYLE_FIDUCIAL,color="#FF4B00",linestyle="--"),
     replace(STYLE_FIDUCIAL,color="#FF4B00",linestyle=":"),
 ]
 styles_blue = [
-    replace(STYLE_FIDUCIAL,color="#005AFF",linestyle="--"),
+    replace(STYLE_FIDUCIAL,color="#005AFF",linestyle="-"),
     replace(STYLE_FIDUCIAL,color="#005AFF",linestyle="--"),
     replace(STYLE_FIDUCIAL,color="#005AFF",linestyle=":"),
 ]
@@ -114,6 +115,7 @@ styles = [
     styles_black,
     styles_blue
 ]
+from matplotlib.lines import Line2D
 
 @dataclass(frozen=True,slots=True)
 class PlotComponentBase:
@@ -261,61 +263,84 @@ def main() -> None:
     outpath.parent.mkdir(parents=True, exist_ok=True)
     df_set = FileReader.table_from_csv(args.spectrum)
     dfs = groupby_to_dict(df_set,by=["model_index","t"])
-    df_spectrum = dfs[(4914,2.0)]
     with PdfPages(outpath) as pdf:
         fig, axes = layout.create()
-        i=0
-        for (model_index, time), df_spectrum in dfs.items():
-            plotter = pu.Plotter(axes[0,0])
-            if model_index != 4914:
-                continue
-            nu = u.Quantity(
-                df_spectrum["nu"].to_numpy(dtype=np.float64),
-                df_spectrum.attrs["nu_unit"]
-            ).to_value(x_axis.label.unit)
+        model_indices = sorted({k[0] for k in dfs})
+        times = sorted({k[1] for k in dfs})
 
-            t = u.Quantity(
-                time,
-                df_spectrum.attrs["t_unit"]
-            )
-            tau = PlotOpticalDepth.from_df(
-                x=nu,
-                df=df_spectrum,
-                styles=styles[i]
-            )
-            lnu = PlotSpecificLuminosity.from_df(
-                x=nu,
-                df=df_spectrum,
-                unit=lnu_axis.label.unit,
-                styles=styles[i]
-            )
-            fnu = PlotSpecificFlux.from_df(
-                x=nu,
-                df=df_spectrum,
-                unit=fnu_axis.label.unit,
-                styles=styles[i]
-            )
-            tau.draw_thermal(plotter)
-            tau.draw_powerlaw(plotter)
-            tau.draw_total(plotter)
+        for i, model_index in enumerate(model_indices):
+            handles = []
+            for j, time in enumerate(times):
+                if (model_index, time) not in dfs:
+                    continue
+                df_spectrum = dfs[model_index,time]
+                print(i,j)
+                plotter = pu.Plotter(axes[0,i])
+                nu = u.Quantity(
+                    df_spectrum["nu"].to_numpy(dtype=np.float64),
+                    df_spectrum.attrs["nu_unit"]
+                ).to_value(x_axis.label.unit)
 
-            plotter.title(
-                strings=[
-                    f"t={t}",
-                    f"model {model_index}"
-                ],
-                fontsize=18
-            )
+                t = u.Quantity(
+                    time,
+                    df_spectrum.attrs["t_unit"]
+                )
+                legend = Line2D(
+                    [],[],
+                    linestyle=styles[j][0].linestyle,
+                    linewidth=styles[j][0].linewidth,
+                    color=styles[j][0].color,
+                    label=f"t={t}",
+                )
+                handles.append(legend)
+                tau = PlotOpticalDepth.from_df(
+                    x=nu,
+                    df=df_spectrum,
+                    styles=styles[j]
+                )
+                lnu = PlotSpecificLuminosity.from_df(
+                    x=nu,
+                    df=df_spectrum,
+                    unit=lnu_axis.label.unit,
+                    styles=styles[j]
+                )
+                fnu = PlotSpecificFlux.from_df(
+                    x=nu,
+                    df=df_spectrum,
+                    unit=fnu_axis.label.unit,
+                    styles=styles[j]
+                )
+                tau.draw_thermal(plotter)
+                tau.draw_powerlaw(plotter)
+                tau.draw_total(plotter)
 
-            plotter = pu.Plotter(axes[1,0])
-            lnu.draw_thermal(plotter)
-            lnu.draw_total(plotter)
+                plotter.ax.legend(
+                    handles=handles,
+                    fontsize=16
+                )
 
-            plotter = pu.Plotter(axes[2,0])
-            fnu.draw_thermal(plotter)
-            fnu.draw_total(plotter)
+                plotter.title(
+                    strings=[
+                        f"model {model_index}"
+                    ],
+                    fontsize=18
+                )
 
-            i+=1
+                plotter = pu.Plotter(axes[1,i])
+                lnu.draw_thermal(plotter)
+                lnu.draw_total(plotter)
+                plotter.ax.legend(
+                    handles=handles,
+                    fontsize=16
+                )
+
+                plotter = pu.Plotter(axes[2,i])
+                fnu.draw_thermal(plotter)
+                fnu.draw_total(plotter)
+                plotter.ax.legend(
+                    handles=handles,
+                    fontsize=16
+                )
 
         pdf.savefig(fig)
         plt.close(fig)

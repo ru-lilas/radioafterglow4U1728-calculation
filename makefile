@@ -1,6 +1,6 @@
 # 実行例: make RUN_ID=1 chi2
 .DEFAULT_GOAL := all
-.SILENT:
+# .SILENT:
 
 PYTHON ?= python3
 PDF_VIEWER ?= evince
