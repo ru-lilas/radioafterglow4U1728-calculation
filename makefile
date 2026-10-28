@@ -78,7 +78,7 @@ ARGS_CHEVALIER_BESTFIT_POINTS = --chevalier_bestfit_points $(FILEPATH_CHEVALIER_
     chevaliercm chevalier min_chi2 chi2 lc_bin lc candidates \
     peak_grid lc_all modeltable peak_table
 
-all: best-lc chevalierbest
+all: best-lc chevalierbest pdf-spectrum
 
 # view-energetics: $(FILEPATH_ENERGETICS_PDF)
 # 	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &

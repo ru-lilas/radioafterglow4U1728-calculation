@@ -408,6 +408,12 @@ def main() -> None:
                     handles=handles,
                     fontsize=16
                 )
+                plotter.ax.axvline(
+                    9e+9,
+                    color="#000000",
+                    linestyle="--",
+                    linewidth=0.5
+                )
                 plotter.title(
                     strings=[
                         f"model {model_index}"
@@ -423,15 +429,28 @@ def main() -> None:
                     handles=handles,
                     fontsize=16
                 )
+                plotter.ax.axvline(
+                    9e+9,
+                    color="#000000",
+                    linestyle="--",
+                    linewidth=0.5
+                )
 
                 plotter = pu.Plotter(axes[2,i])
                 tau.draw_thermal(plotter)
                 tau.draw_powerlaw(plotter)
                 tau.draw_total(plotter)
+                plotter.ax.axhline(1.0,color="#000000")
 
                 plotter.ax.legend(
                     handles=handles,
                     fontsize=16
+                )
+                plotter.ax.axvline(
+                    9e+9,
+                    color="#000000",
+                    linestyle="--",
+                    linewidth=0.5
                 )
 
 
@@ -442,6 +461,12 @@ def main() -> None:
                     handles=handles,
                     fontsize=16
                 )
+                plotter.ax.axvline(
+                    9e+9,
+                    color="#000000",
+                    linestyle="--",
+                    linewidth=0.5
+                )
 
                 plotter = pu.Plotter(axes[4,i])
                 fnu.draw_thermal(plotter)
@@ -449,6 +474,12 @@ def main() -> None:
                 plotter.ax.legend(
                     handles=handles,
                     fontsize=16
+                )
+                plotter.ax.axvline(
+                    9e+9,
+                    color="#000000",
+                    linestyle="--",
+                    linewidth=0.5
                 )
 
         pdf.savefig(fig)
