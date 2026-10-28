@@ -29,10 +29,10 @@ XM = XM_SPACE.geomspace()
 XM = XM[None,:]
 
 figure = pu.FigureConfig(
-    figsize=(24,27)
+    figsize=(12*2,9*5)
 )
 subplots = pu.SubplotConfig(
-    nrows=3,
+    nrows=5,
     ncols=2,
     sharex="col",
     sharey="row",
@@ -74,6 +74,24 @@ fnu_axis = replace(
         fontsize=32
     )
 )
+jnu_axis = replace(
+    x_axis,
+    limits=(1.0e-24,1.0e-12),
+    label = pu.LabelConfigure(
+        prefix=r'$j_{\nu}$',
+        unit="erg cm-3 s-1 Hz-1",
+        fontsize=32
+    )
+)
+anu_axis = replace(
+    x_axis,
+    limits=(1.0e-16,1.0e+00),
+    label = pu.LabelConfigure(
+        prefix=r'$\alpha_{\nu}$',
+        unit="cm-1",
+        fontsize=32
+    )
+)
 ticks = pu.TickStyle(
     labelsize=32,
     direction="in",
@@ -81,6 +99,8 @@ ticks = pu.TickStyle(
 AXES = pu.AxesConfig(
     x=x_axis,
     y=(
+        jnu_axis,
+        anu_axis,
         y_axis,
         lnu_axis,
         fnu_axis
@@ -95,25 +115,10 @@ STYLE_FIDUCIAL = pu.LineStyle(
     linestyle="-",
     linewidth=2.0
 )
-styles_black = [
-    STYLE_FIDUCIAL,
-    replace(STYLE_FIDUCIAL,linestyle="--"),
-    replace(STYLE_FIDUCIAL,linestyle=":"),
-]
-styles_red = [
-    replace(STYLE_FIDUCIAL,color="#FF4B00",linestyle="-"),
-    replace(STYLE_FIDUCIAL,color="#FF4B00",linestyle="--"),
-    replace(STYLE_FIDUCIAL,color="#FF4B00",linestyle=":"),
-]
-styles_blue = [
-    replace(STYLE_FIDUCIAL,color="#005AFF",linestyle="-"),
-    replace(STYLE_FIDUCIAL,color="#005AFF",linestyle="--"),
-    replace(STYLE_FIDUCIAL,color="#005AFF",linestyle=":"),
-]
 styles = [
-    styles_red,
-    styles_black,
-    styles_blue
+    replace(STYLE_FIDUCIAL,color="#FF4B00",linestyle="-"),
+    STYLE_FIDUCIAL,
+    replace(STYLE_FIDUCIAL,color="#005FBB",linestyle="-")
 ]
 from matplotlib.lines import Line2D
 
@@ -123,7 +128,7 @@ class PlotComponentBase:
     thermal: NDArray[np.float64]
     powerlaw: NDArray[np.float64]
     total: NDArray[np.float64]
-    styles: list[pu.LineStyle]
+    style: pu.LineStyle
 
     def draw(
         self,
@@ -142,21 +147,33 @@ class PlotComponentBase:
         plotter:pu.Plotter
     ):
         self.draw(
-            plotter,self.thermal,self.styles[1]
+            plotter,self.thermal,
+            replace(
+                self.style,
+                linestyle="--"
+            )
         )
     def draw_powerlaw(
         self,
         plotter:pu.Plotter
     ):
         self.draw(
-            plotter,self.powerlaw,self.styles[2]
+            plotter,self.powerlaw,
+            replace(
+                self.style,
+                linestyle=":"
+            )
         )
     def draw_total(
         self,
         plotter:pu.Plotter
     ):
         self.draw(
-            plotter,self.total,self.styles[0]
+            plotter,self.total,
+            replace(
+                self.style,
+                linestyle="-"
+            )
         )
 
     def draw_all(
@@ -175,14 +192,14 @@ class PlotOpticalDepth(PlotComponentBase):
         cls,
         x:NDArray[np.float64],
         df:pd.DataFrame,
-        styles: list[pu.LineStyle]
+        style:pu.LineStyle
     ):
         return cls(
             x=x,
             thermal = df["tau_thermal"].to_numpy(dtype=np.float64),
             powerlaw = df["tau_powerlaw"].to_numpy(dtype=np.float64),
             total = df["tau_total"].to_numpy(dtype=np.float64),
-            styles=styles
+            style=style
         )
 
 @dataclass(frozen=True,slots=True)
@@ -193,7 +210,7 @@ class PlotSpecificLuminosity(PlotComponentBase):
         x:NDArray[np.float64],
         df:pd.DataFrame,
         unit: str,
-        styles: list[pu.LineStyle]
+        style: pu.LineStyle
     ):
         df_unit = df.attrs["lnu_unit"]
         thermal = u.Quantity(
@@ -213,7 +230,7 @@ class PlotSpecificLuminosity(PlotComponentBase):
             thermal = np.asarray(thermal.to_value(unit),dtype=np.float64),
             powerlaw = np.asarray(powerlaw.to_value(unit),dtype=np.float64),
             total = np.asarray(total.to_value(unit),dtype=np.float64),
-            styles=styles
+            style=style
         )
 
 @dataclass(frozen=True,slots=True)
@@ -224,7 +241,7 @@ class PlotSpecificFlux(PlotComponentBase):
         x:NDArray[np.float64],
         df:pd.DataFrame,
         unit: str,
-        styles: list[pu.LineStyle]
+        style: pu.LineStyle
     ):
         df_unit = df.attrs["fnu_unit"]
         thermal = u.Quantity(
@@ -244,7 +261,69 @@ class PlotSpecificFlux(PlotComponentBase):
             thermal = np.asarray(thermal.to_value(unit),dtype=np.float64),
             powerlaw = np.asarray(powerlaw.to_value(unit),dtype=np.float64),
             total = np.asarray(total.to_value(unit),dtype=np.float64),
-            styles=styles
+            style=style
+        )
+
+@dataclass(frozen=True,slots=True)
+class PlotEmissivity(PlotComponentBase):
+    @classmethod
+    def from_df(
+        cls,
+        x:NDArray[np.float64],
+        df:pd.DataFrame,
+        unit: str,
+        style: pu.LineStyle
+    ):
+        df_unit = df.attrs["jnu_unit"]
+        thermal = u.Quantity(
+            df["jnu_thermal"].to_numpy(dtype=np.float64),
+            df_unit
+        )
+        powerlaw = u.Quantity(
+            df["jnu_powerlaw"].to_numpy(dtype=np.float64),
+            df_unit
+        )
+        total = u.Quantity(
+            df["jnu_total"].to_numpy(dtype=np.float64),
+            df_unit
+        )
+        return cls(
+            x=x,
+            thermal = np.asarray(thermal.to_value(unit),dtype=np.float64),
+            powerlaw = np.asarray(powerlaw.to_value(unit),dtype=np.float64),
+            total = np.asarray(total.to_value(unit),dtype=np.float64),
+            style=style
+        )
+
+@dataclass(frozen=True,slots=True)
+class PlotAbsorption(PlotComponentBase):
+    @classmethod
+    def from_df(
+        cls,
+        x:NDArray[np.float64],
+        df:pd.DataFrame,
+        unit: str,
+        style: pu.LineStyle
+    ):
+        df_unit = df.attrs["alpha_nu_unit"]
+        thermal = u.Quantity(
+            df["alpha_nu_thermal"].to_numpy(dtype=np.float64),
+            df_unit
+        )
+        powerlaw = u.Quantity(
+            df["alpha_nu_powerlaw"].to_numpy(dtype=np.float64),
+            df_unit
+        )
+        total = u.Quantity(
+            df["alpha_nu_total"].to_numpy(dtype=np.float64),
+            df_unit
+        )
+        return cls(
+            x=x,
+            thermal = np.asarray(thermal.to_value(unit),dtype=np.float64),
+            powerlaw = np.asarray(powerlaw.to_value(unit),dtype=np.float64),
+            total = np.asarray(total.to_value(unit),dtype=np.float64),
+            style=style
         )
 
 def parse_args() -> argparse.Namespace:
@@ -287,29 +366,65 @@ def main() -> None:
                 )
                 legend = Line2D(
                     [],[],
-                    linestyle=styles[j][0].linestyle,
-                    linewidth=styles[j][0].linewidth,
-                    color=styles[j][0].color,
+                    linestyle=styles[j].linestyle,
+                    linewidth=styles[j].linewidth,
+                    color=styles[j].color,
                     label=f"t={t}",
                 )
                 handles.append(legend)
                 tau = PlotOpticalDepth.from_df(
                     x=nu,
                     df=df_spectrum,
-                    styles=styles[j]
+                    style=styles[j]
                 )
                 lnu = PlotSpecificLuminosity.from_df(
                     x=nu,
                     df=df_spectrum,
                     unit=lnu_axis.label.unit,
-                    styles=styles[j]
+                    style=styles[j]
                 )
                 fnu = PlotSpecificFlux.from_df(
                     x=nu,
                     df=df_spectrum,
                     unit=fnu_axis.label.unit,
-                    styles=styles[j]
+                    style=styles[j]
                 )
+                jnu = PlotEmissivity.from_df(
+                    x=nu,
+                    df=df_spectrum,
+                    unit=jnu_axis.label.unit,
+                    style=styles[j]
+                )
+                anu = PlotAbsorption.from_df(
+                    x=nu,
+                    df=df_spectrum,
+                    unit=anu_axis.label.unit,
+                    style=styles[j]
+                )
+                jnu.draw_thermal(plotter)
+                jnu.draw_powerlaw(plotter)
+                jnu.draw_total(plotter)
+                plotter.ax.legend(
+                    handles=handles,
+                    fontsize=16
+                )
+                plotter.title(
+                    strings=[
+                        f"model {model_index}"
+                    ],
+                    fontsize=18
+                )
+
+                plotter = pu.Plotter(axes[1,i])
+                anu.draw_thermal(plotter)
+                anu.draw_powerlaw(plotter)
+                anu.draw_total(plotter)
+                plotter.ax.legend(
+                    handles=handles,
+                    fontsize=16
+                )
+
+                plotter = pu.Plotter(axes[2,i])
                 tau.draw_thermal(plotter)
                 tau.draw_powerlaw(plotter)
                 tau.draw_total(plotter)
@@ -319,14 +434,8 @@ def main() -> None:
                     fontsize=16
                 )
 
-                plotter.title(
-                    strings=[
-                        f"model {model_index}"
-                    ],
-                    fontsize=18
-                )
 
-                plotter = pu.Plotter(axes[1,i])
+                plotter = pu.Plotter(axes[3,i])
                 lnu.draw_thermal(plotter)
                 lnu.draw_total(plotter)
                 plotter.ax.legend(
@@ -334,7 +443,7 @@ def main() -> None:
                     fontsize=16
                 )
 
-                plotter = pu.Plotter(axes[2,i])
+                plotter = pu.Plotter(axes[4,i])
                 fnu.draw_thermal(plotter)
                 fnu.draw_total(plotter)
                 plotter.ax.legend(

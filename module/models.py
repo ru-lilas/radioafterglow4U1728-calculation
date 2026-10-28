@@ -60,6 +60,8 @@ class DefaultUnits(StrEnum):
     t = "min"
     nu = "GHz"
     phi = "GHz min"
+    jnu = "erg cm-3 s-1 Hz-1"
+    anu = "cm-1"
 
 class DimensionlessSynchrotronKeys(StrEnum):
     JNU_THERMAL = auto()
@@ -992,19 +994,6 @@ class SynchrotronResults:
             nu=nu,
         )
 
-    def to_spectrum(self, t: QuantityData) -> "SynchrotronSpectrum":
-        return SynchrotronSpectrum(
-            model_params=self.model_params,
-            xm=self.xm,
-            j_nu=self.j_nu,
-            alpha_nu=self.alpha_nu,
-            snu=self.snu,
-            tau=self.tau,
-            lnu=self.lnu,
-            fnu_obsframe=self.fnu_obsframe,
-            t=t,
-        )
-
     def peak(
         self,
     ) -> SynchrotronPeak:
@@ -1068,12 +1057,6 @@ class SynchrotronResults:
             FluxName.FNU_THERMAL: fnu.thermal_only.to_value(fnu_unit).ravel(),
             FluxName.FNU_POWERLAW: fnu.powerlaw_only.to_value(fnu_unit).ravel(),
             FluxName.FNU_TOTAL: fnu.total.to_value(fnu_unit).ravel(),
-            DimensionlessSynchrotronKeys.JNU_THERMAL: jnu.thermal.ravel(),
-            DimensionlessSynchrotronKeys.JNU_POWERLAW: jnu.powerlaw.ravel(),
-            DimensionlessSynchrotronKeys.JNU_TOTAL: jnu.total.ravel(),
-            DimensionlessSynchrotronKeys.ALPHA_NU_THERMAL: anu.thermal.ravel(),
-            DimensionlessSynchrotronKeys.ALPHA_NU_POWERLAW: anu.powerlaw.ravel(),
-            DimensionlessSynchrotronKeys.ALPHA_NU_TOTAL: anu.total.ravel(),
             DimensionlessSynchrotronKeys.TAU_THERMAL: self.tau.thermal_only.ravel(),
             DimensionlessSynchrotronKeys.TAU_POWERLAW: self.tau.powerlaw_only.ravel(),
             DimensionlessSynchrotronKeys.TAU_TOTAL: self.tau.total.ravel(),
@@ -1201,6 +1184,7 @@ class SynchrotronSpectrum(SynchrotronResults):
         fnu_unit: str = DefaultUnits.fnu,
         phi_unit: str = DefaultUnits.phi,
         nu_unit: str = DefaultUnits.nu,
+        jnu_unit: str = DefaultUnits.jnu,
         t_unit: str = DefaultUnits.t,
         lnu_unit: str = DefaultUnits.lnu,
         index_column_name: str = ColumnNames.MODEL_INDEX,
@@ -1211,6 +1195,10 @@ class SynchrotronSpectrum(SynchrotronResults):
             phi_unit=phi_unit,
             index_column_name=index_column_name
         )
+        t = self.t.quantity
+        df["jnu_thermal"] = self.j_nu.thermal(t).to_value(jnu_unit)
+        df["jnu_powerlaw"] = self.j_nu.powerlaw(t).to_value(jnu_unit)
+        df["jnu_total"] = self.j_nu.total(t).to_value(jnu_unit)
         df[ColumnNames.NU] = self.nu.to_value(nu_unit).ravel()
         df[ColumnNames.T] = self.t.value_in(t_unit)
         df.attrs[MetadataNames.NU_UNIT] = str(nu_unit)

@@ -255,6 +255,7 @@ $(FILEPATH_SPECTRUM_MINIMUM_CHI_SQUARED): \
 	$(FILEPATH_MINIMUM_CHI_SQUARED) \
 	$(FILEPATH_MODEL_PARAMETER_TABLE) \
 	$(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE) \
+	module/synchrotron_spectrum.py \
 	scripts/compute_bestfit_spectrum.py
 	$(PYTHON) -m scripts.compute_bestfit_spectrum \
 		--minimum_chi_squared $(FILEPATH_MINIMUM_CHI_SQUARED) \

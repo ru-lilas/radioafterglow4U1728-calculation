@@ -16,6 +16,7 @@ from module.chevalier import BestfitModelPoint
 from module.timing_utils import timed
 from module.models import ModelParameters,ColumnNames,SynchrotronResults
 from module.synchrotron_numerical_table import ThermalSynchrotronIntegrals
+from module.synchrotron_spectrum import SynchrotronSpectrum
 
 XM_SPACE = FloatVectorSpace(
     start=1.0e-02,
@@ -62,7 +63,7 @@ def main() -> None:
                 xm=XM,
                 table=integral
             )
-            spectrum = results.to_spectrum(time)
+            spectrum = SynchrotronSpectrum.from_results(results,time)
             df = spectrum.to_df()
             dfs.append(df)
     df_out = pd.concat(dfs)

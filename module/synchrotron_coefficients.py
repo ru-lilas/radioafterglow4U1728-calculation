@@ -1,7 +1,15 @@
+# pyright: reportAttributeAccessIssue=false
+# pyright: reportUnknownMemberType=false
 """Synchrotron emissivity and absorption coefficients and their normalization."""
 
 from dataclasses import dataclass
 from typing import Self
+import astropy.units as u
+from astropy.constants import e,c,m_e,m_p
+c = u.Quantity(c)
+m_e = u.Quantity(m_e)
+m_p = u.Quantity(m_p)
+mec2 = (m_e*c**2)
 
 import numpy as np
 from numpy.typing import NDArray
@@ -237,31 +245,55 @@ class Emissivity:
     j_0: NDArray[np.float64]
     j_scr: EmissivityFequencyDependenceTerm
 
-    @property
-    def thermal(self)->NDArray[np.float64]:
-        return self.j_0*self.j_scr.thermal
+    def j0_quantity(
+        self,
+        t:u.Quantity
+    ):
+        return u.Quantity(self.j_0*mec2/(c*t)**3)
 
-    @property
-    def powerlaw(self)->NDArray[np.float64]:
-        return self.j_0*self.j_scr.powerlaw
+    def thermal(
+        self,
+        t:u.Quantity
+    )->u.Quantity:
+        return u.Quantity(self.j_scr.thermal*self.j0_quantity(t))
 
-    @property
-    def total(self)->NDArray[np.float64]:
-        return self.j_0*self.j_scr.total
+    def powerlaw(
+        self,
+        t:u.Quantity
+    )->u.Quantity:
+        return u.Quantity(self.j_scr.powerlaw*self.j0_quantity(t))
+
+    def total(
+        self,
+        t:u.Quantity
+    )->u.Quantity:
+        return u.Quantity(self.j0_quantity(t)*self.j_scr.total)
 
 @dataclass(frozen=True,slots=True)
 class AbsorptionCoefficient:
     alpha_0: NDArray[np.float64]
     alpha_scr: AbsorptionCoefficientFrequencyDependence
 
-    @property
-    def thermal(self)->NDArray[np.float64]:
-        return self.alpha_0*self.alpha_scr.thermal
+    def alpha0_quantity(
+        self,
+        t:u.Quantity
+    ):
+        return u.Quantity(self.alpha_0/(c*t))
 
-    @property
-    def powerlaw(self)->NDArray[np.float64]:
-        return self.alpha_0*self.alpha_scr.powerlaw
+    def thermal(
+        self,
+        t:u.Quantity
+    )->u.Quantity:
+        return u.Quantity(self.alpha0_quantity(t)*self.alpha_scr.thermal)
 
-    @property
-    def total(self)->NDArray[np.float64]:
-        return self.alpha_0*self.alpha_scr.total
+    def powerlaw(
+        self,
+        t:u.Quantity
+    )->u.Quantity:
+        return u.Quantity(self.alpha0_quantity(t)*self.alpha_scr.powerlaw)
+
+    def total(
+        self,
+        t:u.Quantity
+    )->u.Quantity:
+        return u.Quantity(self.alpha0_quantity(t)*self.alpha_scr.total)

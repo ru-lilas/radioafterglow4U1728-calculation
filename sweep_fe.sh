@@ -2,9 +2,10 @@ python -m scripts.build_input \
   --mode f-e-sweep \
   --template input/general.yaml \
   --runs-dir data \
-  --f-e-values 0.0000001 0.005 \
+  --f-e-values 0.0000001 0.001 0.005 0.007 0.01 0.1 \
   --sweep-index data/f_e_sweep.csv \
-  --yes
+  --yes \
+  --extend-sweep
 
 python -m scripts.plot_lightcurve \
   --mode sweep \
