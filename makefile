@@ -47,6 +47,7 @@ FILEPATH_CHI_SQUARED := $(call run_data,chi_squared.csv)
 FILEPATH_MINIMUM_CHI_SQUARED := $(call run_data,minimum_chi_squared.csv)
 FILEPATH_CHEVALIER_BESTFIT_POINTS := $(call run_data,chevalier_bestfit_points.csv)
 FILEPATH_ENERGETICS := $(call run_data,energetics.csv)
+FILEPATH_SPECTRUM_MINIMUM_CHI_SQUARED := $(call run_data,spectrum_minimum_chi_squared.csv)
 
 FILEPATH_MINIMUM_CHI2_LC_PDF := $(call run_fig,minimum_chi2_lightcurve.pdf)
 FILEPATH_CHEVALIER_PDF := $(call run_fig,chevalier_diagram.pdf)
@@ -241,6 +242,18 @@ $(FILEPATH_PEAK_CUTOFF_RATIO_PDF): \
 		$(ARGS_OUTPUT)
 
 #=== datafiles ===#
+spectrum: $(FILEPATH_SPECTRUM_MINIMUM_CHI_SQUARED)
+$(FILEPATH_SPECTRUM_MINIMUM_CHI_SQUARED): \
+	$(FILEPATH_MINIMUM_CHI_SQUARED) \
+	$(FILEPATH_MODEL_PARAMETER_TABLE) \
+	$(FILEPATH_SYNCHROTRON_FUNCTION_NUMERICAL_TABLE) \
+	scripts/compute_bestfit_spectrum.py
+	$(PYTHON) -m scripts.compute_bestfit_spectrum \
+		--minimum_chi_squared $(FILEPATH_MINIMUM_CHI_SQUARED) \
+		$(ARGS_MODEL_PARAMETER_TABLE) \
+		$(ARGS_INTEGRAL_TABLE) \
+		$(ARGS_OUTPUT)
+
 energetics: $(FILEPATH_ENERGETICS)
 $(FILEPATH_ENERGETICS): \
 	$(FILEPATH_INPUT) \
@@ -377,7 +390,6 @@ $(FILEPATH_MODEL_LIGHTCURVES): \
 modeltable: $(FILEPATH_MODEL_PARAMETER_TABLE)
 $(FILEPATH_MODEL_PARAMETER_TABLE): \
 	$(FILEPATH_INPUT) \
-	module/models.py \
 	scripts/build_model_parameter_table.py
 	$(PYTHON) -m scripts.build_model_parameter_table \
 		$< \

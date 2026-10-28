@@ -1,3 +1,3 @@
-for run in {50..56}; do
+for run in {60..76}; do
   make RUN_ID="$run" all || break;
 done

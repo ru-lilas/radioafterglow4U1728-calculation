@@ -68,6 +68,9 @@ class DimensionlessSynchrotronKeys(StrEnum):
     ALPHA_NU_THERMAL = auto()
     ALPHA_NU_POWERLAW = auto()
     ALPHA_NU_TOTAL = auto()
+    TAU_THERMAL = auto()
+    TAU_POWERLAW = auto()
+    TAU_TOTAL = auto()
     SNU_THERMAL = auto()
     SNU_POWERLAW = auto()
     SNU_TOTAL = auto()
@@ -989,6 +992,19 @@ class SynchrotronResults:
             nu=nu,
         )
 
+    def to_spectrum(self, t: QuantityData) -> "SynchrotronSpectrum":
+        return SynchrotronSpectrum(
+            model_params=self.model_params,
+            xm=self.xm,
+            j_nu=self.j_nu,
+            alpha_nu=self.alpha_nu,
+            snu=self.snu,
+            tau=self.tau,
+            lnu=self.lnu,
+            fnu_obsframe=self.fnu_obsframe,
+            t=t,
+        )
+
     def peak(
         self,
     ) -> SynchrotronPeak:
@@ -1056,6 +1072,9 @@ class SynchrotronResults:
             DimensionlessSynchrotronKeys.ALPHA_NU_THERMAL: anu.thermal.ravel(),
             DimensionlessSynchrotronKeys.ALPHA_NU_POWERLAW: anu.powerlaw.ravel(),
             DimensionlessSynchrotronKeys.ALPHA_NU_TOTAL: anu.total.ravel(),
+            DimensionlessSynchrotronKeys.TAU_THERMAL: self.tau.thermal_only.ravel(),
+            DimensionlessSynchrotronKeys.TAU_POWERLAW: self.tau.powerlaw_only.ravel(),
+            DimensionlessSynchrotronKeys.TAU_TOTAL: self.tau.total.ravel(),
             DimensionlessSynchrotronKeys.SNU_THERMAL: self.snu.dependence.thermal.ravel(),
             DimensionlessSynchrotronKeys.SNU_POWERLAW: self.snu.dependence.powerlaw.ravel(),
             DimensionlessSynchrotronKeys.SNU_TOTAL: self.snu.dependence.total.ravel(),
@@ -1157,6 +1176,35 @@ class SynchrotronLightcurves(SynchrotronResults):
         )
         df[ColumnNames.NU] = self.nu.value_in(nu_unit)
         df[ColumnNames.T] = self.t.to_value(t_unit).ravel()
+        df.attrs[MetadataNames.NU_UNIT] = str(nu_unit)
+        df.attrs[MetadataNames.T_UNIT] = str(t_unit)
+        return df
+
+@dataclass(frozen=True, slots=True)
+class SynchrotronSpectrum(SynchrotronResults):
+    t: QuantityData
+
+    @property
+    def nu(self) -> u.Quantity:
+        return self.phi / self.t.quantity
+
+    def to_df(
+        self,
+        *,
+        fnu_unit: str = DefaultUnits.fnu,
+        phi_unit: str = DefaultUnits.phi,
+        nu_unit: str = DefaultUnits.nu,
+        t_unit: str = DefaultUnits.t,
+        index_column_name: str = ColumnNames.MODEL_INDEX,
+    ) -> pd.DataFrame:
+        df = SynchrotronResults.to_df(
+            self,
+            fnu_unit=fnu_unit,
+            phi_unit=phi_unit,
+            index_column_name=index_column_name
+        )
+        df[ColumnNames.NU] = self.nu.to_value(nu_unit).ravel()
+        df[ColumnNames.T] = self.t.value_in(t_unit)
         df.attrs[MetadataNames.NU_UNIT] = str(nu_unit)
         df.attrs[MetadataNames.T_UNIT] = str(t_unit)
         return df
