@@ -9,6 +9,7 @@ import pandas as pd
 from dataclasses import fields, dataclass, replace
 from matplotlib.backends.backend_pdf import PdfPages
 
+from module import utils
 from module.dataframe_utils import groupby_to_dict, select_maximum_row
 from module.mydataclasses import FloatVectorSpace, LongformatDataFrame, QuantityArray1D, QuantityData
 from module.utils import FileReader, FileWriter
@@ -93,10 +94,25 @@ STYLE_FIDUCIAL = pu.LineStyle(
     linestyle="-",
     linewidth=2.0
 )
-styles = [
+styles_black = [
     STYLE_FIDUCIAL,
     replace(STYLE_FIDUCIAL,linestyle="--"),
     replace(STYLE_FIDUCIAL,linestyle=":"),
+]
+styles_red = [
+    replace(STYLE_FIDUCIAL,color="#FF4B00",linestyle="--"),
+    replace(STYLE_FIDUCIAL,color="#FF4B00",linestyle="--"),
+    replace(STYLE_FIDUCIAL,color="#FF4B00",linestyle=":"),
+]
+styles_blue = [
+    replace(STYLE_FIDUCIAL,color="#005AFF",linestyle="--"),
+    replace(STYLE_FIDUCIAL,color="#005AFF",linestyle="--"),
+    replace(STYLE_FIDUCIAL,color="#005AFF",linestyle=":"),
+]
+styles = [
+    styles_red,
+    styles_black,
+    styles_blue
 ]
 
 @dataclass(frozen=True,slots=True)
@@ -244,43 +260,62 @@ def main() -> None:
     outpath: Path = args.output
     outpath.parent.mkdir(parents=True, exist_ok=True)
     df_set = FileReader.table_from_csv(args.spectrum)
-    dfs = groupby_to_dict(df_set,by="model_index")
-    df_spectrum = dfs[4914]
+    dfs = groupby_to_dict(df_set,by=["model_index","t"])
+    df_spectrum = dfs[(4914,2.0)]
     with PdfPages(outpath) as pdf:
         fig, axes = layout.create()
-        plotter = pu.Plotter(axes[0,0])
-        nu = u.Quantity(
-            df_spectrum["nu"].to_numpy(dtype=np.float64),
-            df_spectrum.attrs["nu_unit"]
-        ).to_value(x_axis.label.unit)
-        tau = PlotOpticalDepth.from_df(
-            x=nu,
-            df=df_spectrum,
-            styles=styles
-        )
-        lnu = PlotSpecificLuminosity.from_df(
-            x=nu,
-            df=df_spectrum,
-            unit=lnu_axis.label.unit,
-            styles=styles
-        )
-        fnu = PlotSpecificFlux.from_df(
-            x=nu,
-            df=df_spectrum,
-            unit=fnu_axis.label.unit,
-            styles=styles
-        )
-        tau.draw_thermal(plotter)
-        tau.draw_powerlaw(plotter)
-        tau.draw_total(plotter)
+        i=0
+        for (model_index, time), df_spectrum in dfs.items():
+            plotter = pu.Plotter(axes[0,0])
+            if model_index != 4914:
+                continue
+            nu = u.Quantity(
+                df_spectrum["nu"].to_numpy(dtype=np.float64),
+                df_spectrum.attrs["nu_unit"]
+            ).to_value(x_axis.label.unit)
 
-        plotter = pu.Plotter(axes[1,0])
-        lnu.draw_thermal(plotter)
-        lnu.draw_total(plotter)
+            t = u.Quantity(
+                time,
+                df_spectrum.attrs["t_unit"]
+            )
+            tau = PlotOpticalDepth.from_df(
+                x=nu,
+                df=df_spectrum,
+                styles=styles[i]
+            )
+            lnu = PlotSpecificLuminosity.from_df(
+                x=nu,
+                df=df_spectrum,
+                unit=lnu_axis.label.unit,
+                styles=styles[i]
+            )
+            fnu = PlotSpecificFlux.from_df(
+                x=nu,
+                df=df_spectrum,
+                unit=fnu_axis.label.unit,
+                styles=styles[i]
+            )
+            tau.draw_thermal(plotter)
+            tau.draw_powerlaw(plotter)
+            tau.draw_total(plotter)
 
-        plotter = pu.Plotter(axes[2,0])
-        fnu.draw_thermal(plotter)
-        fnu.draw_total(plotter)
+            plotter.title(
+                strings=[
+                    f"t={t}",
+                    f"model {model_index}"
+                ],
+                fontsize=18
+            )
+
+            plotter = pu.Plotter(axes[1,0])
+            lnu.draw_thermal(plotter)
+            lnu.draw_total(plotter)
+
+            plotter = pu.Plotter(axes[2,0])
+            fnu.draw_thermal(plotter)
+            fnu.draw_total(plotter)
+
+            i+=1
 
         pdf.savefig(fig)
         plt.close(fig)

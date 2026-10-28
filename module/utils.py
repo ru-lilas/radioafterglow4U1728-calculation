@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.typing import NDArray
 from typing import Callable,cast
 from module.types import FloatArray, FloatPair
 import pandas as pd
@@ -214,3 +215,17 @@ def str_to_bool(value: str) -> bool:
             raise ValueError(
                 f"boolへ変換できない文字列です: {value!r}"
             )
+
+def reduce_to_float(values: NDArray[np.float64]) -> float:
+    if values.size == 0:
+        raise ValueError("Array is empty")
+    if not np.all(values == values.flat[0]):
+        raise ValueError("Array elements are not identical")
+    return float(values.flat[0])
+
+def reduce_to_int(values: NDArray[np.int64]) -> int:
+    if values.size == 0:
+        raise ValueError("Array is empty")
+    if not np.all(values == values.flat[0]):
+        raise ValueError("Array elements are not identical")
+    return int(values.flat[0])

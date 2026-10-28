@@ -37,6 +37,12 @@ def parse_args() -> argparse.Namespace:
         parser.add_argument(f"--{name}", type=Path, required=True)
     return parser.parse_args()
 
+times = [
+    QuantityData(1.0,"min"),
+    QuantityData(2.0,"min"),
+    QuantityData(10.0,"min"),
+]
+
 @timed
 def main() -> None:
     args = parse_args()
@@ -48,16 +54,17 @@ def main() -> None:
     rows:list[dict[str,Any]] = df_bestfit.to_dict(orient="records")
     dfs:list[pd.DataFrame] = []
     for row in rows:
-        minchi2_index:int = int(row[ColumnNames.MODEL_INDEX])
-        bestfit_model = models.select_models([minchi2_index])
-        results = SynchrotronResults.compute_from(
-            model_params=bestfit_model,
-            xm=XM,
-            table=integral
-        )
-        spectrum = results.to_spectrum(QuantityData(2.5,"min"))
-        df = spectrum.to_df()
-        dfs.append(df)
+        for time in times:
+            minchi2_index:int = int(row[ColumnNames.MODEL_INDEX])
+            bestfit_model = models.select_models([minchi2_index])
+            results = SynchrotronResults.compute_from(
+                model_params=bestfit_model,
+                xm=XM,
+                table=integral
+            )
+            spectrum = results.to_spectrum(time)
+            df = spectrum.to_df()
+            dfs.append(df)
     df_out = pd.concat(dfs)
     FileWriter.df_to_csv(args.output,df_out)
 
