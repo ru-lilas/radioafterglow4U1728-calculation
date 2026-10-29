@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from typing import Any, Hashable, Literal, get_args
+from typing import Any, Hashable, Literal, TypeGuard, get_args
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -28,16 +28,6 @@ XM_SPACE = FloatVectorSpace(
 XM = XM_SPACE.geomspace()
 XM = XM[None,:]
 
-figure = pu.FigureConfig(
-    figsize=(12*2,9*5)
-)
-subplots = pu.SubplotConfig(
-    nrows=5,
-    ncols=2,
-    sharex="col",
-    sharey="row",
-    hide_shared_labels=True
-)
 x_axis = pu.AxisConfig(
     scale="log",
     limits=(1.0e+07,1.0e+12),
@@ -92,6 +82,23 @@ anu_axis = replace(
         fontsize=32
     )
 )
+jnu_ratio_axis = replace(
+    x_axis,
+    limits=(1.0e-04,1.0e+04),
+    label = pu.LabelConfigure(
+        prefix=r'$j_{\nu,\mathrm{pl}}~/~j_{\nu,\mathrm{th}}$',
+        unit="",
+        fontsize=32
+    )
+)
+anu_ratio_axis = replace(
+    jnu_ratio_axis,
+    label = pu.LabelConfigure(
+        prefix=r'$\alpha_{\nu,\mathrm{pl}}~/~\alpha_{\nu,\mathrm{th}}$',
+        unit="",
+        fontsize=32
+    )
+)
 ticks = pu.TickStyle(
     labelsize=32,
     direction="in",
@@ -103,9 +110,23 @@ AXES = pu.AxesConfig(
         anu_axis,
         y_axis,
         lnu_axis,
-        fnu_axis
+        fnu_axis,
+        jnu_ratio_axis,
+        anu_ratio_axis
     ),
     ticks=ticks
+)
+NROWS=len(AXES.y)
+NCOLS=2
+figure = pu.FigureConfig(
+    figsize=(12*NCOLS,9*NROWS)
+)
+subplots = pu.SubplotConfig(
+    nrows=NROWS,
+    ncols=NCOLS,
+    sharex="col",
+    sharey="row",
+    hide_shared_labels=True
 )
 layout = pu.PlotLayout(
     figure,AXES,subplots
@@ -129,6 +150,36 @@ class PlotComponentBase:
     powerlaw: NDArray[np.float64]
     total: NDArray[np.float64]
     style: pu.LineStyle
+
+    @classmethod
+    def from_df(
+        cls,
+        x:NDArray[np.float64],
+        df:pd.DataFrame,
+        quantity_name:str,
+        unit: str,
+        style: pu.LineStyle
+    ):
+        df_unit = df.attrs[f"{quantity_name}_unit"]
+        thermal = u.Quantity(
+            df[f"{quantity_name}_thermal"].to_numpy(dtype=np.float64),
+            df_unit
+        )
+        powerlaw = u.Quantity(
+            df[f"{quantity_name}_powerlaw"].to_numpy(dtype=np.float64),
+            df_unit
+        )
+        total = u.Quantity(
+            df[f"{quantity_name}_total"].to_numpy(dtype=np.float64),
+            df_unit
+        )
+        return cls(
+            x=x,
+            thermal = np.asarray(thermal.to_value(unit),dtype=np.float64),
+            powerlaw = np.asarray(powerlaw.to_value(unit),dtype=np.float64),
+            total = np.asarray(total.to_value(unit),dtype=np.float64),
+            style=style
+        )
 
     def draw(
         self,
@@ -186,9 +237,8 @@ class PlotComponentBase:
 
 @dataclass(frozen=True,slots=True)
 class PlotOpticalDepth(PlotComponentBase):
-
     @classmethod
-    def from_df(
+    def from_df_dimless(
         cls,
         x:NDArray[np.float64],
         df:pd.DataFrame,
@@ -203,126 +253,66 @@ class PlotOpticalDepth(PlotComponentBase):
         )
 
 @dataclass(frozen=True,slots=True)
-class PlotSpecificLuminosity(PlotComponentBase):
-    @classmethod
-    def from_df(
-        cls,
-        x:NDArray[np.float64],
-        df:pd.DataFrame,
-        unit: str,
-        style: pu.LineStyle
-    ):
-        df_unit = df.attrs["lnu_unit"]
-        thermal = u.Quantity(
-            df["lnu_thermal"].to_numpy(dtype=np.float64),
-            df_unit
-        )
-        powerlaw = u.Quantity(
-            df["lnu_powerlaw"].to_numpy(dtype=np.float64),
-            df_unit
-        )
-        total = u.Quantity(
-            df["lnu_total"].to_numpy(dtype=np.float64),
-            df_unit
-        )
-        return cls(
-            x=x,
-            thermal = np.asarray(thermal.to_value(unit),dtype=np.float64),
-            powerlaw = np.asarray(powerlaw.to_value(unit),dtype=np.float64),
-            total = np.asarray(total.to_value(unit),dtype=np.float64),
-            style=style
-        )
-
-@dataclass(frozen=True,slots=True)
-class PlotSpecificFlux(PlotComponentBase):
-    @classmethod
-    def from_df(
-        cls,
-        x:NDArray[np.float64],
-        df:pd.DataFrame,
-        unit: str,
-        style: pu.LineStyle
-    ):
-        df_unit = df.attrs["fnu_unit"]
-        thermal = u.Quantity(
-            df["fnu_thermal"].to_numpy(dtype=np.float64),
-            df_unit
-        )
-        powerlaw = u.Quantity(
-            df["fnu_powerlaw"].to_numpy(dtype=np.float64),
-            df_unit
-        )
-        total = u.Quantity(
-            df["fnu_total"].to_numpy(dtype=np.float64),
-            df_unit
-        )
-        return cls(
-            x=x,
-            thermal = np.asarray(thermal.to_value(unit),dtype=np.float64),
-            powerlaw = np.asarray(powerlaw.to_value(unit),dtype=np.float64),
-            total = np.asarray(total.to_value(unit),dtype=np.float64),
-            style=style
-        )
-
-@dataclass(frozen=True,slots=True)
 class PlotEmissivity(PlotComponentBase):
-    @classmethod
-    def from_df(
-        cls,
-        x:NDArray[np.float64],
-        df:pd.DataFrame,
-        unit: str,
-        style: pu.LineStyle
+    @property
+    def ratio(
+        self
+    )->NDArray[np.float64]:
+        return self.powerlaw/self.thermal
+
+    def draw_ratio(
+        self,
+        plotter:pu.Plotter,
+        style:pu.LineStyle
     ):
-        df_unit = df.attrs["jnu_unit"]
-        thermal = u.Quantity(
-            df["jnu_thermal"].to_numpy(dtype=np.float64),
-            df_unit
+        plotter.ax.axhline(
+            y=1.0e-02,
+            lw=0.5,
+            ls="--",
+            color="#000000"
         )
-        powerlaw = u.Quantity(
-            df["jnu_powerlaw"].to_numpy(dtype=np.float64),
-            df_unit
+        plotter.ax.axhline(
+            y=1.0e+02,
+            lw=0.5,
+            ls="--",
+            color="#000000"
         )
-        total = u.Quantity(
-            df["jnu_total"].to_numpy(dtype=np.float64),
-            df_unit
-        )
-        return cls(
-            x=x,
-            thermal = np.asarray(thermal.to_value(unit),dtype=np.float64),
-            powerlaw = np.asarray(powerlaw.to_value(unit),dtype=np.float64),
-            total = np.asarray(total.to_value(unit),dtype=np.float64),
+        return plotter.line(
+            self.x,
+            self.ratio,
             style=style
         )
+        
 
 @dataclass(frozen=True,slots=True)
 class PlotAbsorption(PlotComponentBase):
-    @classmethod
-    def from_df(
-        cls,
-        x:NDArray[np.float64],
-        df:pd.DataFrame,
-        unit: str,
-        style: pu.LineStyle
+
+    @property
+    def ratio(
+        self
+    )->NDArray[np.float64]:
+        return self.powerlaw/self.thermal
+
+    def draw_ratio(
+        self,
+        plotter:pu.Plotter,
+        style:pu.LineStyle
     ):
-        df_unit = df.attrs["alpha_nu_unit"]
-        thermal = u.Quantity(
-            df["alpha_nu_thermal"].to_numpy(dtype=np.float64),
-            df_unit
+        plotter.ax.axhline(
+            y=1.0e-02,
+            lw=0.5,
+            ls="--",
+            color="#000000"
         )
-        powerlaw = u.Quantity(
-            df["alpha_nu_powerlaw"].to_numpy(dtype=np.float64),
-            df_unit
+        plotter.ax.axhline(
+            y=1.0e+02,
+            lw=0.5,
+            ls="--",
+            color="#000000"
         )
-        total = u.Quantity(
-            df["alpha_nu_total"].to_numpy(dtype=np.float64),
-            df_unit
-        )
-        return cls(
-            x=x,
-            thermal = np.asarray(thermal.to_value(unit),dtype=np.float64),
-            powerlaw = np.asarray(powerlaw.to_value(unit),dtype=np.float64),
-            total = np.asarray(total.to_value(unit),dtype=np.float64),
+        return plotter.line(
+            self.x,
+            self.ratio,
             style=style
         )
 
@@ -330,10 +320,17 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     for name in (
         "spectrum",
+        "model_parameter_table",
         "output",
     ):
         parser.add_argument(f"--{name}", type=Path, required=True)
     return parser.parse_args()
+
+def is_float64_array(value: object) -> TypeGuard[NDArray[np.float64]]:
+    return (
+        isinstance(value, np.ndarray)
+        and value.dtype == np.dtype("float64")
+    )
 
 @timed
 def main() -> None:
@@ -341,6 +338,8 @@ def main() -> None:
     outpath: Path = args.output
     outpath.parent.mkdir(parents=True, exist_ok=True)
     df_set = FileReader.table_from_csv(args.spectrum)
+    df_models = FileReader.table_from_csv(args.model_parameter_table)
+    models = ModelParameters.from_df(df_models)
     dfs = groupby_to_dict(df_set,by=["model_index","t"])
     with PdfPages(outpath) as pdf:
         fig, axes = layout.create()
@@ -349,16 +348,21 @@ def main() -> None:
 
         for i, model_index in enumerate(model_indices):
             handles = []
+            model = models.select_models([model_index])
+            f_e = model.powerlaw.f_e
             for j, time in enumerate(times):
                 if (model_index, time) not in dfs:
                     continue
                 df_spectrum = dfs[model_index,time]
-                print(i,j)
                 plotter = pu.Plotter(axes[0,i])
                 nu = u.Quantity(
                     df_spectrum["nu"].to_numpy(dtype=np.float64),
                     df_spectrum.attrs["nu_unit"]
                 ).to_value(x_axis.label.unit)
+                if not is_float64_array(nu):
+                    raise TypeError(
+                        "nuの型が不正です"
+                    )
 
                 t = u.Quantity(
                     time,
@@ -372,32 +376,36 @@ def main() -> None:
                     label=f"t={t}",
                 )
                 handles.append(legend)
-                tau = PlotOpticalDepth.from_df(
+                tau = PlotOpticalDepth.from_df_dimless(
                     x=nu,
                     df=df_spectrum,
                     style=styles[j]
                 )
-                lnu = PlotSpecificLuminosity.from_df(
+                lnu = PlotComponentBase.from_df(
                     x=nu,
                     df=df_spectrum,
                     unit=lnu_axis.label.unit,
+                    quantity_name="lnu",
                     style=styles[j]
                 )
-                fnu = PlotSpecificFlux.from_df(
+                fnu = PlotComponentBase.from_df(
                     x=nu,
                     df=df_spectrum,
+                    quantity_name="fnu",
                     unit=fnu_axis.label.unit,
                     style=styles[j]
                 )
                 jnu = PlotEmissivity.from_df(
                     x=nu,
                     df=df_spectrum,
+                    quantity_name="jnu",
                     unit=jnu_axis.label.unit,
                     style=styles[j]
                 )
                 anu = PlotAbsorption.from_df(
                     x=nu,
                     df=df_spectrum,
+                    quantity_name="alpha_nu",
                     unit=anu_axis.label.unit,
                     style=styles[j]
                 )
@@ -416,7 +424,11 @@ def main() -> None:
                 )
                 plotter.title(
                     strings=[
-                        f"model {model_index}"
+                        f"model {model_index}",
+                        rf'$\varepsilon_B$={model.eps_b:.1e}',
+                        rf'$\varepsilon_\mathrm{{th}}$={model.eps_th:.1f}',
+                        rf'$f_e$={f_e:.1e}',
+                        rf'$p$={model.powerlaw.p_index:.2f}'
                     ],
                     fontsize=18
                 )
@@ -482,6 +494,29 @@ def main() -> None:
                     linewidth=0.5
                 )
 
+                plotter = pu.Plotter(axes[5,i])
+                jnu.draw_ratio(
+                    plotter,
+                    style=styles[j]
+                )
+                plotter.ax.axvline(
+                    9e+9,
+                    color="#000000",
+                    linestyle="--",
+                    linewidth=0.5
+                )
+
+                plotter = pu.Plotter(axes[6,i])
+                anu.draw_ratio(
+                    plotter,
+                    style=styles[j]
+                )
+                plotter.ax.axvline(
+                    9e+9,
+                    color="#000000",
+                    linestyle="--",
+                    linewidth=0.5
+                )
         pdf.savefig(fig)
         plt.close(fig)
 
