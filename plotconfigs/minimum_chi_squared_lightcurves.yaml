@@ -92,7 +92,7 @@ metadata:
       label_format:
         <<: *LabelFormatTmp
         prefix: 'p'
-        fmt: '.2f'
+        fmt: '.1f'
         unit: ''
     f_e: 
       show: true

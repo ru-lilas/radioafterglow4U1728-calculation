@@ -11,6 +11,7 @@ from matplotlib import colormaps
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LogNorm, Normalize, to_hex
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
 from numpy.typing import NDArray
 from dataclasses import dataclass, fields, replace
 from pathlib import Path
@@ -490,29 +491,20 @@ def validate_observed(observed: ObservedLightcurve) -> None:
 def color_mapping(
     runs: list[SweepRun],
     settings: SweepSettings,
-) -> tuple[dict[int, str], ScalarMappable | None]:
-    values = np.asarray([run.f_e for run in runs], dtype=float)
-    if np.any(values <= 0):
-        raise ValueError("log10(f_e) requires f_e > 0")
-
-    log_values = np.log10(values)
+) -> dict[int, str]:
+    """Assign evenly spaced colormap colors in ascending f_e order"""
+    ordered = sorted(runs, key=lambda run: run.f_e)
     cmap = colormaps[settings.cmap]
-
-    if len(values) == 1:
-        return {runs[0].run_id: to_hex(cmap(0.5))}, None
-
-    norm = Normalize(
-        vmin=-3.0,
-        # vmin=log_values.min(),
-        vmax=log_values.max()
+    positions = (
+        np.linspace(0.0, 1.0, len(ordered))
+        if len(ordered) > 1
+        else np.array([0.5])
     )
-    mappable = ScalarMappable(norm=norm, cmap=cmap)
 
-    colors = {
-        run.run_id: to_hex(cmap(real_scalar(norm(value))))
-        for run, value in zip(runs, log_values)
+    return {
+        run.run_id: to_hex(cmap(float(position)))
+        for run, position in zip(ordered, positions)
     }
-    return colors, mappable
 
 def check_axes(ax_config: pu.AxesConfig, x: object, y: object) -> None:
     """Reject invalid displayed values instead of silently flooring them"""
@@ -599,7 +591,7 @@ def draw_sweep(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
     if not settings.show_binned and binned_path is not None:
         raise ValueError("Enable show_binned in build_sweep_settings() to use binned results")
     runs = read_sweep_runs(args.sweep_index)
-    colors, mappable = color_mapping(runs, settings)
+    colors = color_mapping(runs, settings)
     sources: set[Path] = {args.sweep_index, args.obslc, args.plotconfig}
     # Check original observation headers, then reuse the existing observation abstraction
     read_table(args.obslc)
@@ -751,15 +743,19 @@ def draw_sweep(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
                     plot_binned_curve(plotter, binned, obs, replace(style_binned.resolve(0), color=colors[key[0]]),
                                       x_unit=axis.x_unit, y_unit=axis.y_unit)
             print(f"{obs_nu:g} GHz: {len(keys)} model curves; f_e={[run.f_e for run in runs]}", flush=True)
-        if mappable is not None:
-            pu.ColorbarComponent(mappable, pu.ColorbarConfigure(
-                show=True, pad=0.01, fraction=0.05, tick_labelsize=16,
-                label=pu.LabelConfigure(r"$\log_{10} f_{\mathrm{e}}$", "", 18),
-            )).draw(fig, list(axes.flat))
-        else:
-            axes.flat[0].plot([], [], color=colors[runs[0].run_id],
-                              label=pu.QuantityLabel(r"f_{\mathrm{e}}", ".1g", "").to_text(runs[0].f_e))
-            axes.flat[0].legend()
+            handles = [
+                Line2D(
+                    [], [],
+                    color=colors[run.run_id],
+                    label=pu.QuantityLabel(
+                        r"f_{\mathrm{e}}", ".1e", "",
+                    ).to_text(run.f_e),
+                )
+                for run in sorted(runs, key=lambda run: run.f_e)
+            ]
+            axes.flat[col].legend(handles=handles,fontsize=18)
+
+            save_figure(fig, args.output, sources)
         save_figure(fig, args.output, sources)
     finally:
         plt.close(fig)
