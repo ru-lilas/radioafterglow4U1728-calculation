@@ -27,6 +27,7 @@ from module.mydataclasses import LongformatDataFrame, QuantityArray1D, QuantityD
 from module.observation import LongformatLightcurve, ObservedLightcurve
 from module.utils import FileReader
 from module.timing_utils import timed
+from module import style_templates as st
 
 try:
     from . import build_input
@@ -38,18 +39,14 @@ style_continuous = pu.LineStyleConfig(
         "#FF4B00",
         "#005AFF"
     ],
-    linestyle="--",
-    linewidth=2.0
+    linestyle="-",
+    linewidth=1.0
 )
 style_thermal = replace(
     style_continuous,
     linestyle=":",
 )
-style_binned = replace(
-    style_continuous,
-    linestyle="-",
-    linewidth=2.0
-)
+style_binned = st.lc_binned
 style_observed = pu.ErrorbarStyleConfig(
     colors=[
         "#FF4B00",
@@ -126,6 +123,185 @@ class SweepSettings:
 def build_sweep_settings() -> SweepSettings:
     """Configure sweep curves and color normalization directly in Python"""
     return SweepSettings(normalization="linear")
+
+
+SweepParameter = Literal["f_e", "p_index"]
+
+
+@dataclass(frozen=True, slots=True)
+class SweepSource:
+    """Describe one sweep manifest and its RUN-relative result locations"""
+
+    parameter: SweepParameter
+    sweep_index: Path
+    minimum_chi_squared_path: Path
+    model_parameter_table_path: Path
+    candidate_lightcurves_path: Path
+    binned_lightcurves_path: Path | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class SweepPanelSpec:
+    """Keep source selection and presentation attached to one panel position"""
+
+    row: int
+    col: int
+    source: SweepSource
+    frequency: QuantityData
+    axes: pu.AxesConfig
+    settings: SweepSettings
+
+
+def normalized_result_path(path: Path) -> Path:
+    """Normalize a RUN-relative file path lexically without reading files"""
+    if not isinstance(path, Path):
+        raise TypeError("Result paths must be Path instances")
+    if path.is_absolute():
+        raise ValueError(f"Result path must be RUN-relative: {path}")
+    parts: list[str] = []
+    for part in path.parts:
+        if part == "..":
+            if not parts:
+                raise ValueError(f"Result path escapes its RUN: {path}")
+            parts.pop()
+        elif part != ".":
+            parts.append(part)
+    if not parts:
+        raise ValueError(f"Result path must name a file: {path}")
+    return Path(*parts)
+
+
+def validate_sweep_source(source: SweepSource) -> None:
+    """Check source configuration without opening the manifest or results"""
+    if not isinstance(source, SweepSource):
+        raise TypeError("Expected a SweepSource instance")
+    if source.parameter not in ("f_e", "p_index"):
+        raise ValueError(f"Unsupported sweep parameter: {source.parameter!r}")
+    if not isinstance(source.sweep_index, Path) or not source.sweep_index.name:
+        raise ValueError("The sweep manifest must have an explicit file path")
+    for path in (source.minimum_chi_squared_path, source.model_parameter_table_path,
+                 source.candidate_lightcurves_path, source.binned_lightcurves_path):
+        if path is not None:
+            normalized_result_path(path)
+    for path in (source.minimum_chi_squared_path, source.model_parameter_table_path,
+                 source.candidate_lightcurves_path):
+        if path is None:
+            raise ValueError("All three required result paths must be supplied")
+
+
+def validate_sweep_panels(panels: tuple[SweepPanelSpec, ...]) -> tuple[int, int]:
+    """Validate panel configuration and return its rectangular grid dimensions"""
+    if not isinstance(panels, tuple) or not panels:
+        raise ValueError("Configure a nonempty tuple of sweep panels")
+    positions: set[tuple[int, int]] = set()
+    source_signatures: dict[Path, tuple[SweepParameter, tuple[Path | None, ...]]] = {}
+    supported = (FluxName.FNU_TOTAL, FluxName.FNU_THERMAL, FluxName.FNU_POWERLAW)
+    for panel in panels:
+        if not isinstance(panel, SweepPanelSpec):
+            raise TypeError("Expected SweepPanelSpec instances")
+        for name, index in (("row", panel.row), ("col", panel.col)):
+            if isinstance(index, bool) or not isinstance(index, int) or index < 0:
+                raise ValueError(f"Panel {name} must be a nonnegative integer: {index!r}")
+        position = (panel.row, panel.col)
+        if position in positions:
+            raise ValueError(f"Duplicate panel position: {position}")
+        positions.add(position)
+        validate_sweep_source(panel.source)
+        source = panel.source
+        # Resolve the manifest only; result paths are still relative to an unknown RUN
+        manifest = source.sweep_index.resolve()
+        result_paths = tuple(
+            None if path is None else normalized_result_path(path)
+            for path in (source.minimum_chi_squared_path, source.model_parameter_table_path,
+                         source.candidate_lightcurves_path, source.binned_lightcurves_path)
+        )
+        signature = (source.parameter, result_paths)
+        previous = source_signatures.get(manifest)
+        if previous is not None and previous != signature:
+            raise ValueError(f"Conflicting source specifications for manifest: {manifest}")
+        source_signatures[manifest] = signature
+        if not isinstance(panel.frequency, QuantityData):
+            raise TypeError(f"Panel {position}: frequency must be QuantityData")
+        frequency = panel.frequency
+        if not isinstance(frequency.unit, str) or not frequency.unit:
+            raise ValueError(f"Panel {position}: explicit frequency unit is required")
+        value = real_scalar(frequency.value)
+        factor = real_scalar(u.Unit(frequency.unit).to(u.GHz))
+        if real_scalar(value * factor) <= 0:
+            raise ValueError(f"Panel {position}: frequency must be positive")
+        if (not isinstance(panel.axes, pu.AxesConfig)
+                or not isinstance(panel.axes.x, pu.AxisConfig)
+                or not isinstance(panel.axes.y, pu.AxisConfig)):
+            raise ValueError(f"Panel {position}: use concrete single-panel axis configurations")
+        settings = panel.settings
+        if not isinstance(settings, SweepSettings):
+            raise TypeError(f"Panel {position}: expected SweepSettings")
+        if (not settings.components or len(set(settings.components)) != len(settings.components)
+                or any(component not in supported for component in settings.components)):
+            raise ValueError(f"Panel {position}: select distinct supported continuous components")
+        styles = dict(settings.component_styles)
+        if (len(styles) != len(settings.component_styles)
+                or any(component not in styles for component in settings.components)
+                or any(not isinstance(styles[component], pu.LineStyle)
+                       for component in settings.components)):
+            raise ValueError(f"Panel {position}: configure one resolved style per selected component")
+        if not isinstance(settings.show_binned, bool):
+            raise TypeError(f"Panel {position}: show_binned must be boolean")
+        if settings.show_binned and source.binned_lightcurves_path is None:
+            raise ValueError(f"Panel {position}: binned drawing requires a source binned path")
+        if settings.cmap not in colormaps:
+            raise ValueError(f"Panel {position}: unknown colormap {settings.cmap!r}")
+    nrows = max(row for row, _ in positions) + 1
+    ncols = max(col for _, col in positions) + 1
+    if len(positions) != nrows * ncols:
+        raise ValueError("Panel positions must fill a rectangular grid without gaps")
+    return nrows, ncols
+
+
+def build_sweep_panels(
+    *,
+    f_e_source: SweepSource,
+    p_index_source: SweepSource,
+    frequencies: tuple[QuantityData, ...],
+    axes: pu.AxesConfig,
+    f_e_settings: SweepSettings,
+    p_index_settings: SweepSettings,
+) -> tuple[SweepPanelSpec, ...]:
+    """Build two sweep rows using explicit caller-supplied sources and settings
+
+    Construct the complete sources with actual result paths before calling this
+    builder. Frequencies (5.5 GHz, 9.0 GHz) give the illustrative two-by-two
+    arrangement. The first row uses f_e and the second uses p_index. Returned
+    panel instances may be moved or restyled with dataclasses.replace; validate
+    the resulting tuple again before future rendering integration. This builder
+    is not connected to the legacy CLI or rendering path
+    """
+    validate_sweep_source(f_e_source)
+    validate_sweep_source(p_index_source)
+    if f_e_source.parameter != "f_e" or p_index_source.parameter != "p_index":
+        raise ValueError("The two source arguments must select f_e and p_index respectively")
+    if not isinstance(frequencies, tuple) or not frequencies:
+        raise ValueError("Supply a nonempty tuple of explicit frequencies")
+    if isinstance(axes.x, tuple) and len(axes.x) != len(frequencies):
+        raise ValueError("Column axis settings must match the configured frequencies")
+    if isinstance(axes.y, tuple) and len(axes.y) != 2:
+        raise ValueError("Row axis settings must match the two sweep sources")
+    panels = tuple(
+        SweepPanelSpec(
+            row=row,
+            col=col,
+            source=source,
+            frequency=frequency,
+            axes=axes.for_subplot(row, col),
+            settings=settings,
+        )
+        for row, (source, settings) in enumerate(
+            ((f_e_source, f_e_settings), (p_index_source, p_index_settings))
+        )
+        for col, frequency in enumerate(frequencies)
+    )
+    validate_sweep_panels(panels)
+    return panels
 
 
 def parse_args() -> argparse.Namespace:
@@ -262,7 +438,7 @@ class SweepRun:
     run_name: str
     input_path: Path
     config_hash: str
-    f_e: float
+    sweep_value: float
 
 
 def real_scalar(value: object) -> float:
@@ -401,7 +577,7 @@ def read_sweep_runs(path: Path) -> list[SweepRun]:
             if row["status"] not in ("created", "reused"):
                 raise ValueError(f"Invalid status for {run.run_name}")
             if any(old.run_id == run_id or old.input_path.resolve() == run.input_path.resolve()
-                   or math.isclose(old.f_e, f_e, rel_tol=RTOL, abs_tol=0) for old in runs):
+                   or math.isclose(old.sweep_value, f_e, rel_tol=RTOL, abs_tol=0) for old in runs):
                 raise ValueError(f"Duplicate or ambiguous sweep assignment: {row}")
             config = build_input.load_yaml(run.input_path)
             build_input.validate_f_e_input(config)
@@ -417,7 +593,7 @@ def read_sweep_runs(path: Path) -> list[SweepRun]:
             runs.append(run)
     if not runs:
         raise ValueError(f"Empty sweep manifest: {path}")
-    return sorted(runs, key=lambda run: run.f_e)
+    return sorted(runs, key=lambda run: run.sweep_value)
 
 
 def validate_provenance(df: pd.DataFrame, run: SweepRun, path: Path) -> None:
@@ -493,7 +669,7 @@ def color_mapping(
     settings: SweepSettings,
 ) -> dict[int, str]:
     """Assign evenly spaced colormap colors in ascending f_e order"""
-    ordered = sorted(runs, key=lambda run: run.f_e)
+    ordered = sorted(runs, key=lambda run: run.sweep_value)
     cmap = colormaps[settings.cmap]
     positions = (
         np.linspace(0.0, 1.0, len(ordered))
@@ -576,6 +752,10 @@ def draw_bestfit(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
 def draw_sweep(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
     """Select each RUN's bestfit independently and compose a shared-color figure"""
     settings = build_sweep_settings()
+    settings = replace(
+        build_sweep_settings(),
+        show_binned=args.binned_lightcurves_path is not None,
+    )
     if (not settings.components or len(set(settings.components)) != len(settings.components)
             or any(name not in (FluxName.FNU_TOTAL, FluxName.FNU_THERMAL, FluxName.FNU_POWERLAW)
                    for name in settings.components)):
@@ -631,7 +811,7 @@ def draw_sweep(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
         if parameters.switches[SwitchKeys.THERMAL_ONLY]:
             raise ValueError(f"Thermal-only result parameters: {run.run_name}")
         # The parameter-table schema must carry f_e even if curve files omit it
-        if not math.isclose(real_scalar(parameters.powerlaw.f_e), run.f_e, rel_tol=RTOL, abs_tol=0):
+        if not math.isclose(real_scalar(parameters.powerlaw.f_e), run.sweep_value, rel_tol=RTOL, abs_tol=0):
             raise ValueError(f"Parameter-table f_e mismatch: {run.run_name}")
         config_input = build_input.load_yaml(run.input_path)
         expected_distance = real_scalar(build_input.get_nested_value(config_input, "model_parameters.distance.value"))
@@ -742,16 +922,16 @@ def draw_sweep(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
                                binned.fnu_with_bg.to_value_in(axis.y_unit))
                     plot_binned_curve(plotter, binned, obs, replace(style_binned.resolve(0), color=colors[key[0]]),
                                       x_unit=axis.x_unit, y_unit=axis.y_unit)
-            print(f"{obs_nu:g} GHz: {len(keys)} model curves; f_e={[run.f_e for run in runs]}", flush=True)
+            print(f"{obs_nu:g} GHz: {len(keys)} model curves; f_e={[run.sweep_value for run in runs]}", flush=True)
             handles = [
                 Line2D(
                     [], [],
                     color=colors[run.run_id],
                     label=pu.QuantityLabel(
                         r"f_{\mathrm{e}}", ".1e", "",
-                    ).to_text(run.f_e),
+                    ).to_text(run.sweep_value),
                 )
-                for run in sorted(runs, key=lambda run: run.f_e)
+                for run in sorted(runs, key=lambda run: run.sweep_value)
             ]
             axes.flat[col].legend(handles=handles,fontsize=18)
 
