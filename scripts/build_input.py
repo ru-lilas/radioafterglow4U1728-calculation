@@ -555,7 +555,12 @@ def apply_overrides(config: CommentedMap, overrides: list[str]) -> None:
 
 
 
-SweepParameter = Literal["eps_b", "eps_th", "f_e"]
+SweepParameter = Literal[
+    "eps_b",
+    "eps_th",
+    "f_e",
+    "p_index"
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -579,31 +584,57 @@ SWEEP_SPECS: dict[SweepParameter, SweepSpec] = {
                         "model_parameters.shock.common.eps_th", "eps_th_values"),
     "f_e": SweepSpec("f_e", "f-e-sweep", "--f-e-values",
                      "model_parameters.shock.powerlaw.f_e", "f_e_values"),
+    "p_index": SweepSpec(
+        "p_index",
+        "p-index-sweep",
+        "--p-index-values",
+        "model_parameters.shock.powerlaw.p_index",
+        "p_index_values"
+    )
 }
 # Retain public constants used by existing eps_B callers
 EPS_B_PATH = SWEEP_SPECS["eps_b"].yaml_path
 SWEEP_FIELDS = SWEEP_SPECS["eps_b"].manifest_fields
 
 
-def validate_sweep_values(values: list[float], *, parameter: SweepParameter = "eps_b") -> list[float]:
-    """Validate the selected fraction and deduplicate in input order"""
+def validate_sweep_values(
+    values: list[float],
+    *,
+    parameter: SweepParameter = "eps_b",
+) -> list[float]:
+    """Validate sweep values and deduplicate in input order"""
     if not values:
         raise ValueError(f"{parameter}のリストが空です")
+
     unique: list[float] = []
+
     for value in values:
-        if (isinstance(value, bool) or not isinstance(value, (int, float))
-                or not math.isfinite(value)
-                or not (0 <= value <= 1 if parameter == "f_e" else 0 < value <= 1)):
-            raise ValueError(f"Invalid {parameter} fraction: {value}; "
-                             + ("require 0 <= f_e <= 1" if parameter == "f_e"
-                                else "require 0 < fraction <= 1"))
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not math.isfinite(value)
+        ):
+            raise ValueError(f"Invalid {parameter}: {value}")
+
+        if parameter == "p_index":
+            valid = value > 2
+        elif parameter == "f_e":
+            valid = 0 <= value <= 1
+        else:
+            valid = 0 < value <= 1
+
+        if not valid:
+            raise ValueError(
+                f"Invalid {parameter} value: {value}"
+            )
+
         numeric = float(value)
         if numeric in unique:
             print(f"Duplicate {parameter} skipped: {numeric:g}")
         else:
             unique.append(numeric)
-    return unique
 
+    return unique
 
 def validate_eps_b_values(values: list[float]) -> list[float]:
     """Preserve the existing eps_B value-validation entry point"""
@@ -906,7 +937,7 @@ def generate_parameter_sweep(base: CommentedMap, values: list[float], *,
         raise ValueError(f"Sweep plan belongs to another sweep: {plan_path}")
     configs = [build_sweep_config(base, value, parameter=parameter) for value in values]
     for config in configs:
-        if parameter == "f_e":
+        if parameter in ("f_e", "p_index"):
             validate_f_e_input(config)
         extracted = extract_index_values(config)
         validate_index_header(index_path, [
@@ -990,10 +1021,21 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="general.yamlを基にrunのinput.yamlとindex.csvを生成する。"
     )
-    parser.add_argument("--mode", choices=("single", "eps-b-sweep", "eps-th-sweep", "f-e-sweep"), default="single")
+    parser.add_argument(
+        "--mode",
+        choices=(
+            "single",
+            "eps-b-sweep",
+            "eps-th-sweep",
+            "f-e-sweep",
+            "p-index-sweep",
+        ),
+        default="single",
+    )
     parser.add_argument("--eps-b-values", type=float, nargs="+")
     parser.add_argument("--eps-th-values", type=float, nargs="+")
     parser.add_argument("--f-e-values", type=float, nargs="+")
+    parser.add_argument("--p-index-values", type=float, nargs="+")
     parser.add_argument("--sweep-index", type=Path)
     parser.add_argument("--extend-sweep", action="store_true",
                         help="既存の走査条件を維持し、指定した走査値を末尾に追加")
@@ -1012,14 +1054,21 @@ def main() -> None:
     values: list[float] | None = None
     sweep_index: Path | None = args.sweep_index
     if args.mode == "single":
-        if (args.eps_b_values is not None or args.eps_th_values is not None
-                or args.f_e_values is not None or sweep_index is not None or args.extend_sweep):
+        if (
+            args.eps_b_values is not None
+            or args.eps_th_values is not None
+            or args.f_e_values is not None
+            or args.p_index_values is not None
+            or sweep_index is not None
+            or args.extend_sweep
+        ):
             parser.error("走査専用引数には走査モードが必要です")
     else:
         supplied: dict[SweepParameter, list[float] | None] = {
             "eps_b": args.eps_b_values,
             "eps_th": args.eps_th_values,
             "f_e": args.f_e_values,
+            "p_index": args.p_index_values,
         }
         for candidate, spec in SWEEP_SPECS.items():
             if args.mode == spec.mode:
