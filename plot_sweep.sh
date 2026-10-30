@@ -8,6 +8,7 @@ if [[ "$1" == "--full" ]]; then
     --minimum-chi-squared-path  minimum_chi_squared.csv\
     --model-parameter-table-path model_parameter_table.csv \
     --candidate-lightcurves-path candidate_lightcurves.csv \
+    --binned-lightcurves-path binned_lightcurves.csv\
     --obslc ./data/obs/obslc.csv \
     --plotconfig ./plotconfigs/minimum_chi_squared_lightcurves.yaml \
     --frequencies 5.5 9.0 \
@@ -22,6 +23,6 @@ else
     --candidate-lightcurves-path candidate_lightcurves.csv \
     --obslc ./data/obs/obslc.csv \
     --plotconfig ./plotconfigs/minimum_chi_squared_lightcurves.yaml \
-    --frequencies 5.5 9.0 \
+    --frequencies 9.0 \
     --output fig/f_e_lightcurves.pdf
 fi

@@ -13,7 +13,7 @@ else
     --mode f-e-sweep \
     --template input/general.yaml \
     --runs-dir data \
-    --f-e-values 0.0001 0.0005 0.001 0.005 0.01 \
+    --f-e-values 0.0005 0.005 0.05 \
     --sweep-index data/f_e_sweep.csv \
     --yes
 fi
