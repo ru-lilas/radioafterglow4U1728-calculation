@@ -127,6 +127,49 @@ def build_sweep_settings() -> SweepSettings:
 
 SweepParameter = Literal["f_e", "p_index"]
 
+SWEEP_LABELS: dict[SweepParameter, pu.QuantityLabel] = {
+    "f_e": pu.QuantityLabel(r"f_{\mathrm{e}}", ".1e", ""),
+    "p_index": pu.QuantityLabel("p", ".2f", ""),
+}
+
+
+def validate_sweep_parameter(value: object) -> SweepParameter:
+    """Narrow the plot selector independently of the generator's other axes"""
+    if isinstance(value, str):
+        if value == "f_e":
+            return "f_e"
+        if value == "p_index":
+            return "p_index"
+    raise ValueError(f"Unsupported lightcurve sweep parameter: {value!r}")
+
+
+def model_sweep_value(model: ModelParameters, parameter: SweepParameter) -> float:
+    """Read one explicitly selected model parameter as a finite real scalar"""
+    parameter = validate_sweep_parameter(parameter)
+    if parameter == "f_e":
+        return real_scalar(model.powerlaw.f_e)
+    return real_scalar(model.powerlaw.p_index)
+
+
+def sweep_title_fields(parameter: SweepParameter) -> tuple[str, ...]:
+    """Exclude the varied field from candidate shared title quantities"""
+    parameter = validate_sweep_parameter(parameter)
+    fixed = "p_index" if parameter == "f_e" else "f_e"
+    return ("eps_b", "eps_th", "mu_e_mu", "distance", fixed)
+
+
+def validate_powerlaw_metadata(df: pd.DataFrame, path: Path) -> None:
+    """Require valid power-law attrs before the model reader converts scalars"""
+    for parameter, key in (("f_e", MetadataNames.F_E), ("p_index", MetadataNames.P_INDEX)):
+        selector = validate_sweep_parameter(parameter)
+        if key not in df.attrs:
+            raise ValueError(f"Missing parameter-table metadata {parameter}: {path}")
+        try:
+            value = real_scalar(df.attrs[key])
+            build_input.validate_sweep_values([value], parameter=selector)
+        except (TypeError, ValueError) as error:
+            raise ValueError(f"Invalid parameter-table metadata {parameter}: {path}: {error}") from error
+
 
 @dataclass(frozen=True, slots=True)
 class SweepSource:
@@ -315,7 +358,7 @@ def parse_args() -> argparse.Namespace:
         parser.add_argument(*aliases, dest=name, type=Path)
     for name in ("obslc", "plotconfig", "output"):
         parser.add_argument(f"--{name}", type=Path, required=True)
-    parser.add_argument("--parameter", choices=("f_e",))
+    parser.add_argument("--parameter", choices=("f_e", "p_index"))
     parser.add_argument("--sweep-index", type=Path)
     parser.add_argument("--frequencies", type=float, nargs="+", metavar="GHz")
     for name in ("minimum_chi_squared", "model_parameter_table", "candidate_lightcurves",
@@ -556,43 +599,55 @@ def run_result_path(run: SweepRun, relative: Path) -> Path:
     return path
 
 
-def read_sweep_runs(path: Path) -> list[SweepRun]:
-    """Validate manifest identity and full input family before loading results"""
-    expected = build_input.SWEEP_SPECS["f_e"].manifest_fields
+def read_sweep_runs(path: Path, *, parameter: SweepParameter) -> list[SweepRun]:
+    """Validate one selected manifest and its full input family before results"""
+    parameter = validate_sweep_parameter(parameter)
+    spec = build_input.SWEEP_SPECS[parameter]
+    expected = spec.manifest_fields
     runs: list[SweepRun] = []
     families: list[object] = []
     with path.open(encoding="utf-8", newline="") as file:
         reader = csv.DictReader(file)
         if reader.fieldnames != expected:
-            raise ValueError(f"Expected f_e manifest columns {expected}: {path}")
-        for row in reader:
-            if None in row or any(value is None or value == "" for value in row.values()):
-                raise ValueError(f"Malformed manifest record: {row}")
-            # CSV identity fields are textual by definition, unlike numeric result columns
-            run_id = integer_identifier(int(row["run_id"]), minimum=1)
-            f_e = build_input.validate_sweep_values([float(row["f_e"])], parameter="f_e")[0]
-            run = SweepRun(run_id, row["run_name"], Path(row["input_path"]), row["config_hash"], f_e)
-            if run.run_name != f"run_{run_id:06d}" or run.input_path.parent.name != run.run_name:
-                raise ValueError(f"Conflicting RUN identity: {row}")
-            if row["status"] not in ("created", "reused"):
-                raise ValueError(f"Invalid status for {run.run_name}")
-            if any(old.run_id == run_id or old.input_path.resolve() == run.input_path.resolve()
-                   or math.isclose(old.sweep_value, f_e, rel_tol=RTOL, abs_tol=0) for old in runs):
-                raise ValueError(f"Duplicate or ambiguous sweep assignment: {row}")
-            config = build_input.load_yaml(run.input_path)
-            build_input.validate_f_e_input(config)
-            actual = real_scalar(build_input.get_nested_value(config, build_input.SWEEP_SPECS["f_e"].yaml_path))
-            if not math.isclose(actual, f_e, rel_tol=RTOL, abs_tol=0):
-                raise ValueError(f"Manifest f_e disagrees with {run.input_path}")
-            if build_input.calculate_config_hash(config) != run.config_hash:
-                raise ValueError(f"Manifest hash disagrees with {run.input_path}")
-            family = build_input.sweep_family(config, parameter="f_e")
-            if families and family != families[0]:
-                raise ValueError(f"Fixed input settings differ: {run.input_path}")
-            families.append(family)
-            runs.append(run)
+            raise ValueError(f"Expected {parameter} manifest columns {expected}: {path}")
+        for line_number, row in enumerate(reader, start=2):
+            try:
+                if None in row or any(value is None or value == "" for value in row.values()):
+                    raise ValueError(f"Malformed manifest record: {row}")
+                # Manifest cells are textual; int rejects fractional identifier spelling
+                run_id = integer_identifier(int(row["run_id"]), minimum=1)
+                value = build_input.validate_sweep_values(
+                    [float(row[parameter])], parameter=parameter,
+                )[0]
+                run = SweepRun(run_id, row["run_name"], Path(row["input_path"]),
+                               row["config_hash"], value)
+                if run.run_name != f"run_{run_id:06d}" or run.input_path.parent.name != run.run_name:
+                    raise ValueError(f"Conflicting RUN identity: {row}")
+                if row["status"] not in ("created", "reused"):
+                    raise ValueError(f"Invalid status for {run.run_name}")
+                if any(old.run_id == run_id or old.input_path.resolve() == run.input_path.resolve()
+                       or math.isclose(old.sweep_value, value, rel_tol=RTOL, abs_tol=0) for old in runs):
+                    raise ValueError(f"Duplicate or ambiguous sweep assignment: {row}")
+                config = build_input.load_yaml(run.input_path)
+                # The generator intentionally shares this power-law validator for both axes
+                build_input.validate_f_e_input(config)
+                actual = real_scalar(build_input.get_nested_value(config, spec.yaml_path))
+                if not math.isclose(actual, value, rel_tol=RTOL, abs_tol=0):
+                    raise ValueError(f"Manifest {parameter} disagrees with {run.input_path}")
+                if build_input.calculate_config_hash(config) != run.config_hash:
+                    raise ValueError(f"Manifest hash disagrees with {run.input_path}")
+                family = build_input.sweep_family(config, parameter=parameter)
+                if families and family != families[0]:
+                    raise ValueError(f"Fixed input settings differ: {run.input_path}")
+                families.append(family)
+                runs.append(run)
+            except (KeyError, TypeError, ValueError, OSError) as error:
+                raise ValueError(
+                    f"{parameter} manifest {path}, record {line_number}, "
+                    f"RUN={row.get('run_name')}, input={row.get('input_path')}: {error}"
+                ) from error
     if not runs:
-        raise ValueError(f"Empty sweep manifest: {path}")
+        raise ValueError(f"Empty {parameter} sweep manifest: {path}")
     return sorted(runs, key=lambda run: run.sweep_value)
 
 
@@ -617,7 +672,7 @@ def validate_provenance(df: pd.DataFrame, run: SweepRun, path: Path) -> None:
             candidates.extend(require_series(df, name).tolist())
         if candidates:
             if name in ("f_e", "p_index"):
-                key = f"model_parameters.shock.powerlaw.{name}"
+                key = build_input.SWEEP_SPECS[validate_sweep_parameter(name)].yaml_path
             elif name in ("mu", "mu_e"):
                 key = f"model_parameters.shock.common.molecular_weight.{name}"
             else:
@@ -668,7 +723,7 @@ def color_mapping(
     runs: list[SweepRun],
     settings: SweepSettings,
 ) -> dict[int, str]:
-    """Assign evenly spaced colormap colors in ascending f_e order"""
+    """Assign evenly spaced colormap colors in ascending sweep-value order"""
     ordered = sorted(runs, key=lambda run: run.sweep_value)
     cmap = colormaps[settings.cmap]
     positions = (
@@ -751,7 +806,8 @@ def draw_bestfit(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
 
 def draw_sweep(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
     """Select each RUN's bestfit independently and compose a shared-color figure"""
-    settings = build_sweep_settings()
+    parameter = validate_sweep_parameter(args.parameter)
+    sweep_label = SWEEP_LABELS[parameter]
     settings = replace(
         build_sweep_settings(),
         show_binned=args.binned_lightcurves_path is not None,
@@ -770,7 +826,7 @@ def draw_sweep(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
         raise ValueError("Selected binned curves require --binned-lightcurves-path")
     if not settings.show_binned and binned_path is not None:
         raise ValueError("Enable show_binned in build_sweep_settings() to use binned results")
-    runs = read_sweep_runs(args.sweep_index)
+    runs = read_sweep_runs(args.sweep_index, parameter=parameter)
     colors = color_mapping(runs, settings)
     sources: set[Path] = {args.sweep_index, args.obslc, args.plotconfig}
     # Check original observation headers, then reuse the existing observation abstraction
@@ -807,12 +863,16 @@ def draw_sweep(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
             sources.add(path)
             tables["binned"] = read_table(path)
             validate_provenance(tables["binned"], run, path)
+        validate_powerlaw_metadata(tables["parameters"], paths["parameters"])
         parameters = ModelParameters.from_df(tables["parameters"])
         if parameters.switches[SwitchKeys.THERMAL_ONLY]:
             raise ValueError(f"Thermal-only result parameters: {run.run_name}")
-        # The parameter-table schema must carry f_e even if curve files omit it
-        if not math.isclose(real_scalar(parameters.powerlaw.f_e), run.sweep_value, rel_tol=RTOL, abs_tol=0):
-            raise ValueError(f"Parameter-table f_e mismatch: {run.run_name}")
+        # Both attrs are required even when the curve tables omit power-law parameters
+        if not math.isclose(model_sweep_value(parameters, parameter), run.sweep_value,
+                            rel_tol=RTOL, abs_tol=0):
+            raise ValueError(
+                f"Parameter-table {parameter} mismatch: {run.run_name}: {paths['parameters']}"
+            )
         config_input = build_input.load_yaml(run.input_path)
         expected_distance = real_scalar(build_input.get_nested_value(config_input, "model_parameters.distance.value"))
         distance_unit: object = build_input.get_nested_value(config_input, "model_parameters.distance.unit")
@@ -898,7 +958,7 @@ def draw_sweep(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
             plot_observed(plotter, obs, col, x_unit=axis.x_unit, y_unit=axis.y_unit, sweep=True)
             keys = [key for key in curves if key[1] == obs_nu]
             title = [pu.QuantityLabel(r"\nu", ".4g", r"\mathrm{GHz}").to_text(obs_nu)]
-            for name in ("eps_b", "eps_th", "mu_e_mu", "distance", "p_index"):
+            for name in sweep_title_fields(parameter):
                 if name not in plotconf.metadata.items:
                     continue
                 quantities = [metadata[key].to_dict()[name] for key in keys]
@@ -922,20 +982,17 @@ def draw_sweep(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
                                binned.fnu_with_bg.to_value_in(axis.y_unit))
                     plot_binned_curve(plotter, binned, obs, replace(style_binned.resolve(0), color=colors[key[0]]),
                                       x_unit=axis.x_unit, y_unit=axis.y_unit)
-            print(f"{obs_nu:g} GHz: {len(keys)} model curves; f_e={[run.sweep_value for run in runs]}", flush=True)
+            print(f"{obs_nu:g} GHz: {len(keys)} model curves; {parameter}={[run.sweep_value for run in runs]}", flush=True)
             handles = [
                 Line2D(
                     [], [],
                     color=colors[run.run_id],
-                    label=pu.QuantityLabel(
-                        r"f_{\mathrm{e}}", ".1e", "",
-                    ).to_text(run.sweep_value),
+                    label=sweep_label.to_text(run.sweep_value),
                 )
                 for run in sorted(runs, key=lambda run: run.sweep_value)
             ]
             axes.flat[col].legend(handles=handles,fontsize=18)
 
-            save_figure(fig, args.output, sources)
         save_figure(fig, args.output, sources)
     finally:
         plt.close(fig)
