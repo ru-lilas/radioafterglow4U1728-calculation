@@ -21,7 +21,7 @@ layout:
       scale: "log"
       limits: [1.0e-01,1.0e+01]
       label:
-        prefix: '$F_{\nu,\mathrm{net,peak}}$'
+        prefix: '$F_{\nu,\mathrm{peak}}$'
         unit: "mJy"
         fontsize: 32
     ticks:
