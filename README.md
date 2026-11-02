@@ -18,3 +18,16 @@
 ```
     make hogehoge
 ```
+
+# フィードバック
+## Chevalier contour
+- thetaのlabelが大きすぎる(いらない?)
+- contour labelをもう少し強調する& 被らない
+- 縦軸のlabelのnetを取り除く(captionで説明すればよい)
+
+## bestfit-lightcurve
+- parameterのfontsizeが小さい
+- 5.5と9は左右反対のほうがよい
+
+## energetics
+- PICのepsBの値をaxvlineで引く
