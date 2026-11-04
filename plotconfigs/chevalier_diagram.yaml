@@ -1,6 +1,6 @@
 layout:
   figure:
-    figsize: [12,12]
+    figsize: [3,4]
     dpi: 100
     layout_engine: constrained
   subplots:
@@ -16,23 +16,23 @@ layout:
       label:
         prefix: '$\nu t_{\mathrm{peak}}$'
         unit: "GHz min"
-        fontsize: 32
+        fontsize: 11
     y:
       scale: "log"
       limits: [1.0e-01,1.0e+01]
       label:
         prefix: '$F_{\nu,\mathrm{peak}}$'
         unit: "mJy"
-        fontsize: 32
+        fontsize: 11
     ticks:
-      labelsize: 32
+      labelsize: 8
       direction: "in"
-      major_length: 10.0
-      minor_length: 8.0
-      width: 1.0
-      pad: 10.0
+      major_length: 6.0
+      minor_length: 3.0
+      width: 0.5
+      pad: 2.0
 metadata:
-  fontsize: 18
+  fontsize: 8
   items:
     eps_b:
       show: true
@@ -101,7 +101,7 @@ components:
       label: &ContourLabel_tmp
         inline: true
         inline_spacing: 5
-        fontsize: 16
+        fontsize: 9
       label_format:
         prefix: 'A_{\mathrm{w}}'
         fmt: ".0e"
@@ -140,11 +140,11 @@ components:
         - "#FFCABF"
         - "#BFE4FF"
       edgecolor: "#000000"
-      linewidth: 1.0
+      linewidth: 0.5
       alpha: 0.8
-      zorder: 1
+      zorder: 3
       hatches:
-        - "/"
+        - "///"
         - null
     label_format:
       prefix: ''
@@ -158,16 +158,16 @@ components:
         - "#FF4B00"
         - "#005AFF"
       marker: "o"
-      markersize: 6.0
-      markeredgewidth: 1.0
+      markersize: 3.0
+      markeredgewidth: 0.5
       markeredgecolors: 
         - "#000000"
-      elinewidth: 1.0
+      elinewidth: 0.5
       capsize: 1.0
       capthick: 1.0
       linestyle: "none"
       alpha: null
-      zorder: 2.0
+      zorder: 4.0
   non_relativistic_boundary: &BoundaryComponent_tmp
     type: line
     legend: false
@@ -175,7 +175,7 @@ components:
       colors:
         - "#000000"
       linewidth: 1.0
-      linestyle: "--"
+      linestyle: ":"
       alpha: null
       zorder: 2.0
   ultra_relativistic_boundary:
@@ -196,5 +196,5 @@ components:
       ha: right
       va: bottom
   legend:
-    fontsize: 24
+    fontsize: 8
     loc: "upper left"

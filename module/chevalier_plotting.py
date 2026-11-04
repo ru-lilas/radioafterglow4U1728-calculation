@@ -181,7 +181,11 @@ class ChevalierPlotData:
         grids = PeakGrid.from_df(peak_table)
         region = grids.reduce_to_plotregion(axes.range(), phi_unit=axes.x_unit, fnu_unit=axes.y_unit)
         theta = grids.theta_grid(models).to_FloatGrid("")
-        invisible = region.out_of_plotregion.take_or([theta.less_than(1.0), theta.greater_than(10.0)])
+        beta_sh = grids.beta_sh_grid(models).to_FloatGrid("")
+        invisible = region.out_of_plotregion.take_or([
+            beta_sh.less_than(0.169),
+            beta_sh.greater_than(0.51)
+        ])
         observations = LongformatLightcurve.from_csv(paths.obslc).group_by_frequency()
         bestfits = (FileReader.table_from_csv(paths.chevalier_bestfit_points)
                     if paths.chevalier_bestfit_points is not None else None)
@@ -215,9 +219,13 @@ class ChevalierPlotData:
     def draw_boundaries(self, plotter: plot_utils.Plotter) -> None:
         """Draw the existing temperature boundaries and their labels"""
         components = self.config.components
-        for name, critical in (("non_relativistic_boundary", 1.0), ("ultra_relativistic_boundary", 10.0)):
+        for name, critical in (
+                ("non_relativistic_boundary", 1.0),
+            ):
             boundary = RelativisticBoundary.build(
-                plotregion=self.plotregion, theta=self.theta, theta_crit=critical,
+                plotregion=self.plotregion,
+                theta=self.theta,
+                theta_crit=critical,
                 style=components[name].resolve_line_style(0),
             )
             boundary.plot(plotter)
