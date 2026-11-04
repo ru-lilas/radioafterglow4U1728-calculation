@@ -221,10 +221,6 @@ class ChevalierPlotData:
                 style=components[name].resolve_line_style(0),
             )
             boundary.plot(plotter)
-            BoundaryLabel(
-                boundary.phi_boundary, boundary.fnu_boundary, boundary.theta_crit,
-                components[name + "_label"].text_style_config,
-            ).plot(plotter)
 
     def draw_observations(self, plotter: plot_utils.Plotter, *, show_legend: bool = True) -> None:
         """Draw observed peak regions and optional frequency-matched bestfit points"""
