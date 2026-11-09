@@ -23,12 +23,13 @@ def build_contour_components() -> tuple[ContourComponent, ...]:
             label=plot_utils.ContourLabelStyle(
                 inline=True,
                 inline_spacing=5,
-                fontsize=8
+                fontsize=6
             ),
             label_format=plot_utils.QuantityLabel(
                 r"A_{\mathrm{w}}",
                 ".0e",
-                r"\mathrm{g\,cm^{-1}}"
+                r"\mathrm{g\,cm^{-1}}",
+                exponent_only=True
             ),
         )),
         ContourComponent("beta_sh", plot_utils.ContourStyleConfig(
@@ -42,7 +43,7 @@ def build_contour_components() -> tuple[ContourComponent, ...]:
             label=plot_utils.ContourLabelStyle(
                 inline=True,
                 inline_spacing=5,
-                fontsize=8
+                fontsize=6
             ),
             label_format=plot_utils.QuantityLabel(
                 r"v_{\mathrm{sh}}/c", ".2f", "",

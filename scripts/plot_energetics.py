@@ -159,7 +159,7 @@ def build_plot_config(parameter: SweepParameter) -> PlotSettings:
         TitleItem("p_index", "column", pu.MetadataConfig(True, "",
             pu.QuantityLabel("p", ".2f", "")), "positive", "omit"),
         TitleItem("f_e", "column", pu.MetadataConfig(True, "",
-            pu.QuantityLabel(r"f_e", ".0e", "")), "positive", "omit"),
+            pu.QuantityLabel(r'\eta_{\mathrm{e,nt}}', ".0e", "")), "positive", "omit"),
         TitleItem("burnt_mass_fraction", "attrs", pu.MetadataConfig(True, "",
             pu.QuantityLabel(r"f_{\mathrm{nuc}}", ".1f", "")), "fraction", "omit"),
         TitleItem("distance_value", "attrs", pu.MetadataConfig(True, "kpc",

@@ -123,13 +123,13 @@ class SweepSettings:
 
 def build_sweep_settings() -> SweepSettings:
     """Configure sweep curves and color normalization directly in Python"""
-    return SweepSettings(normalization="linear")
+    return SweepSettings(normalization="linear",cmap="berlin")
 
 
 SweepParameter = Literal["f_e", "p_index"]
 
 SWEEP_LABELS: dict[SweepParameter, pu.QuantityLabel] = {
-    "f_e": pu.QuantityLabel(r"f_{\mathrm{e}}", ".1e", ""),
+    "f_e": pu.QuantityLabel(r"\eta_{\mathrm{e}}", ".1e", ""),
     "p_index": pu.QuantityLabel("p", ".2f", ""),
 }
 

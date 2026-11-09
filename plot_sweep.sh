@@ -24,5 +24,5 @@ else
     --obslc ./data/obs/obslc.csv \
     --plotconfig ./plotconfigs/minimum_chi_squared_lightcurves.yaml \
     --frequencies 9.0 \
-    --output fig/f_e_lightcurves.pdf
+    --output fig/powerlaw_lightcurves.pdf
 fi

@@ -73,7 +73,7 @@ metadata:
       show: true
       unit: ""
       label_format:
-        prefix: 'f_{\mathrm{e}}'
+        prefix: '\eta_{\mathrm{e,nt}}'
         fmt: '.1e'
         unit: ''
 components:

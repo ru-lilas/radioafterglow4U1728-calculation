@@ -83,6 +83,23 @@ all: best-lc chevalierbest pdf-spectrum
 # view-energetics: $(FILEPATH_ENERGETICS_PDF)
 # 	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
 
+copy-all: copy-chevalier copy-bestfitlcs
+
+copy-budget: \
+	fig/energetics_epsb.pdf
+	cp $< ../paper/figures/budget.pdf
+
+copy-powerlaw-dependence: \
+	$(FIGDIR)/powerlaw_lightcurves.pdf
+	cp $< ../paper/figures/powerlaw_lightcurves.pdf
+
+copy-chevalier: \
+	$(FILEPATH_CHEVALIER_WITH_BESTFITS_PDF)
+	cp $< ../paper/figures/contours.pdf
+copy-bestfitlcs: \
+	$(FILEPATH_MINIMUM_CHI2_LC_PDF)
+	cp $< ../paper/figures/bestfit_lightcurves.pdf
+
 fig/energetics_epsb.pdf: \
 	scripts/plot_energetics.py \
 	data/energetics_epsb.csv
@@ -90,6 +107,12 @@ fig/energetics_epsb.pdf: \
 		--input data/energetics_epsb.csv \
 		--parameter eps_b \
 		--output $@
+
+$(FIGDIR)/powerlaw_lightcurves.pdf: \
+	sweep_lc.sh \
+	scripts/plot_lightcurve.py \
+	$(PLOTCONFIGDIR)/lightcurves_powerlaw_sensitivity.yaml
+	bash $<
 
 view-best-lc: $(FILEPATH_MINIMUM_CHI2_LC_PDF)
 	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &

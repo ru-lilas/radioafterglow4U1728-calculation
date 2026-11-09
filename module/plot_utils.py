@@ -77,20 +77,19 @@ class QuantityLabel:
     unit: str
     suffix: str = ""
     show_equals: bool = True
+    exponent_only: bool = False
 
-    def formatted_value(
-        self,
-        value: float,
-    ) -> str:
+    def formatted_value(self, value: float) -> str:
         formatted = f"{value:{self.fmt}}"
 
         if self.fmt.endswith("e"):
             mantissa, exponent = formatted.split("e")
+            exponent = int(exponent)
 
-            return (
-                rf"{mantissa}"
-                rf"\times10^{{{int(exponent)}}}"
-            )
+            if self.exponent_only:
+                return rf"10^{{{exponent}}}"
+
+            return rf"{mantissa}\times10^{{{exponent}}}"
 
         return formatted
 

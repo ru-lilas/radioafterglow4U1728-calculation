@@ -100,7 +100,7 @@ metadata:
       unit: ""
       label_format:
         <<: *LabelFormatTmp
-        prefix: 'f_{\mathrm{e}}'
+        prefix: '\eta_{\mathrm{e,nt}}'
         fmt: '.1e'
         unit: ''
     chi_squared: 
@@ -187,7 +187,7 @@ components:
       tick_labelsize: 20
       label:
         <<: *ColorbarLabel
-        prefix: "$f_e$"
+        prefix: '$\eta_{\mathrm{e,nt}$'
   fiducial_parameter:
     type: text
     legend: false

@@ -6,4 +6,4 @@ python -m scripts.plot_lightcurve_sweep \
   --candidate-lightcurves-path candidate_lightcurves.csv \
   --obslc ./data/obs/obslc.csv \
   --plotconfig plotconfigs/minimum_chi_squared_lightcurves.yaml \
-  --output fig/lightcurves.pdf
+  --output fig/powerlaw_lightcurves.pdf

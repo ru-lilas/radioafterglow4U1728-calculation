@@ -99,7 +99,7 @@ metadata:
       unit: ""
       label_format:
         <<: *LabelFormatTmp
-        prefix: 'f_{\mathrm{e}}'
+        prefix: '\eta_{\mathrm{e},\mathrm{nt}}'
         fmt: '.1e'
         unit: ''
     chi_squared: 
