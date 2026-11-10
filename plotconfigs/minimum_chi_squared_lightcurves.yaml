@@ -17,7 +17,7 @@ layout:
         label:
           prefix: 'Time Since the X-ray Burst'
           unit: &x_unit "min"
-          fontsize: 12
+          fontsize: 14
     y:
       - &flux_axis
         scale: "linear"
@@ -25,7 +25,7 @@ layout:
         label:
           prefix: 'Radio Flux Density'
           unit: &y_unit "mJy"
-          fontsize: 12
+          fontsize: 14
       - *flux_axis
     ticks:
       labelsize: 11
@@ -38,7 +38,7 @@ metadata:
   fontsize: 8
   items:
     eps_b:
-      show: true
+      show: false
       unit: ""
       label_format: &LabelFormatTmp
         prefix: '\varepsilon_{\mathrm{B}}'
@@ -47,7 +47,7 @@ metadata:
         suffix: ""
         show_equals: true
     eps_th:
-      show: true
+      show: false
       unit: ""
       label_format:
         <<: *LabelFormatTmp
@@ -55,7 +55,7 @@ metadata:
         fmt: '.2f'
         unit: ""
     distance:
-      show: true
+      show: false
       unit: "kpc"
       label_format:
         <<: *LabelFormatTmp
@@ -63,7 +63,7 @@ metadata:
         fmt: '.1f'
         unit: '\mathrm{kpc}'
     mu_e_mu:
-      show: true
+      show: false
       unit: ""
       label_format:
         <<: *LabelFormatTmp

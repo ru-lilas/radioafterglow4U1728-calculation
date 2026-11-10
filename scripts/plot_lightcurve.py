@@ -119,7 +119,10 @@ class SweepSettings:
 
 def build_sweep_settings() -> SweepSettings:
     """Configure sweep curves and color normalization directly in Python"""
-    return SweepSettings(normalization="linear",cmap="berlin")
+    return SweepSettings(
+        normalization="linear",
+        cmap="viridis"
+    )
 
 
 SweepParameter = Literal["f_e", "p_index"]
@@ -230,10 +233,11 @@ def validate_sweep_source(source: SweepSource) -> None:
 
 
 def validate_sweep_panels(panels: tuple[SweepPanelSpec, ...]) -> tuple[int, int]:
-    """Validate panel configuration and return its rectangular grid dimensions"""
+    """Validate a single-frequency column and return its grid dimensions"""
     if not isinstance(panels, tuple) or not panels:
         raise ValueError("Configure a nonempty tuple of sweep panels")
     positions: set[tuple[int, int]] = set()
+    frequency_ghz: float | None = None
     source_signatures: dict[Path, tuple[SweepParameter, tuple[Path | None, ...]]] = {}
     supported = (FluxName.FNU_TOTAL, FluxName.FNU_THERMAL, FluxName.FNU_POWERLAW)
     for panel in panels:
@@ -242,6 +246,8 @@ def validate_sweep_panels(panels: tuple[SweepPanelSpec, ...]) -> tuple[int, int]
         for name, index in (("row", panel.row), ("col", panel.col)):
             if isinstance(index, bool) or not isinstance(index, int) or index < 0:
                 raise ValueError(f"Panel {name} must be a nonnegative integer: {index!r}")
+        if panel.col != 0:
+            raise ValueError("Sweep panels must be placed in a single column")
         position = (panel.row, panel.col)
         if position in positions:
             raise ValueError(f"Duplicate panel position: {position}")
@@ -265,10 +271,11 @@ def validate_sweep_panels(panels: tuple[SweepPanelSpec, ...]) -> tuple[int, int]
         frequency = panel.frequency
         if not isinstance(frequency.unit, str) or not frequency.unit:
             raise ValueError(f"Panel {position}: explicit frequency unit is required")
-        value = real_scalar(frequency.value)
-        factor = real_scalar(u.Unit(frequency.unit).to(u.GHz))
-        if real_scalar(value * factor) <= 0:
-            raise ValueError(f"Panel {position}: frequency must be positive")
+        panel_ghz = frequency_in_ghz(frequency)
+        if frequency_ghz is None:
+            frequency_ghz = panel_ghz
+        elif not math.isclose(panel_ghz, frequency_ghz, rel_tol=RTOL, abs_tol=0):
+            raise ValueError(f"Panel {position}: all sweep panels must use the same frequency")
         if (not isinstance(panel.axes, pu.AxesConfig)
                 or not isinstance(panel.axes.x, pu.AxisConfig)
                 or not isinstance(panel.axes.y, pu.AxisConfig)):
@@ -292,33 +299,26 @@ def validate_sweep_panels(panels: tuple[SweepPanelSpec, ...]) -> tuple[int, int]
         if settings.cmap not in colormaps:
             raise ValueError(f"Panel {position}: unknown colormap {settings.cmap!r}")
     nrows = max(row for row, _ in positions) + 1
-    ncols = max(col for _, col in positions) + 1
-    if len(positions) != nrows * ncols:
-        raise ValueError("Panel positions must fill a rectangular grid without gaps")
-    return nrows, ncols
+    if len(positions) != nrows:
+        raise ValueError("Sweep panel rows must be contiguous")
+    return nrows, 1
 
 
 def build_sweep_panels(
     *,
     rows: tuple[tuple[SweepSource, SweepSettings], ...],
-    frequencies: tuple[QuantityData, ...],
+    frequency: QuantityData,
     axes: pu.AxesConfig,
 ) -> tuple[SweepPanelSpec, ...]:
-    """Build any number of source rows with explicit frequency columns
-
-    Individual returned instances may be moved or restyled with replace before
-    passing the tuple to draw_sweep. Use SweepPanelSpec directly for layouts
-    with different frequencies in different rows
-    """
-    if not rows or not frequencies:
-        raise ValueError("Supply source rows and explicit frequencies")
+    """Build one row per sweep source at the shared frequency"""
+    if not rows:
+        raise ValueError("Supply at least one sweep source row")
     x = axes.x
     y = axes.y
     if isinstance(x, tuple):
-        if len(x) == 1:
-            x = x[0]
-        elif len(x) != len(frequencies):
-            raise ValueError("Column axes must match the configured frequencies")
+        if len(x) != 1:
+            raise ValueError("Sweep panels require one x-axis configuration")
+        x = x[0]
     if isinstance(y, tuple):
         if len(y) == 1:
             y = y[0]
@@ -326,10 +326,9 @@ def build_sweep_panels(
             raise ValueError("Row axes must match the configured sources")
     concrete_axes = replace(axes, x=x, y=y)
     panels = tuple(
-        SweepPanelSpec(row, col, source, frequency,
-                       concrete_axes.for_subplot(row, col), settings)
+        SweepPanelSpec(row, 0, source, frequency,
+                       concrete_axes.for_subplot(row, 0), settings)
         for row, (source, settings) in enumerate(rows)
-        for col, frequency in enumerate(frequencies)
     )
     validate_sweep_panels(panels)
     return panels
@@ -352,23 +351,26 @@ def parse_args() -> argparse.Namespace:
         parser.add_argument(f"--{name}", type=Path, required=True)
     parser.add_argument("--parameter", choices=("f_e", "p_index"))
     parser.add_argument("--sweep-index", type=Path)
-    parser.add_argument("--frequencies", type=float, nargs="+", metavar="GHz")
+    parser.add_argument("--frequency", "--frequencies", type=float, metavar="GHz",
+                        help="Single observing frequency to plot in sweep mode.")
     for name in ("minimum_chi_squared", "model_parameter_table", "candidate_lightcurves",
                  "binned_lightcurves"):
         parser.add_argument("--" + name.replace("_", "-") + "-path", type=Path)
     args = parser.parse_args()
     single = ("input", "candidate_lightcurves", "model_parameter_table",
               "minimum_chi_squared", "binned_lightcurves")
-    sweep = ("sweep_index", "parameter", "frequencies", "minimum_chi_squared_path",
+    sweep = ("sweep_index", "parameter", "frequency", "minimum_chi_squared_path",
              "model_parameter_table_path", "candidate_lightcurves_path", "binned_lightcurves_path")
     if args.mode == "sweep":
         for name in single:
             if getattr(args, name) is not None:
                 parser.error(f"--mode sweep cannot use --{name}")
-        for name in ("parameter", "sweep_index", "minimum_chi_squared_path",
+        for name in ("parameter", "sweep_index", "frequency", "minimum_chi_squared_path",
                      "model_parameter_table_path", "candidate_lightcurves_path"):
             if getattr(args, name) is None:
                 parser.error(f"--mode sweep requires --{name.replace('_', '-')}")
+        if not math.isfinite(args.frequency) or args.frequency <= 0:
+            parser.error("--frequency must be finite and positive")
     else:
         for name in sweep:
             if getattr(args, name) is not None:
@@ -419,8 +421,12 @@ def plot_observed(
                  style=style_background.resolve(0))
     style = style_observed.resolve(col % len(style_observed.colors))
     if sweep:
-        style = replace(style, markerfacecolor="#222222", markeredgecolor="#222222",
-                        ecolor="#222222", zorder=5)
+        style = replace(
+            style,
+            markerfacecolor="#000000",
+            markeredgecolor="#000000",
+            ecolor="#000000",
+            zorder=1)
     return plotter.errorbar(x=observed.t.to_value_in(x_unit),
                      y=observed.fnu_total.to_value_in(y_unit),
                      yerr=observed.fnu_total_err.to_value_in(y_unit), style=style)
@@ -573,15 +579,6 @@ def match_frequency(available: list[float], requested: float) -> float:
     return matches[0]
 
 
-def select_frequencies(available: list[float], requested: list[float] | None) -> list[float]:
-    """Return deterministic ascending unique frequency selections"""
-    if requested is None:
-        return sorted(available)
-    if not requested:
-        raise ValueError("At least one frequency is required")
-    return sorted({match_frequency(available, nu) for nu in requested})
-
-
 def run_result_path(run: SweepRun, relative: Path) -> Path:
     """Resolve a result path without permitting escape from its RUN"""
     root = run.input_path.resolve().parent
@@ -719,9 +716,9 @@ def color_mapping(
     ordered = sorted(runs, key=lambda run: run.sweep_value)
     cmap = colormaps[settings.cmap]
     positions = (
-        np.linspace(0.0, 1.0, len(ordered))
+        np.linspace(0.10, 0.90, len(ordered))
         if len(ordered) > 1
-        else np.array([0.5])
+        else np.array([0.50])
     )
 
     return {
@@ -868,15 +865,6 @@ def canonical_sweep_sources(
     return sources
 
 
-def requested_source_frequencies(
-    panels: tuple[SweepPanelSpec, ...],
-    observed: dict[float, ObservedLightcurve],
-) -> list[float]:
-    """Deduplicate panel requests using the matched observation frequency keys"""
-    return sorted({match_frequency(list(observed), frequency_in_ghz(panel.frequency))
-                   for panel in panels})
-
-
 def validate_axis_sharing(
     panels: tuple[SweepPanelSpec, ...], subplots: pu.SubplotConfig,
 ) -> None:
@@ -904,11 +892,13 @@ def load_sweep_source(
     observed: dict[float, ObservedLightcurve],
     components: tuple[FluxName, ...],
     show_binned: bool,
-    requested_frequencies: list[float] | None,
+    frequency_ghz: float,
     source_files: set[Path],
 ) -> LoadedSweep:
-    """Validate one source and construct reusable selected curves without Axes"""
+    """Validate one source and prepare its curves at the selected frequency"""
     validate_sweep_source(source)
+    obs_nu = match_frequency(list(observed), frequency_ghz)
+    obs = observed[obs_nu]
     supported = (FluxName.FNU_TOTAL, FluxName.FNU_THERMAL, FluxName.FNU_POWERLAW)
     if not components or len(set(components)) != len(components) or any(c not in supported for c in components):
         raise ValueError("Select distinct supported continuous flux components")
@@ -965,64 +955,41 @@ def load_sweep_source(
         minima = frequency_groups(tables["minimum"])
         continuous_groups = frequency_groups(tables["continuous"])
         binned_groups = frequency_groups(tables["binned"]) if show_binned else {}
-        for group in continuous_groups.values():
-            validate_samples(group)
-            for component in components:
-                numeric_values(group, component)
-        for group in binned_groups.values():
-            validate_samples(group, binned=True)
         frequencies[run.run_id] = sorted(minima)
-        if len(select_frequencies(sorted(minima), sorted(minima))) != len(minima):
-            raise ValueError(f"Ambiguous bestfit frequencies: {run.run_name}")
-        for nu, df_min in minima.items():
-            try:
-                if len(df_min) != 1:
-                    raise ValueError("Expected exactly one bestfit result per frequency")
-                index = integer_identifier(require_series(df_min, ColumnNames.MODEL_INDEX).iloc[0])
-                result = clc.ChiSquaredResult.from_series(df_min.iloc[0])
-                chi2 = real_scalar(result.chi_squared)
-                if chi2 < 0:
-                    raise ValueError("Negative chi-squared")
-                obs_nu = match_frequency(list(observed), nu)
-                obs = observed[obs_nu]
-                nu_quantity = QuantityData(nu, "GHz")
-                source_nu = match_frequency(list(continuous_groups), nu)
-                df_continuous = select_model_df(continuous_groups[source_nu], index, source_nu)
-                selected = requested_frequencies is None or any(
-                    math.isclose(obs_nu, nu_requested, rel_tol=RTOL, abs_tol=0)
-                    for nu_requested in requested_frequencies
-                )
-                if not selected:
-                    if show_binned:
-                        bin_nu = match_frequency(list(binned_groups), nu)
-                        select_model_df(binned_groups[bin_nu], index, bin_nu)
-                    continue
-                key = (run.run_id, obs_nu, index)
-                curves[key] = {component: build_continuous_lightcurve(
-                    df_continuous, index, nu_quantity, component,
-                ) for component in components}
-                metadata[key] = PlotMetadata.from_model(parameters.select_models([index]), chi2)
-                if show_binned:
-                    bin_nu = match_frequency(list(binned_groups), nu)
-                    df_bin = select_model_df(binned_groups[bin_nu], index, bin_nu)
-                    binned = clc.BinnedLightcurveWithBackground.from_df(df_bin, obs.fnu_background.index(0))
-                    values = np.asarray(binned.fnu_with_bg.to_value_in("mJy"), dtype=float)
-                    if not np.all(np.isfinite(values)) or values.size != len(df_bin):
-                        raise ValueError("Invalid binned flux values")
-                    binned_curves[key] = binned
-            except (KeyError, ValueError, TypeError) as error:
-                raise ValueError(f"{run.run_name}, nu={nu:g} GHz: {error}") from error
-    reference = frequencies[runs[0].run_id]
-    if requested_frequencies is None:
-        for run in runs:
-            available = frequencies[run.run_id]
-            if len(available) != len(reference) or select_frequencies(available, reference) != available:
-                raise ValueError(f"Bestfit frequency sets differ: {run.run_name}")
-        if len(observed) != len(reference):
-            raise ValueError("Observation and bestfit frequency sets differ; use --frequencies explicitly")
-    selected = select_frequencies(reference, requested_frequencies)
-    for run in runs:
-        select_frequencies(frequencies[run.run_id], selected)
+        try:
+            nu = match_frequency(frequencies[run.run_id], obs_nu)
+            df_min = minima[nu]
+            if len(df_min) != 1:
+                raise ValueError("Expected exactly one bestfit result at the selected frequency")
+            index = integer_identifier(require_series(df_min, ColumnNames.MODEL_INDEX).iloc[0])
+            result = clc.ChiSquaredResult.from_series(df_min.iloc[0])
+            chi2 = real_scalar(result.chi_squared)
+            if chi2 < 0:
+                raise ValueError("Negative chi-squared")
+            nu_quantity = QuantityData(nu, "GHz")
+            source_nu = match_frequency(list(continuous_groups), nu)
+            continuous_group = continuous_groups[source_nu]
+            validate_samples(continuous_group)
+            for component in components:
+                numeric_values(continuous_group, component)
+            df_continuous = select_model_df(continuous_group, index, source_nu)
+            key = (run.run_id, obs_nu, index)
+            curves[key] = {component: build_continuous_lightcurve(
+                df_continuous, index, nu_quantity, component,
+            ) for component in components}
+            metadata[key] = PlotMetadata.from_model(parameters.select_models([index]), chi2)
+            if show_binned:
+                bin_nu = match_frequency(list(binned_groups), nu)
+                binned_group = binned_groups[bin_nu]
+                validate_samples(binned_group, binned=True)
+                df_bin = select_model_df(binned_group, index, bin_nu)
+                binned = clc.BinnedLightcurveWithBackground.from_df(df_bin, obs.fnu_background.index(0))
+                values = np.asarray(binned.fnu_with_bg.to_value_in("mJy"), dtype=float)
+                if not np.all(np.isfinite(values)) or values.size != len(df_bin):
+                    raise ValueError("Invalid binned flux values")
+                binned_curves[key] = binned
+        except (KeyError, ValueError, TypeError) as error:
+            raise ValueError(f"{run.run_name}, nu={obs_nu:g} GHz: {error}") from error
     return runs, curves, binned_curves, metadata, frequencies
 
 
@@ -1049,17 +1016,24 @@ def draw_sweep_panel(
     if len(keys) != len(runs) or {key[0] for key in keys} != {run.run_id for run in runs}:
         raise ValueError(f"Incomplete prepared curves at panel {(panel.row, panel.col)}")
     title = [pu.QuantityLabel(r"\nu", ".4g", r"\mathrm{GHz}").to_text(nu_ghz)]
-    for name in sweep_title_fields(panel.source.parameter):
-        if name not in metadata_config.items:
-            continue
-        quantities = [metadata[key].to_dict()[name] for key in keys]
-        quantity = quantities[0]
-        value = real_scalar(quantity.value)
-        if any(not math.isclose(real_scalar(other.value_in(quantity.unit)), value,
-                                rel_tol=RTOL, abs_tol=0) for other in quantities):
-            raise ValueError(f"Shared title field varies: {name}, panel {(panel.row, panel.col)}")
-        pu.MetadataComponent(quantity, metadata_config.items[name]).add_strings(title)
-    plotter.title(strings=title, fontsize=metadata_config.fontsize)
+    fixed_parameter: SweepParameter = (
+        "p_index" if panel.source.parameter == "f_e" else "f_e"
+    )
+    fixed_values = [
+        real_scalar(metadata[key].to_dict()[fixed_parameter].value)
+        for key in keys
+    ]
+    fixed_value = fixed_values[0]
+    if any(
+        not math.isclose(value, fixed_value, rel_tol=RTOL, abs_tol=0)
+        for value in fixed_values[1:]
+    ):
+        raise ValueError(f"Fixed parameter {fixed_parameter} varies within the sweep")
+
+    # plotter.title(
+    #     strings=[pu.QuantityLabel(r"\nu", ".4g", r"\mathrm{GHz}").to_text(nu_ghz)],
+    #     fontsize=metadata_config.fontsize,
+    # )
     component_styles = dict(panel.settings.component_styles)
     for key in keys:
         for component in panel.settings.components:
@@ -1079,7 +1053,15 @@ def draw_sweep_panel(
     label = SWEEP_LABELS[panel.source.parameter]
     handles = [Line2D([], [], color=colors[run.run_id], label=label.to_text(run.sweep_value))
                for run in sorted(runs, key=lambda run: run.sweep_value)]
-    ax.legend(handles=handles, fontsize=18)
+
+    ax.legend(
+        handles=handles,
+        fontsize=10,
+        frameon=False,
+        title=SWEEP_LABELS[fixed_parameter].to_text(fixed_value),
+        title_fontsize = 10,
+        alignment="right"
+    )
     print(f"Panel {(panel.row, panel.col)}, {panel.source.sweep_index}, {nu_ghz:g} GHz: "
           f"{len(keys)} model curves; {panel.source.parameter}={[run.sweep_value for run in runs]}",
           flush=True)
@@ -1101,7 +1083,7 @@ def render_prepared_sweep(
     nrows, ncols = validate_sweep_panels(panels)
     subplot = replace(plotconf.layout.subplots, nrows=nrows, ncols=ncols)
     validate_axis_sharing(panels, subplot)
-    frequencies = [match_frequency(list(observed), frequency_in_ghz(panel.frequency)) for panel in panels]
+    nu = match_frequency(list(observed), frequency_in_ghz(panels[0].frequency))
     colors: dict[tuple[SourceKey, str], dict[int, str]] = {}
     for panel in panels:
         source_key = panel.source.sweep_index.resolve()
@@ -1115,7 +1097,7 @@ def render_prepared_sweep(
         squeeze=False,
     )
     try:
-        for panel, nu in zip(panels, frequencies):
+        for panel in panels:
             ax = axes[panel.row, panel.col]
             pu.AxesConfigurator.apply(ax, panel.axes)
             source_key = panel.source.sweep_index.resolve()
@@ -1150,6 +1132,7 @@ def draw_sweep(
     """Prepare independent sources and render explicitly placed Python panels"""
     sources = canonical_sweep_sources(panels)
     validate_axis_sharing(panels, plotconf.layout.subplots)
+    frequency_ghz = frequency_in_ghz(panels[0].frequency)
     observed = read_sweep_observations(obslc)
     source_files = {obslc}
     if plotconfig_path is not None:
@@ -1158,18 +1141,16 @@ def draw_sweep(
     curves_by_source: dict[SourceKey, ContinuousCurves] = {}
     binned_by_source: dict[SourceKey, BinnedCurves] = {}
     metadata_by_source: dict[SourceKey, ModelMetadata] = {}
-    frequencies_by_source: dict[SourceKey, RunFrequencies] = {}
     for key, source in sources.items():
         consumers = tuple(panel for panel in panels if panel.source.sweep_index.resolve() == key)
         components = tuple(dict.fromkeys(component for panel in consumers
                                          for component in panel.settings.components))
-        wanted = requested_source_frequencies(consumers, observed)
         try:
             (runs_by_source[key], curves_by_source[key], binned_by_source[key],
-             metadata_by_source[key], frequencies_by_source[key]) = load_sweep_source(
+             metadata_by_source[key], _) = load_sweep_source(
                 source, observed=observed, components=components,
                 show_binned=any(panel.settings.show_binned for panel in consumers),
-                requested_frequencies=wanted, source_files=source_files,
+                frequency_ghz=frequency_ghz, source_files=source_files,
             )
         except (KeyError, TypeError, ValueError, OSError) as error:
             raise ValueError(f"Source {key}, parameter={source.parameter}: {error}") from error
@@ -1182,7 +1163,7 @@ def draw_sweep(
 
 
 def draw_legacy_sweep(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
-    """Adapt existing CLI inputs to the same source-separated panel renderer"""
+    """Render one CLI sweep at the explicitly selected frequency"""
     source = SweepSource(
         validate_sweep_parameter(args.parameter), args.sweep_index,
         args.minimum_chi_squared_path, args.model_parameter_table_path,
@@ -1190,24 +1171,27 @@ def draw_legacy_sweep(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None
     )
     settings = replace(build_sweep_settings(), show_binned=source.binned_lightcurves_path is not None)
     observed = read_sweep_observations(args.obslc)
+    obs_nu = match_frequency(list(observed), args.frequency)
     source_files = {args.obslc, args.plotconfig}
     runs, curves, binned, metadata, frequencies = load_sweep_source(
         source, observed=observed, components=settings.components,
-        show_binned=settings.show_binned, requested_frequencies=args.frequencies,
+        show_binned=settings.show_binned, frequency_ghz=obs_nu,
         source_files=source_files,
     )
     reference = frequencies[runs[0].run_id]
-    selected = select_frequencies(reference, args.frequencies)
+    selected = match_frequency(reference, obs_nu)
     axes = plotconf.layout.axes
-    if isinstance(axes.x, tuple):
+    if isinstance(axes.x, tuple) and len(axes.x) != 1:
         if len(axes.x) != len(reference):
             raise ValueError("Per-frequency x-axis settings must match the reference frequency set")
-        axes = replace(axes, x=tuple(axes.x[reference.index(match_frequency(reference, nu))]
-                                    for nu in selected))
+        axes = replace(axes, x=axes.x[reference.index(selected)])
     if isinstance(axes.y, tuple) and len(axes.y) != 1:
-        raise ValueError("Sweep layout requires one y-axis configuration row")
+        if len(axes.y) != len(reference):
+            raise ValueError("Per-frequency y-axis settings must match the reference frequency set")
+        # Match the high-to-low row order used by the vertical bestfit layout.
+        axes = replace(axes, y=axes.y[reference[::-1].index(selected)])
     panels = build_sweep_panels(
-        rows=((source, settings),), frequencies=tuple(QuantityData(nu, "GHz") for nu in selected),
+        rows=((source, settings),), frequency=QuantityData(obs_nu, "GHz"),
         axes=axes,
     )
     key = source.sweep_index.resolve()
