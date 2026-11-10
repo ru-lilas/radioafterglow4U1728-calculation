@@ -17,7 +17,9 @@ def main() -> None:
     parser.add_argument("--model-parameter-table-path", type=Path, required=True)
     parser.add_argument("--candidate-lightcurves-path", type=Path, required=True)
     parser.add_argument("--binned-lightcurves-path", type=Path)
-    parser.add_argument("--frequencies", type=float, nargs="+", default=[5.5, 9.0])
+    parser.add_argument(
+        "--frequency", type=float, choices=(5.5, 9.0), default=9.0, metavar="GHz",
+    )
     parser.add_argument("--obslc", type=Path, required=True)
     parser.add_argument("--plotconfig", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -43,29 +45,17 @@ def main() -> None:
         plotconf,
         layout=replace(
             plotconf.layout,
-            figure=replace(plotconf.layout.figure, figsize=(24.0, 8.0)),
+            figure=replace(plotconf.layout.figure, figsize=(12.0, 14.0)),
         ),
     )
-    # 既存YAMLの2列目が9 GHz用の軸設定である場合
-    axes_9ghz = plotconf.layout.axes.for_subplot(0, 1)
 
-    panels = (
-        lc.SweepPanelSpec(
-            row=0,
-            col=0,
-            source=f_e_source,
-            frequency=lc.QuantityData(9.0, "GHz"),
-            axes=axes_9ghz,
-            settings=settings,
-        ),
-        lc.SweepPanelSpec(
-            row=0,
-            col=1,
-            source=p_index_source,
-            frequency=lc.QuantityData(9.0, "GHz"),
-            axes=axes_9ghz,
-            settings=settings,
-        ),
+    frequency_col = {5.5: 0, 9.0: 1}[args.frequency]
+    axes = plotconf.layout.axes.for_subplot(0, 0)
+
+    panels = lc.build_sweep_panels(
+        rows=((f_e_source, settings), (p_index_source, settings)),
+        frequency=lc.QuantityData(args.frequency, "GHz"),
+        axes=axes,
     )
     # To edit one panel, replace that instance before passing the tuple below
     lc.draw_sweep(
