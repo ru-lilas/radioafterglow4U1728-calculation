@@ -11,6 +11,7 @@ from matplotlib import colormaps
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LogNorm, Normalize, to_hex
 from matplotlib.axes import Axes
+from matplotlib.container import ErrorbarContainer
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from numpy.typing import NDArray
@@ -406,7 +407,7 @@ def build_continuous_lightcurve(
 def plot_observed(
     plotter: pu.Plotter, observed: ObservedLightcurve, col: int,
     *, x_unit: str, y_unit: str, sweep: bool = False,
-) -> None:
+) -> ErrorbarContainer:
     """Draw shared observations and background once per panel"""
     plotter.line(x=observed.t.to_value_in(x_unit),
                  y=observed.fnu_background.to_value_in(y_unit),
@@ -415,7 +416,7 @@ def plot_observed(
     if sweep:
         style = replace(style, markerfacecolor="#222222", markeredgecolor="#222222",
                         ecolor="#222222", zorder=5)
-    plotter.errorbar(x=observed.t.to_value_in(x_unit),
+    return plotter.errorbar(x=observed.t.to_value_in(x_unit),
                      y=observed.fnu_total.to_value_in(y_unit),
                      yerr=observed.fnu_total_err.to_value_in(y_unit), style=style)
 
@@ -765,7 +766,7 @@ def draw_bestfit(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
         if axes.shape != (len(df_minchi2), 1):
             raise ValueError("Bestfit layout must have one row per result and one column")
         for row, result_pos in enumerate(result_order):
-            ax = axes[row,0]
+            ax:Axes = axes[row,0]
             result = clc.ChiSquaredResult.from_series(df_minchi2.iloc[result_pos])
             index = integer_identifier(result.model_index)
             nu = QuantityData(result.nu, df_minchi2.attrs[MetadataNames.NU_UNIT])
@@ -777,12 +778,25 @@ def draw_bestfit(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
             metadata = PlotMetadata.from_model(parameters.select_models([index]), result.chi_squared)
             config = plotconf.layout.axes.for_subplot(row, 0)
             plotter = pu.Plotter(ax)
-            plot_observed(plotter, observed, result_pos, x_unit=config.x_unit, y_unit=config.y_unit)
+            observed_handle = plot_observed(
+                plotter,
+                observed,
+                result_pos,
+                x_unit=config.x_unit,
+                y_unit=config.y_unit
+            )
             plot_model_curve(plotter, continuous, observed, style_continuous.resolve(result_pos),
                              x_unit=config.x_unit, y_unit=config.y_unit)
             plot_binned_curve(plotter, binned, observed, style_binned.resolve(result_pos),
                               x_unit=config.x_unit, y_unit=config.y_unit)
             add_model_metadata(plotter, metadata, plotconf, "")
+            ax.legend(
+                handles=[],
+                title=f"{nu.quantity:.1f}",
+                loc = "upper right",
+                title_fontsize=12,
+                frameon=False,
+            )
         sources = {args.obslc, args.plotconfig, args.minimum_chi_squared,
                    args.model_parameter_table, args.candidate_lightcurves, args.binned_lightcurves}
         if args.input is not None:
