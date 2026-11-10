@@ -119,7 +119,10 @@ class SweepSettings:
 
 def build_sweep_settings() -> SweepSettings:
     """Configure sweep curves and color normalization directly in Python"""
-    return SweepSettings(normalization="linear",cmap="berlin")
+    return SweepSettings(
+        normalization="linear",
+        cmap="viridis"
+    )
 
 
 SweepParameter = Literal["f_e", "p_index"]
@@ -418,8 +421,12 @@ def plot_observed(
                  style=style_background.resolve(0))
     style = style_observed.resolve(col % len(style_observed.colors))
     if sweep:
-        style = replace(style, markerfacecolor="#222222", markeredgecolor="#222222",
-                        ecolor="#222222", zorder=5)
+        style = replace(
+            style,
+            markerfacecolor="#000000",
+            markeredgecolor="#000000",
+            ecolor="#000000",
+            zorder=1)
     return plotter.errorbar(x=observed.t.to_value_in(x_unit),
                      y=observed.fnu_total.to_value_in(y_unit),
                      yerr=observed.fnu_total_err.to_value_in(y_unit), style=style)
@@ -709,9 +716,9 @@ def color_mapping(
     ordered = sorted(runs, key=lambda run: run.sweep_value)
     cmap = colormaps[settings.cmap]
     positions = (
-        np.linspace(0.0, 1.0, len(ordered))
+        np.linspace(0.10, 0.90, len(ordered))
         if len(ordered) > 1
-        else np.array([0.5])
+        else np.array([0.50])
     )
 
     return {
@@ -1039,7 +1046,11 @@ def draw_sweep_panel(
     label = SWEEP_LABELS[panel.source.parameter]
     handles = [Line2D([], [], color=colors[run.run_id], label=label.to_text(run.sweep_value))
                for run in sorted(runs, key=lambda run: run.sweep_value)]
-    ax.legend(handles=handles, fontsize=18)
+    ax.legend(
+        handles=handles,
+        fontsize=8,
+        frameon=False
+    )
     print(f"Panel {(panel.row, panel.col)}, {panel.source.sweep_index}, {nu_ghz:g} GHz: "
           f"{len(keys)} model curves; {panel.source.parameter}={[run.sweep_value for run in runs]}",
           flush=True)

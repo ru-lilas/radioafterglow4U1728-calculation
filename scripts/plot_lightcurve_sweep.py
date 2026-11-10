@@ -45,7 +45,7 @@ def main() -> None:
         plotconf,
         layout=replace(
             plotconf.layout,
-            figure=replace(plotconf.layout.figure, figsize=(12.0, 14.0)),
+            figure=replace(plotconf.layout.figure, figsize=(6.7, 7.2)),
         ),
     )
 
