@@ -61,6 +61,8 @@ style_background = replace(
     colors=[
         "#000000"
     ],
+    linewidth = 1.0,
+    linestyle = ":"
 )
 
 @dataclass(frozen=True, slots=True)
