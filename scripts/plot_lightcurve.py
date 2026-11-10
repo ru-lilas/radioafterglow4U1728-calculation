@@ -1016,17 +1016,24 @@ def draw_sweep_panel(
     if len(keys) != len(runs) or {key[0] for key in keys} != {run.run_id for run in runs}:
         raise ValueError(f"Incomplete prepared curves at panel {(panel.row, panel.col)}")
     title = [pu.QuantityLabel(r"\nu", ".4g", r"\mathrm{GHz}").to_text(nu_ghz)]
-    for name in sweep_title_fields(panel.source.parameter):
-        if name not in metadata_config.items:
-            continue
-        quantities = [metadata[key].to_dict()[name] for key in keys]
-        quantity = quantities[0]
-        value = real_scalar(quantity.value)
-        if any(not math.isclose(real_scalar(other.value_in(quantity.unit)), value,
-                                rel_tol=RTOL, abs_tol=0) for other in quantities):
-            raise ValueError(f"Shared title field varies: {name}, panel {(panel.row, panel.col)}")
-        pu.MetadataComponent(quantity, metadata_config.items[name]).add_strings(title)
-    plotter.title(strings=title, fontsize=metadata_config.fontsize)
+    fixed_parameter: SweepParameter = (
+        "p_index" if panel.source.parameter == "f_e" else "f_e"
+    )
+    fixed_values = [
+        real_scalar(metadata[key].to_dict()[fixed_parameter].value)
+        for key in keys
+    ]
+    fixed_value = fixed_values[0]
+    if any(
+        not math.isclose(value, fixed_value, rel_tol=RTOL, abs_tol=0)
+        for value in fixed_values[1:]
+    ):
+        raise ValueError(f"Fixed parameter {fixed_parameter} varies within the sweep")
+
+    # plotter.title(
+    #     strings=[pu.QuantityLabel(r"\nu", ".4g", r"\mathrm{GHz}").to_text(nu_ghz)],
+    #     fontsize=metadata_config.fontsize,
+    # )
     component_styles = dict(panel.settings.component_styles)
     for key in keys:
         for component in panel.settings.components:
@@ -1046,10 +1053,14 @@ def draw_sweep_panel(
     label = SWEEP_LABELS[panel.source.parameter]
     handles = [Line2D([], [], color=colors[run.run_id], label=label.to_text(run.sweep_value))
                for run in sorted(runs, key=lambda run: run.sweep_value)]
+
     ax.legend(
         handles=handles,
-        fontsize=8,
-        frameon=False
+        fontsize=10,
+        frameon=False,
+        title=SWEEP_LABELS[fixed_parameter].to_text(fixed_value),
+        title_fontsize = 10,
+        alignment="right"
     )
     print(f"Panel {(panel.row, panel.col)}, {panel.source.sweep_index}, {nu_ghz:g} GHz: "
           f"{len(keys)} model curves; {panel.source.parameter}={[run.sweep_value for run in runs]}",
