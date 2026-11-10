@@ -50,6 +50,7 @@ FILEPATH_ENERGETICS := $(call run_data,energetics.csv)
 FILEPATH_SPECTRUM_MINIMUM_CHI_SQUARED := $(call run_data,spectrum_minimum_chi_squared.csv)
 
 FILEPATH_MINIMUM_CHI2_LC_PDF := $(call run_fig,minimum_chi2_lightcurve.pdf)
+FILEPATH_MINIMUM_CHI2_LC_PAPER_PDF := $(call run_fig,minimum_chi2_lightcurve_paper.pdf)
 FILEPATH_CHEVALIER_PDF := $(call run_fig,chevalier_diagram.pdf)
 FILEPATH_CHEVALIER_WITH_BESTFITS_PDF := $(call run_fig,chevalier_diagram_with_bestfits.pdf)
 FILEPATH_CHEVALIER_COLORMAP_PDF := $(call run_fig,chevalier_colormap.pdf)
@@ -97,7 +98,7 @@ copy-chevalier: \
 	$(FILEPATH_CHEVALIER_WITH_BESTFITS_PDF)
 	cp $< ../paper/figures/contours.pdf
 copy-bestfitlcs: \
-	$(FILEPATH_MINIMUM_CHI2_LC_PDF)
+	$(FILEPATH_MINIMUM_CHI2_LC_PAPER_PDF)
 	cp $< ../paper/figures/bestfit_lightcurves.pdf
 
 fig/energetics_epsb.pdf: \
@@ -115,6 +116,9 @@ $(FIGDIR)/powerlaw_lightcurves.pdf: \
 	bash $<
 
 view-best-lc: $(FILEPATH_MINIMUM_CHI2_LC_PDF)
+	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
+
+view-best-lc-paper: $(FILEPATH_MINIMUM_CHI2_LC_PAPER_PDF)
 	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
 
 view-dimless-syn: $(FILEPATH_DIMENSIONLESS_SYNCHROTRONS_PDF)
@@ -183,6 +187,25 @@ $(FILEPATH_OPTICALDEPTH_CMAPS_PDF): \
 		$(ARGS_OUTPUT)
 
 best-lc: $(FILEPATH_MINIMUM_CHI2_LC_PDF)
+$(FILEPATH_MINIMUM_CHI2_LC_PAPER_PDF): \
+	$(FILEPATH_INPUT) \
+	$(FILEPATH_MINIMUM_CHI_SQUARED) \
+	$(FILEPATH_BINNED_LIGHTCURVES) \
+	$(FILEPATH_CANDIDATE_LIGHTCURVES) \
+	$(FILEPATH_MODEL_PARAMETER_TABLE) \
+	$(FILEPATH_OBSLC) \
+	$(PLOTCONFIGDIR)/minimum_chi_squared_lightcurves.yaml \
+	scripts/plot_lightcurve.py
+	$(PYTHON) -m scripts.plot_lightcurve \
+		$(ARGS_INPUT) \
+		--minimum_chi_squared $(FILEPATH_MINIMUM_CHI_SQUARED) \
+		$(ARGS_BINNED_LIGHTCURVES) \
+		$(ARGS_MODEL_PARAMETER_TABLE) \
+		$(ARGS_CANDIDATE_LIGHTCURVES) \
+		$(ARGS_OBSLC) \
+		--hide-metadata \
+		--plotconfig $(PLOTCONFIGDIR)/minimum_chi_squared_lightcurves.yaml \
+		$(ARGS_OUTPUT)
 $(FILEPATH_MINIMUM_CHI2_LC_PDF): \
 	$(FILEPATH_INPUT) \
 	$(FILEPATH_MINIMUM_CHI_SQUARED) \

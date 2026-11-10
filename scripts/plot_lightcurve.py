@@ -337,6 +337,11 @@ def build_sweep_panels(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=("bestfit", "candidates", "sweep"), default="bestfit")
+    parser.add_argument(
+        "--hide-metadata",
+        action="store_true",
+        help="Hide model metadata in bestfit panel titles."
+    )
     for name in ("input", "candidate_lightcurves", "model_parameter_table",
                  "minimum_chi_squared", "binned_lightcurves"):
         aliases = [f"--{name}"]
@@ -789,7 +794,8 @@ def draw_bestfit(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
                              x_unit=config.x_unit, y_unit=config.y_unit)
             plot_binned_curve(plotter, binned, observed, style_binned.resolve(result_pos),
                               x_unit=config.x_unit, y_unit=config.y_unit)
-            add_model_metadata(plotter, metadata, plotconf, "")
+            if not args.hide_metadata:
+                add_model_metadata(plotter, metadata, plotconf, "")
             ax.legend(
                 handles=[],
                 title=f"{nu.quantity:.1f}",
