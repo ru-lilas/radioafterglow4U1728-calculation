@@ -11,6 +11,7 @@ from matplotlib import colormaps
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import LogNorm, Normalize, to_hex
 from matplotlib.axes import Axes
+from matplotlib.container import ErrorbarContainer
 from matplotlib.figure import Figure
 from matplotlib.lines import Line2D
 from numpy.typing import NDArray
@@ -35,14 +36,7 @@ try:
 except ImportError:
     import build_input
 
-style_continuous = pu.LineStyleConfig(
-    colors=[
-        "#FF4B00",
-        "#005AFF"
-    ],
-    linestyle="-",
-    linewidth=1.0
-)
+style_continuous = st.lc_continuous
 style_thermal = replace(
     style_continuous,
     linestyle=":",
@@ -54,7 +48,7 @@ style_observed = pu.ErrorbarStyleConfig(
         "#005AFF"
     ],
     marker="o",
-    markersize= 6.0,
+    markersize= 2.0,
     markeredgewidth= 1.0,
     elinewidth= 1.0,
     capsize= 1.0,
@@ -68,6 +62,8 @@ style_background = replace(
     colors=[
         "#000000"
     ],
+    linewidth = 1.0,
+    linestyle = ":"
 )
 
 @dataclass(frozen=True, slots=True)
@@ -341,6 +337,11 @@ def build_sweep_panels(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=("bestfit", "candidates", "sweep"), default="bestfit")
+    parser.add_argument(
+        "--hide-metadata",
+        action="store_true",
+        help="Hide model metadata in bestfit panel titles."
+    )
     for name in ("input", "candidate_lightcurves", "model_parameter_table",
                  "minimum_chi_squared", "binned_lightcurves"):
         aliases = [f"--{name}"]
@@ -411,7 +412,7 @@ def build_continuous_lightcurve(
 def plot_observed(
     plotter: pu.Plotter, observed: ObservedLightcurve, col: int,
     *, x_unit: str, y_unit: str, sweep: bool = False,
-) -> None:
+) -> ErrorbarContainer:
     """Draw shared observations and background once per panel"""
     plotter.line(x=observed.t.to_value_in(x_unit),
                  y=observed.fnu_background.to_value_in(y_unit),
@@ -420,7 +421,7 @@ def plot_observed(
     if sweep:
         style = replace(style, markerfacecolor="#222222", markeredgecolor="#222222",
                         ecolor="#222222", zorder=5)
-    plotter.errorbar(x=observed.t.to_value_in(x_unit),
+    return plotter.errorbar(x=observed.t.to_value_in(x_unit),
                      y=observed.fnu_total.to_value_in(y_unit),
                      yerr=observed.fnu_total_err.to_value_in(y_unit), style=style)
 
@@ -764,11 +765,14 @@ def draw_bestfit(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
     flux = (FluxName.FNU_THERMAL if parameters.switches[SwitchKeys.THERMAL_ONLY]
             else FluxName.FNU_TOTAL)
     fig, axes = plotconf.layout.create()
+    frequencies = df_minchi2[ColumnNames.NU].to_numpy(dtype=float)
+    result_order = np.argsort(-frequencies, kind="stable")
     try:
-        if axes.shape[1] != len(df_minchi2):
-            raise ValueError("Bestfit column count must match the number of selected results")
-        for col in range(axes.shape[1]):
-            result = clc.ChiSquaredResult.from_series(df_minchi2.iloc[col])
+        if axes.shape != (len(df_minchi2), 1):
+            raise ValueError("Bestfit layout must have one row per result and one column")
+        for row, result_pos in enumerate(result_order):
+            ax:Axes = axes[row,0]
+            result = clc.ChiSquaredResult.from_series(df_minchi2.iloc[result_pos])
             index = integer_identifier(result.model_index)
             nu = QuantityData(result.nu, df_minchi2.attrs[MetadataNames.NU_UNIT])
             observed = observations.select_frequency(nu, unit=observations.metadata.nu_unit)
@@ -777,15 +781,28 @@ def draw_bestfit(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
             df = select_model_df(binned_groups[result.nu], index, result.nu)
             binned = clc.BinnedLightcurveWithBackground.from_df(df, observed.fnu_background.index(0))
             metadata = PlotMetadata.from_model(parameters.select_models([index]), result.chi_squared)
-            for row, ax in enumerate(axes[:, col]):
-                config = plotconf.layout.axes.for_subplot(row, col)
-                plotter = pu.Plotter(ax)
-                plot_observed(plotter, observed, col, x_unit=config.x_unit, y_unit=config.y_unit)
-                plot_model_curve(plotter, continuous, observed, style_continuous.resolve(col),
-                                 x_unit=config.x_unit, y_unit=config.y_unit)
-                plot_binned_curve(plotter, binned, observed, style_binned.resolve(col),
-                                  x_unit=config.x_unit, y_unit=config.y_unit)
+            config = plotconf.layout.axes.for_subplot(row, 0)
+            plotter = pu.Plotter(ax)
+            observed_handle = plot_observed(
+                plotter,
+                observed,
+                result_pos,
+                x_unit=config.x_unit,
+                y_unit=config.y_unit
+            )
+            plot_model_curve(plotter, continuous, observed, style_continuous.resolve(result_pos),
+                             x_unit=config.x_unit, y_unit=config.y_unit)
+            plot_binned_curve(plotter, binned, observed, style_binned.resolve(result_pos),
+                              x_unit=config.x_unit, y_unit=config.y_unit)
+            if not args.hide_metadata:
                 add_model_metadata(plotter, metadata, plotconf, "")
+            ax.legend(
+                handles=[],
+                title=f"{nu.quantity:.1f}",
+                loc = "upper right",
+                title_fontsize=12,
+                frameon=False,
+            )
         sources = {args.obslc, args.plotconfig, args.minimum_chi_squared,
                    args.model_parameter_table, args.candidate_lightcurves, args.binned_lightcurves}
         if args.input is not None:

@@ -1,11 +1,11 @@
 layout:
   figure:
-    figsize: [32,9]
+    figsize: [6.7,7.2]
     dpi: 100
     layout_engine: constrained
   subplots:
-    nrows: 1
-    ncols: 2
+    nrows: 2
+    ncols: 1
     sharex: col
     sharey: row
     hide_shared_labels: true
@@ -17,8 +17,7 @@ layout:
         label:
           prefix: 'Time Since the X-ray Burst'
           unit: &x_unit "min"
-          fontsize: 32
-      - *time_axis
+          fontsize: 12
     y:
       - &flux_axis
         scale: "linear"
@@ -26,16 +25,17 @@ layout:
         label:
           prefix: 'Radio Flux Density'
           unit: &y_unit "mJy"
-          fontsize: 32
+          fontsize: 12
+      - *flux_axis
     ticks:
-      labelsize: 32
+      labelsize: 11
       direction: "in"
-      major_length: 10.0
-      minor_length: 8.0
+      major_length: 5.0
+      minor_length: 3.0
       width: 1.0
-      pad: 10.0
+      pad: 8.0
 metadata:
-  fontsize: 18
+  fontsize: 8
   items:
     eps_b:
       show: true
@@ -67,7 +67,7 @@ metadata:
       unit: ""
       label_format:
         <<: *LabelFormatTmp
-        prefix: '\mu_{\mathrm{e}}/\mu'
+        prefix: '\mu_{\mathrm{e}}'
         fmt: '.1f'
         unit: ""
     a_wind:
@@ -83,7 +83,7 @@ metadata:
       unit: ""
       label_format:
         <<: *LabelFormatTmp
-        prefix: '\beta_{\mathrm{sh}}'
+        prefix: 'v_{\mathrm{sh}}/c'
         fmt: '.2f'
         unit: ''
     p_index: 
@@ -103,7 +103,7 @@ metadata:
         fmt: '.1e'
         unit: ''
     chi_squared: 
-      show: true
+      show: false
       unit: ""
       label_format:
         <<: *LabelFormatTmp
