@@ -35,14 +35,7 @@ try:
 except ImportError:
     import build_input
 
-style_continuous = pu.LineStyleConfig(
-    colors=[
-        "#FF4B00",
-        "#005AFF"
-    ],
-    linestyle="-",
-    linewidth=1.0
-)
+style_continuous = st.lc_continuous
 style_thermal = replace(
     style_continuous,
     linestyle=":",
@@ -54,7 +47,7 @@ style_observed = pu.ErrorbarStyleConfig(
         "#005AFF"
     ],
     marker="o",
-    markersize= 6.0,
+    markersize= 2.0,
     markeredgewidth= 1.0,
     elinewidth= 1.0,
     capsize= 1.0,
@@ -765,10 +758,10 @@ def draw_bestfit(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
             else FluxName.FNU_TOTAL)
     fig, axes = plotconf.layout.create()
     try:
-        if axes.shape[1] != len(df_minchi2):
-            raise ValueError("Bestfit column count must match the number of selected results")
-        for col in range(axes.shape[1]):
-            result = clc.ChiSquaredResult.from_series(df_minchi2.iloc[col])
+        if axes.shape != (len(df_minchi2), 1):
+            raise ValueError("Bestfit layout must have one row per result and one column")
+        for row, ax in enumerate(axes[:, 0]):
+            result = clc.ChiSquaredResult.from_series(df_minchi2.iloc[row])
             index = integer_identifier(result.model_index)
             nu = QuantityData(result.nu, df_minchi2.attrs[MetadataNames.NU_UNIT])
             observed = observations.select_frequency(nu, unit=observations.metadata.nu_unit)
@@ -777,15 +770,14 @@ def draw_bestfit(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
             df = select_model_df(binned_groups[result.nu], index, result.nu)
             binned = clc.BinnedLightcurveWithBackground.from_df(df, observed.fnu_background.index(0))
             metadata = PlotMetadata.from_model(parameters.select_models([index]), result.chi_squared)
-            for row, ax in enumerate(axes[:, col]):
-                config = plotconf.layout.axes.for_subplot(row, col)
-                plotter = pu.Plotter(ax)
-                plot_observed(plotter, observed, col, x_unit=config.x_unit, y_unit=config.y_unit)
-                plot_model_curve(plotter, continuous, observed, style_continuous.resolve(col),
-                                 x_unit=config.x_unit, y_unit=config.y_unit)
-                plot_binned_curve(plotter, binned, observed, style_binned.resolve(col),
-                                  x_unit=config.x_unit, y_unit=config.y_unit)
-                add_model_metadata(plotter, metadata, plotconf, "")
+            config = plotconf.layout.axes.for_subplot(row, 0)
+            plotter = pu.Plotter(ax)
+            plot_observed(plotter, observed, row, x_unit=config.x_unit, y_unit=config.y_unit)
+            plot_model_curve(plotter, continuous, observed, style_continuous.resolve(row),
+                             x_unit=config.x_unit, y_unit=config.y_unit)
+            plot_binned_curve(plotter, binned, observed, style_binned.resolve(row),
+                              x_unit=config.x_unit, y_unit=config.y_unit)
+            add_model_metadata(plotter, metadata, plotconf, "")
         sources = {args.obslc, args.plotconfig, args.minimum_chi_squared,
                    args.model_parameter_table, args.candidate_lightcurves, args.binned_lightcurves}
         if args.input is not None:
