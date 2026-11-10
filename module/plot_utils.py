@@ -108,6 +108,7 @@ class LabelConfigure:
     prefix: str
     unit: str
     fontsize: int
+    labelpad: float|None = None
 
     @property
     def text(self):
@@ -361,6 +362,7 @@ class AxesConfigurator:
             ax.set_ylabel(
                 config.label.text,
                 fontsize=config.label.fontsize,
+                labelpad=config.label.labelpad,
             )
 
             if config.limits is not None:
@@ -830,6 +832,7 @@ class MetadataGroupConfig:
 class LegendStyle(Style):
     fontsize: int
     loc: str = "best"
+    frameon: bool = False
 
 @dataclass(frozen=True, slots=True)
 class ComponentConfig:

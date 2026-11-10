@@ -1,6 +1,6 @@
 layout:
   figure:
-    figsize: [3,4]
+    figsize: [3.35,4.2]
     dpi: 100
     layout_engine: constrained
   subplots:
@@ -16,61 +16,62 @@ layout:
       label:
         prefix: '$\nu_{\mathrm{peak}} t_{\mathrm{peak}}$'
         unit: "GHz min"
-        fontsize: 11
+        fontsize: 14
     y:
       scale: "log"
       limits: [1.0e-01,1.0e+01]
       label:
         prefix: '$F_{\nu,\mathrm{peak}}$'
         unit: "mJy"
-        fontsize: 11
+        fontsize: 14
+        labelpad: 1.0
     ticks:
       labelsize: 8
       direction: "in"
       major_length: 6.0
       minor_length: 3.0
       width: 0.5
-      pad: 2.0
+      pad: 3.0
 metadata:
   fontsize: 8
   items:
     eps_b:
-      show: true
+      show: false
       unit: ""
       label_format:
         prefix: '\varepsilon_{\mathrm{B}}'
         fmt: '.1e'
         unit: ""
     eps_th:
-      show: true
+      show: false
       unit: ""
       label_format:
         prefix: '\varepsilon_{\mathrm{th}}'
         fmt: '.2f'
         unit: ""
     distance:
-      show: true
+      show: false
       unit: "kpc"
       label_format:
         prefix: 'D'
         fmt: '.1f'
         unit: '\mathrm{kpc}'
     mu_e_mu:
-      show: true
+      show: false
       unit: ""
       label_format:
         prefix: '\mu_{\mathrm{e}}/\mu'
         fmt: '.1f'
         unit: ""
     p_index: 
-      show: true
+      show: false
       unit: ""
       label_format:
         prefix: 'p'
         fmt: '.2f'
         unit: ''
     f_e: 
-      show: true
+      show: false
       unit: ""
       label_format:
         prefix: '\eta_{\mathrm{e,nt}}'
@@ -101,7 +102,7 @@ components:
       label: &ContourLabel_tmp
         inline: true
         inline_spacing: 5
-        fontsize: 9
+        fontsize: 10
       label_format:
         prefix: 'A_{\mathrm{w}}'
         fmt: ".0e"
@@ -198,3 +199,4 @@ components:
   legend:
     fontsize: 8
     loc: "upper left"
+    frameon: false
