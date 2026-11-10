@@ -759,11 +759,14 @@ def draw_bestfit(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
     flux = (FluxName.FNU_THERMAL if parameters.switches[SwitchKeys.THERMAL_ONLY]
             else FluxName.FNU_TOTAL)
     fig, axes = plotconf.layout.create()
+    frequencies = df_minchi2[ColumnNames.NU].to_numpy(dtype=float)
+    result_order = np.argsort(-frequencies, kind="stable")
     try:
         if axes.shape != (len(df_minchi2), 1):
             raise ValueError("Bestfit layout must have one row per result and one column")
-        for row, ax in enumerate(axes[:, 0]):
-            result = clc.ChiSquaredResult.from_series(df_minchi2.iloc[row])
+        for row, result_pos in enumerate(result_order):
+            ax = axes[row,0]
+            result = clc.ChiSquaredResult.from_series(df_minchi2.iloc[result_pos])
             index = integer_identifier(result.model_index)
             nu = QuantityData(result.nu, df_minchi2.attrs[MetadataNames.NU_UNIT])
             observed = observations.select_frequency(nu, unit=observations.metadata.nu_unit)
@@ -774,10 +777,10 @@ def draw_bestfit(args: argparse.Namespace, plotconf: pu.PlotConfig) -> None:
             metadata = PlotMetadata.from_model(parameters.select_models([index]), result.chi_squared)
             config = plotconf.layout.axes.for_subplot(row, 0)
             plotter = pu.Plotter(ax)
-            plot_observed(plotter, observed, row, x_unit=config.x_unit, y_unit=config.y_unit)
-            plot_model_curve(plotter, continuous, observed, style_continuous.resolve(row),
+            plot_observed(plotter, observed, result_pos, x_unit=config.x_unit, y_unit=config.y_unit)
+            plot_model_curve(plotter, continuous, observed, style_continuous.resolve(result_pos),
                              x_unit=config.x_unit, y_unit=config.y_unit)
-            plot_binned_curve(plotter, binned, observed, style_binned.resolve(row),
+            plot_binned_curve(plotter, binned, observed, style_binned.resolve(result_pos),
                               x_unit=config.x_unit, y_unit=config.y_unit)
             add_model_metadata(plotter, metadata, plotconf, "")
         sources = {args.obslc, args.plotconfig, args.minimum_chi_squared,
