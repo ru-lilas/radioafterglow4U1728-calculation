@@ -228,7 +228,7 @@ class ChevalierPlotData:
                 theta_crit=critical,
                 style=components[name].resolve_line_style(0),
             )
-            boundary.plot(plotter)
+            # boundary.plot(plotter)
 
     def draw_observations(self, plotter: plot_utils.Plotter, *, show_legend: bool = True) -> None:
         """Draw observed peak regions and optional frequency-matched bestfit points"""
