@@ -14,7 +14,7 @@ layout:
       scale: "log"
       limits: [1.0e+00,1.0e+02]
       label:
-        prefix: '$\nu t_{\mathrm{peak}}$'
+        prefix: '$\nu_{\mathrm{peak}} t_{\mathrm{peak}}$'
         unit: "GHz min"
         fontsize: 11
     y:
