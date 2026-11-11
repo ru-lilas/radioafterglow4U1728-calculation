@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 
 from module.utils import FileReader, FileWriter
+from module.varidations import real_scalar
 
 if __package__:
     from .build_input import SWEEP_SPECS, calculate_config_hash, get_nested_value, load_yaml, sweep_family
@@ -47,22 +48,6 @@ class RunEntry:
     input_path: Path
     config_hash: str | None
     parameter: SweepParameter = "eps_b"
-
-
-def real_scalar(value: object) -> float:
-    """Validate a finite real scalar before conversion"""
-    if isinstance(value, np.generic):
-        native: object = value.item()
-        if isinstance(native, np.generic):
-            raise TypeError("Unsupported NumPy scalar precision")
-        return real_scalar(native)
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise TypeError(f"Expected a real scalar, got {type(value).__name__}")
-    result = float(value)
-    if not math.isfinite(result):
-        raise ValueError("Expected a finite number")
-    return result
-
 
 def read_manifest(path: Path) -> list[RunEntry]:
     """Read ordered RUN entries using the input generator's path convention"""

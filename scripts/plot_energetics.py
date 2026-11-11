@@ -21,6 +21,7 @@ from numpy.typing import NDArray
 from module import plot_utils as pu
 from module.utils import FileReader
 from module.mydataclasses import QuantityData
+from module.varidations import real_scalar,require_series
 
 SweepParameter = Literal["eps_b", "eps_th"]
 FloatArray = NDArray[np.float64]
@@ -252,18 +253,6 @@ def native_scalar(value: object) -> object:
         return native
     return value
 
-
-def real_scalar(value: object) -> float:
-    """Validate a finite real scalar before numeric conversion"""
-    value = native_scalar(value)
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise TypeError(f"Expected a real numeric value, got {type(value).__name__}")
-    number = float(value)
-    if not math.isfinite(number):
-        raise ValueError("Expected a finite number")
-    return number
-
-
 def integer_identifier(value: object, *, minimum: int) -> int:
     """Reject fractional, boolean and invalid identifiers without truncation"""
     value = native_scalar(value)
@@ -482,15 +471,6 @@ def build_scatter_components(
             style = replace(base_style, markerfacecolor=color, markeredgecolor=color, ecolor=color)
             components[nu][quantity] = ScatterComponent(values[data.parameter], values[quantity], style)
     return components
-
-
-def require_series(df: pd.DataFrame, name: str) -> pd.Series:
-    """Narrow a single column selection before processing its elements"""
-    column: object = df[name]
-    if not isinstance(column, pd.Series):
-        raise TypeError(f"Expected a single Series for {name}")
-    return column
-
 
 def validate_title_scalar(value: object, item: TitleItem) -> float:
     """Validate a title value using the rule owned by its item"""
