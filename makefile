@@ -101,14 +101,16 @@ copy-bestfitlcs: \
 	$(FILEPATH_MINIMUM_CHI2_LC_PAPER_PDF)
 	cp $< ../paper/figures/bestfit_lightcurves.pdf
 
-fig/epsb_sweep_geom.pdf: \
+ifneq ($(strip $(BUDGET)),)
+fig/$(BUDGET).pdf: \
 	scripts/plot_energetics.py \
-	data/epsb_sweep_geom.csv
+	data/$(BUDGET).csv
 	$(PYTHON) -m scripts.plot_energetics\
-		--input data/budget_epsb_geom.csv \
+		--input data/$(BUDGET).csv \
 		--parameter eps_b \
 		--frequencies 9.0 \
 		--output $@
+endif
 
 $(FIGDIR)/powerlaw_lightcurves.pdf: \
 	sweep_lc.sh \
