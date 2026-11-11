@@ -761,7 +761,6 @@ class ContourComponent:
         cs = plotter.contour(
             self.field.x, self.field.y, self.field.z.copy(), style,
         )
-        print(self.label_fraction)
         if self.label_style is not None:
             positions = (
                 self.lower_label_positions(cs,self.label_fraction)
@@ -1346,12 +1345,22 @@ class Plotter:
         *,
         manual: list[tuple[float, float]] | None = None,
     ) -> list[Text]:
-        return self.ax.clabel(
+        labels = self.ax.clabel(
             contour_set,
             fmt=style.label_format.to_text,
             manual=manual if manual is not None else False,
             **style.label.to_kwargs(),
         )
+        for label in labels:
+            label.set_bbox(
+                dict(
+                    facecolor="#FFFFFF",
+                    edgecolor="none",
+                    alpha=0.8,
+                    pad=0.2
+                )
+            )
+        return labels
 
     def rectangle(
         self,
