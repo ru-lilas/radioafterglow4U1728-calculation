@@ -417,8 +417,18 @@ def write_output(df: pd.DataFrame, output: Path, protected: list[Path]) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--sweep-index", type=Path, required=True)
-    parser.add_argument("--energetics-path", type=Path, default=Path("energetics.csv"))
+    parser.add_argument(
+        "--sweep-index",
+        type=Path,
+        required=True,
+        help='indexのパス(example: epsb_sweep.csv)'
+    )
+    parser.add_argument(
+        "--energetics-path",
+        type=Path,
+        default=Path("energetics.csv"),
+        help='参照するenergeticsのcsvパス(default: energetics.csv)'
+    )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--skip-missing", action="store_true")
     args = parser.parse_args()

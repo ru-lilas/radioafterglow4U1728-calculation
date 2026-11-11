@@ -79,7 +79,7 @@ ARGS_CHEVALIER_BESTFIT_POINTS = --chevalier_bestfit_points $(FILEPATH_CHEVALIER_
     chevaliercm chevalier min_chi2 chi2 lc_bin lc candidates \
     peak_grid lc_all modeltable peak_table
 
-all: best-lc chevalierbest pdf-spectrum
+all: best-lc chevalierbest pdf-spectrum energetics
 
 # view-energetics: $(FILEPATH_ENERGETICS_PDF)
 # 	$(PDF_VIEWER) "$<" >/dev/null 2>&1 &
@@ -101,13 +101,11 @@ copy-bestfitlcs: \
 	$(FILEPATH_MINIMUM_CHI2_LC_PAPER_PDF)
 	cp $< ../paper/figures/bestfit_lightcurves.pdf
 
-$(NAME_ENERGETICS) ?=
-
-fig/$(NAME_ENERGETICS).pdf: \
+fig/epsb_sweep_geom.pdf: \
 	scripts/plot_energetics.py \
-	data/$(NAME_ENERGETICS).csv
+	data/epsb_sweep_geom.csv
 	$(PYTHON) -m scripts.plot_energetics\
-		--input data/$(NAME_ENERGETICS).csv \
+		--input data/budget_epsb_geom.csv \
 		--parameter eps_b \
 		--frequencies 9.0 \
 		--output $@

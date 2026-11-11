@@ -133,9 +133,26 @@ class PlotSettings:
 
 ebstyle = pu.ErrorbarStyle(
     marker="o",
-    markersize=4,
+    markersize=3,
     alpha=0.85,
     zorder=3,
+)
+RATIO_AXIS = pu.AxisConfig(
+    "log",
+    (1.0e-03,1.1e+00),
+    pu.LabelConfigure(
+        "Ratio",
+        "",
+        fontsize=12,
+        labelpad=2,
+    )
+)
+LEGEND = pu.ComponentConfig(
+    type="legend",
+    style=pu.LegendStyle(
+        fontsize=6,
+        loc="best"
+    )
 )
 
 def build_plot_config(parameter: SweepParameter) -> PlotSettings:
@@ -159,16 +176,7 @@ def build_plot_config(parameter: SweepParameter) -> PlotSettings:
         pad=4
     )
     axes = pu.AxesConfig(
-        x, pu.AxisConfig(
-            "log",
-            None,
-            pu.LabelConfigure(
-                "Ratio",
-                "",
-                fontsize=12,
-                labelpad=2,
-            )
-        ),
+        x,RATIO_AXIS,
         ticks,
     )
     # Quantity markers and frequency colors are independent visual encodings.
@@ -213,12 +221,7 @@ def build_plot_config(parameter: SweepParameter) -> PlotSettings:
         ),
         quantity_styles=quantity_styles, frequency_colors=colors,
         selected_quantities=FRACTION_COLUMNS,
-        legend=pu.ComponentConfig(
-            type="legend",
-            style=pu.LegendStyle(
-                fontsize=8,
-                loc="best"
-            )),
+        legend=LEGEND,
         frequency_label=pu.QuantityLabel(prefix="", fmt=".4g", unit=r"\mathrm{GHz}", show_equals=False),
         reference=pu.LineStyle(
             color="#777777",
@@ -594,11 +597,11 @@ def draw_panel(
     )
     if config.reference is not None:
         limits = ax.get_xlim()
-        plotter.line(
-            x=np.asarray(limits, dtype=np.float64),
-            y=np.ones(2),
-            style=config.reference
-        )
+        # plotter.line(
+        #     x=np.asarray(limits, dtype=np.float64),
+        #     y=np.ones(2),
+        #     style=config.reference
+        # )
         ax.set_xlim(limits)
 
 
