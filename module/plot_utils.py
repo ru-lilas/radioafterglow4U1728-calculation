@@ -1315,10 +1315,13 @@ class Plotter:
         self,
         contour_set: QuadContourSet,
         style: ContourStyleConfig,
-    )->list[Text]:
+        *,
+        manual: list[tuple[float, float]] | None = None,
+    ) -> list[Text]:
         return self.ax.clabel(
             contour_set,
             fmt=style.label_format.to_text,
+            manual=manual if manual is not None else False,
             **style.label.to_kwargs(),
         )
 
