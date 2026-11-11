@@ -30,6 +30,7 @@ from module.observation import LongformatLightcurve, ObservedLightcurve
 from module.utils import FileReader
 from module.timing_utils import timed
 from module import style_templates as st
+from module.varidations import real_scalar,require_series
 
 try:
     from . import build_input
@@ -481,19 +482,6 @@ class SweepRun:
     config_hash: str
     sweep_value: float
 
-
-def real_scalar(value: object) -> float:
-    """Narrow finite real scalars without accepting boolean or string coercion"""
-    if isinstance(value, np.generic):
-        value = value.item()
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise TypeError(f"Expected real scalar, got {type(value).__name__}")
-    number = float(value)
-    if not math.isfinite(number):
-        raise ValueError(f"Expected finite scalar, got {number}")
-    return number
-
-
 def integer_identifier(value: object, *, minimum: int = 0) -> int:
     """Validate an integer identifier without truncation"""
     if isinstance(value, np.generic):
@@ -506,14 +494,6 @@ def integer_identifier(value: object, *, minimum: int = 0) -> int:
     if not number.is_integer() or number < minimum:
         raise ValueError(f"Invalid integer identifier: {value}")
     return int(number)
-
-
-def require_series(df: pd.DataFrame, name: str) -> pd.Series:
-    """Select exactly one named column"""
-    column: object = df[name]
-    if not isinstance(column, pd.Series):
-        raise TypeError(f"Expected one Series for {name}")
-    return column
 
 
 def numeric_values(df: pd.DataFrame, name: str) -> NDArray[np.float64]:

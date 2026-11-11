@@ -21,6 +21,7 @@ from numpy.typing import NDArray
 from module import plot_utils as pu
 from module.utils import FileReader
 from module.mydataclasses import QuantityData
+from module.varidations import real_scalar,require_series
 
 SweepParameter = Literal["eps_b", "eps_th"]
 FloatArray = NDArray[np.float64]
@@ -36,10 +37,11 @@ FrequencyGroups = dict[float, dict[str, FloatArray]]
 
 QUANTITY_LABELS = {
     "mass_fraction": r"$M_{\mathrm{ej}}~/~M_{\mathrm{acc}}$",
-    "energy_fraction": r"$E_{\mathrm{kin,ej}}~/~E_{\mathrm{nuc}}$",
+    "energy_fraction": r"$E_{\mathrm{kin}}~/~E_{\mathrm{nuc}}$",
     "mdot_fraction": r"$\dot{M}_{\mathrm{w}}~/~\dot{M}_{\mathrm{acc}}$",
 }
 
+EPS_B_FIDUCIAL = 2.0e-02
 
 @dataclass(frozen=True, slots=True)
 class ScatterComponent:
@@ -130,25 +132,60 @@ class PlotSettings:
     fixed_title: TitleItem
     title_items: tuple[TitleItem, ...]
 
+ebstyle = pu.ErrorbarStyle(
+    marker="o",
+    markersize=3,
+    alpha=0.85,
+    zorder=3,
+)
+RATIO_AXIS = pu.AxisConfig(
+    "log",
+    (1.0e-03,1.1e+00),
+    pu.LabelConfigure(
+        "Ratio",
+        "",
+        fontsize=12,
+        labelpad=2,
+    )
+)
+LEGEND = pu.ComponentConfig(
+    type="legend",
+    style=pu.LegendStyle(
+        fontsize=6,
+        loc="best"
+    )
+)
 
 def build_plot_config(parameter: SweepParameter) -> PlotSettings:
     """Edit all figure, axis, marker and annotation settings here"""
     # Set either y scale to "linear" to include zero fraction values
     x = pu.AxisConfig(
-        scale="log" if parameter == "eps_b" else "linear", limits=None,
-        label=pu.LabelConfigure(r"$\varepsilon_{\mathrm{B}}$" if parameter == "eps_b"
-                                else r"$\varepsilon_{\mathrm{th}}$", "", 20),
+        scale="log" if parameter == "eps_b" else "linear",
+        limits=None,
+        label=pu.LabelConfigure(
+            r"$\varepsilon_{\mathrm{B}}$"
+                if parameter == "eps_b"
+                else r"$\varepsilon_{\mathrm{th}}$",
+            unit="",
+            fontsize=12
+        ),
     )
-    ticks = pu.TickStyle(labelsize=15, major_length=7, minor_length=4, pad=6)
+    ticks = pu.TickStyle(
+        labelsize=8,
+        major_length=3,
+        minor_length=2,
+        pad=4
+    )
     axes = pu.AxesConfig(
-        x, pu.AxisConfig("log", None, pu.LabelConfigure("Fraction", "", 20)), ticks,
+        x,RATIO_AXIS,
+        ticks,
     )
     # Quantity markers and frequency colors are independent visual encodings.
     # Add another fraction here and to FRACTION_COLUMNS to extend.
     quantity_styles = {
-        "energy_fraction": pu.ErrorbarStyle(marker="s", markersize=6, alpha=0.85, zorder=3),
-        "mass_fraction": pu.ErrorbarStyle(marker="o", markersize=6, alpha=0.85, zorder=3),
-        "mdot_fraction": pu.ErrorbarStyle(marker="^", markersize=6, alpha=0.85, zorder=3),
+        "energy_fraction": ebstyle,
+        "mass_fraction": replace(ebstyle,marker="s"),
+        "mdot_fraction": replace(ebstyle,marker="^"),
     }
     colors = ("#000000", "#FF4B00", "#03AF7A", "#990099",
               "#009999", "#AA6600", "#666666", "#CC6699",
@@ -176,14 +213,21 @@ def build_plot_config(parameter: SweepParameter) -> PlotSettings:
     )
     return PlotSettings(
         layout=pu.PlotLayout(
-            figure=pu.FigureConfig((8, 5.5), dpi=150, layout_engine="constrained"),
+            figure=pu.FigureConfig(
+                (3.5, 2.2),
+                dpi=100,
+                layout_engine="constrained"
+            ),
             axes=axes, subplots=pu.SubplotConfig(nrows=1, ncols=1),
         ),
         quantity_styles=quantity_styles, frequency_colors=colors,
         selected_quantities=FRACTION_COLUMNS,
-        legend=pu.ComponentConfig(type="legend", style=pu.LegendStyle(fontsize=12, loc="best")),
+        legend=LEGEND,
         frequency_label=pu.QuantityLabel(prefix="", fmt=".4g", unit=r"\mathrm{GHz}", show_equals=False),
-        reference=pu.LineStyle(color="#777777", linewidth=1, linestyle="--", zorder=1),
+        reference=pu.LineStyle(
+            color="#777777",
+            linewidth=0.75, linestyle="-", zorder=1
+        ),
         title_fontsize=12, show_metadata=True,
         sweep_label=(r"$\varepsilon_{\mathrm{B}}$ sweep" if parameter == "eps_b"
                      else r"$\varepsilon_{\mathrm{th}}$ sweep"),
@@ -208,18 +252,6 @@ def native_scalar(value: object) -> object:
             raise TypeError("Unsupported NumPy scalar precision")
         return native
     return value
-
-
-def real_scalar(value: object) -> float:
-    """Validate a finite real scalar before numeric conversion"""
-    value = native_scalar(value)
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise TypeError(f"Expected a real numeric value, got {type(value).__name__}")
-    number = float(value)
-    if not math.isfinite(number):
-        raise ValueError("Expected a finite number")
-    return number
-
 
 def integer_identifier(value: object, *, minimum: int) -> int:
     """Reject fractional, boolean and invalid identifiers without truncation"""
@@ -440,15 +472,6 @@ def build_scatter_components(
             components[nu][quantity] = ScatterComponent(values[data.parameter], values[quantity], style)
     return components
 
-
-def require_series(df: pd.DataFrame, name: str) -> pd.Series:
-    """Narrow a single column selection before processing its elements"""
-    column: object = df[name]
-    if not isinstance(column, pd.Series):
-        raise TypeError(f"Expected a single Series for {name}")
-    return column
-
-
 def validate_title_scalar(value: object, item: TitleItem) -> float:
     """Validate a title value using the rule owned by its item"""
     number = real_scalar(value)
@@ -529,6 +552,13 @@ def draw_panel(
     plotter = pu.Plotter(ax)
     handles: list[Line2D] = []
     labels: list[str] = []
+    fid = ax.axvline(
+        EPS_B_FIDUCIAL,
+        linewidth=0.5,
+        linestyle="--",
+        color="#000000",
+        zorder=0,
+    )
     for nu, quantities in components.items():
         for quantity in config.selected_quantities:
             component = quantities[quantity]
@@ -540,10 +570,18 @@ def draw_panel(
             labels.append(f"{QUANTITY_LABELS[quantity]}")
     if not isinstance(config.legend.style, pu.LegendStyle):
         raise TypeError("Expected LegendStyle")
-    ax.legend(handles=handles, labels=labels, **config.legend.style.to_kwargs())
+    ax.legend(
+        handles=handles,
+        labels=labels,
+        **config.legend.style.to_kwargs()
+    )
     if config.reference is not None:
         limits = ax.get_xlim()
-        plotter.line(x=np.asarray(limits, dtype=np.float64), y=np.ones(2), style=config.reference)
+        # plotter.line(
+        #     x=np.asarray(limits, dtype=np.float64),
+        #     y=np.ones(2),
+        #     style=config.reference
+        # )
         ax.set_xlim(limits)
 
 
@@ -555,8 +593,8 @@ def draw_figure(data: PlotData, config: PlotSettings) -> Figure:
     fig, axes = config.layout.create()
     try:
         draw_panel(axes.flat[0], data, config, components)
-        ax = axes.flat[0]
-        ax.set_title(title, fontsize=config.title_fontsize)
+        ax:Axes = axes.flat[0]
+        # ax.set_title(title, fontsize=config.title_fontsize)
         return fig
     except Exception:
         plt.close(fig)
