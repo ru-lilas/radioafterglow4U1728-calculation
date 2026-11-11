@@ -101,12 +101,15 @@ copy-bestfitlcs: \
 	$(FILEPATH_MINIMUM_CHI2_LC_PAPER_PDF)
 	cp $< ../paper/figures/bestfit_lightcurves.pdf
 
-fig/energetics_epsb.pdf: \
+$(NAME_ENERGETICS) ?=
+
+fig/$(NAME_ENERGETICS).pdf: \
 	scripts/plot_energetics.py \
-	data/energetics_epsb.csv
+	data/$(NAME_ENERGETICS).csv
 	$(PYTHON) -m scripts.plot_energetics\
-		--input data/energetics_epsb.csv \
+		--input data/$(NAME_ENERGETICS).csv \
 		--parameter eps_b \
+		--frequencies 9.0 \
 		--output $@
 
 $(FIGDIR)/powerlaw_lightcurves.pdf: \
