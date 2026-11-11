@@ -36,7 +36,7 @@ FrequencyGroups = dict[float, dict[str, FloatArray]]
 
 QUANTITY_LABELS = {
     "mass_fraction": r"$M_{\mathrm{ej}}~/~M_{\mathrm{acc}}$",
-    "energy_fraction": r"$E_{\mathrm{kin,ej}}~/~E_{\mathrm{nuc}}$",
+    "energy_fraction": r"$E_{\mathrm{kin}}~/~E_{\mathrm{nuc}}$",
     "mdot_fraction": r"$\dot{M}_{\mathrm{w}}~/~\dot{M}_{\mathrm{acc}}$",
 }
 
@@ -133,7 +133,7 @@ class PlotSettings:
 
 ebstyle = pu.ErrorbarStyle(
     marker="o",
-    markersize=5,
+    markersize=4,
     alpha=0.85,
     zorder=3,
 )
@@ -205,7 +205,7 @@ def build_plot_config(parameter: SweepParameter) -> PlotSettings:
     return PlotSettings(
         layout=pu.PlotLayout(
             figure=pu.FigureConfig(
-                (4.2, 3.35),
+                (3.5, 2.2),
                 dpi=100,
                 layout_engine="constrained"
             ),
