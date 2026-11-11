@@ -183,7 +183,7 @@ class ChevalierPlotData:
         theta = grids.theta_grid(models).to_FloatGrid("")
         beta_sh = grids.beta_sh_grid(models).to_FloatGrid("")
         invisible = region.out_of_plotregion.take_or([
-            beta_sh.less_than(0.169),
+            theta.less_than(0.80),
             beta_sh.greater_than(0.51)
         ])
         observations = LongformatLightcurve.from_csv(paths.obslc).group_by_frequency()
@@ -272,6 +272,7 @@ class ContourComponent:
 
     quantity: str
     style: plot_utils.ContourStyleConfig
+    label_fraction: float|None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -302,9 +303,17 @@ def contour_row(config: plot_utils.PlotConfig, *,
     merged with contour settings from config.
     """
     if components is None:
-        components = tuple(
-            ContourComponent(name, config.components[name].contour_style_config)
-            for name in ("a_wind", "beta_sh")
+        components = (
+            ContourComponent(
+                quantity="a_wind",
+                style=config.components["a_wind"].contour_style_config,
+                label_fraction=0.5,
+            ),
+            ContourComponent(
+                quantity="beta_sh",
+                style=config.components["beta_sh"].contour_style_config,
+                label_fraction=0.15,
+            )
         )
     return ContourRowConfig("Contours", shared_plane_axes(config), components)
 
@@ -460,6 +469,7 @@ def draw_contour_components(plotter: plot_utils.Plotter, data: ChevalierPlotData
                     line_style=style.lines,
                     label_style=style.label,
                     label_format=style.label_format,
+                    label_fraction=component.label_fraction
                 )
                 resolved.draw(plotter.ax, plotter)
             continue

@@ -695,7 +695,6 @@ class ContourStyleConfig(YAMLReadable):
     label: ContourLabelStyle
     label_format: QuantityLabel
 
-
 @dataclass(frozen=True, slots=True, eq=False)
 class ContourComponent:
     """Draw an already resolved, masked field without quantity or unit resolution.
@@ -710,6 +709,7 @@ class ContourComponent:
     line_style: ContourLineStyle
     label_style: ContourLabelStyle | None = None
     label_format: QuantityLabel = QuantityLabel("", "g", "", show_equals=False)
+    label_fraction: float | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.field, ScalarField2D):
@@ -721,6 +721,27 @@ class ContourComponent:
             raise ValueError("Contour levels must be nonempty, finite and strictly increasing")
         levels.setflags(write=False)
         object.__setattr__(self, "levels", levels)
+
+    @staticmethod
+    def lower_label_positions(
+        contour: QuadContourSet,
+        fraction: float = 0.1,
+    ) -> list[tuple[float, float]]:
+        """Select label positions near the lower end of each contour segment."""
+        positions = []
+
+        for level_segments in contour.allsegs:
+            for segment in level_segments:
+                if len(segment) < 2:
+                    continue
+
+                order = np.argsort(segment[:, 1])
+                index = order[min(int(len(segment) * fraction), len(segment) - 1)]
+
+                x, y = segment[index]
+                positions.append((float(x), float(y)))
+
+        return positions
 
     def draw(self, ax: Axes, plotter: "Plotter") -> QuadContourSet:
         """Delegate to Plotter on its existing axes, leaving inputs untouched."""
@@ -737,12 +758,19 @@ class ContourComponent:
             label_format=self.label_format,
         )
         # Matplotlib may update a masked-array mask; isolate its working copy.
-        contour = plotter.contour(
+        cs = plotter.contour(
             self.field.x, self.field.y, self.field.z.copy(), style,
         )
+        print(self.label_fraction)
         if self.label_style is not None:
-            plotter.contour_labels(contour, style)
-        return contour
+            positions = (
+                self.lower_label_positions(cs,self.label_fraction)
+                if self.label_fraction is not None
+                else None
+            )
+            plotter.contour_labels(cs, style, manual=positions)
+
+        return cs
 
 @dataclass(frozen=True, slots=True)
 class ColorbarConfigure:

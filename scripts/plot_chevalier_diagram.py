@@ -20,32 +20,40 @@ def build_contour_components() -> tuple[ContourComponent, ...]:
         fontsize=8
     )
     return (
-        ContourComponent("a_wind", plot_utils.ContourStyleConfig(
-            unit="g cm-1",
-            lines = style_contour,
-            levels=plot_utils.ContourLevelConfig(
-                scale="log", values=[1e4, 1e5, 1e6, 1e7, 1e8, 1e9]),
-            label = labelstyle,
-            label_format=plot_utils.QuantityLabel(
-                r"A_{\mathrm{w}}",
-                ".0e",
-                r"\mathrm{g\,cm^{-1}}",
-                exponent_only=True
+        ContourComponent(
+            "a_wind",
+            plot_utils.ContourStyleConfig(
+                unit="g cm-1",
+                lines = style_contour,
+                levels=plot_utils.ContourLevelConfig(
+                    scale="log", values=[1e4, 1e5, 1e6, 1e7, 1e8, 1e9]),
+                label = labelstyle,
+                label_format=plot_utils.QuantityLabel(
+                    r"A_{\mathrm{w}}",
+                    ".0e",
+                    r"\mathrm{g\,cm^{-1}}",
+                    exponent_only=True
+                ),
             ),
-        )),
-        ContourComponent("beta_sh", plot_utils.ContourStyleConfig(
-            unit="",
-            lines=replace(
-                style_contour,
-                linestyles="--"
+            label_fraction=0.5,
+        ),
+        ContourComponent(
+            "beta_sh",
+            plot_utils.ContourStyleConfig(
+                unit="",
+                lines=replace(
+                    style_contour,
+                    linestyles="--"
+                ),
+                levels=plot_utils.ContourLevelConfig(
+                    scale="linear", values=[0.20, 0.30, 0.40, 0.50, 0.60]),
+                label = labelstyle,
+                label_format=plot_utils.QuantityLabel(
+                    r"v_{\mathrm{sh}}/c", ".2f", "",
+                ),
             ),
-            levels=plot_utils.ContourLevelConfig(
-                scale="linear", values=[0.20, 0.30, 0.40, 0.50, 0.60]),
-            label = labelstyle,
-            label_format=plot_utils.QuantityLabel(
-                r"v_{\mathrm{sh}}/c", ".2f", "",
-            ),
-        )),
+            label_fraction=0.15
+        ),
     )
 
 
